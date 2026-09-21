@@ -1,0 +1,375 @@
+// Модель данных TaskTracker.
+// Пояснения к решениям — в docs/data-model.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Пространство и участники ──────────────────────────────────────────────
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships     Membership[]
+  projects        Project[]
+  labels          Label[]
+  customFieldDefs CustomFieldDef[]
+  activityLog     ActivityLog[]
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  avatarUrl String?
+  timeZone  String    @default("Europe/Moscow")
+  lastSeenAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  memberships    Membership[]
+  projectMembers ProjectMember[]
+  assignments    TaskAssignee[]
+  createdTasks   Task[]          @relation("TaskCreatedBy")
+  comments       Comment[]
+  timeEntries    TimeEntry[]
+  attachments    Attachment[]
+  activityLog    ActivityLog[]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+// ─── Проект ────────────────────────────────────────────────────────────────
+
+enum ProjectState {
+  PLANNED
+  ACTIVE
+  ON_HOLD
+  DONE
+  CANCELLED
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  workspaceId String
+  key         String // короткий код для номеров задач, напр. "CRM"
+  name        String
+  description String?
+  state       ProjectState @default(PLANNED)
+  color       String?
+
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+
+  taskCounter Int       @default(0) // источник номеров вида CRM-17
+  archivedAt  DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  statuses   ProjectStatus[]
+  milestones Milestone[]
+  members    ProjectMember[]
+  tasks      Task[]
+  fieldDefs  CustomFieldDef[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId, state])
+}
+
+model ProjectMember {
+  id        String @id @default(cuid())
+  projectId String
+  userId    String
+  role      Role // переопределяет роль из Membership для этого проекта
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+enum StatusCategory {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model ProjectStatus {
+  id        String         @id @default(cuid())
+  projectId String
+  name      String
+  category  StatusCategory
+  color     String?
+  position  Int
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([projectId, name])
+  @@index([projectId, position])
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  projectId String
+  name      String
+  dueDate   DateTime
+  reachedAt DateTime?
+  position  Int       @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId, dueDate])
+}
+
+// ─── Задача ────────────────────────────────────────────────────────────────
+
+enum Priority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String  @id @default(cuid())
+  workspaceId String // денормализовано: почти все выборки идут по пространству
+  projectId   String
+  number      Int // номер внутри проекта, вместе с Project.key даёт "CRM-17"
+  title       String
+  description String?
+
+  statusId    String
+  priority    Priority @default(MEDIUM)
+  parentId    String?
+  milestoneId String?
+
+  plannedStart DateTime?
+  plannedEnd   DateTime?
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  dueDate      DateTime? // срок, обещанный заказчику
+
+  estimateHours Decimal? @db.Decimal(8, 2)
+  loggedHours   Decimal  @default(0) @db.Decimal(10, 2) // агрегат из TimeEntry
+  progress      Int      @default(0) // 0..100, ставится вручную
+
+  sortOrder   Decimal @default(0) @db.Decimal(20, 10)
+  createdById String
+
+  customFields Json      @default("{}")
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       ProjectStatus    @relation(fields: [statusId], references: [id])
+  parent       Task?            @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Task[]           @relation("TaskHierarchy")
+  milestone    Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assignees    TaskAssignee[]
+  labels       TaskLabel[]
+  comments     Comment[]
+  attachments  Attachment[]
+  timeEntries  TimeEntry[]
+  dependsOn    TaskDependency[] @relation("DependencyTo")
+  dependedOnBy TaskDependency[] @relation("DependencyFrom")
+
+  @@unique([projectId, number])
+  @@index([projectId, statusId, sortOrder])
+  @@index([workspaceId, dueDate])
+  @@index([parentId])
+  @@index([milestoneId])
+}
+
+model TaskAssignee {
+  taskId    String
+  userId    String
+  isPrimary Boolean  @default(false)
+  addedAt   DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId, taskId])
+}
+
+enum DependencyType {
+  FINISH_TO_START
+  START_TO_START
+  FINISH_TO_FINISH
+  START_TO_FINISH
+}
+
+model TaskDependency {
+  id         String         @id @default(cuid())
+  fromTaskId String // предшественник
+  toTaskId   String // зависимая задача
+  type       DependencyType @default(FINISH_TO_START)
+  lagDays    Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  fromTask Task @relation("DependencyFrom", fields: [fromTaskId], references: [id], onDelete: Cascade)
+  toTask   Task @relation("DependencyTo", fields: [toTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([fromTaskId, toTaskId])
+  @@index([toTaskId])
+}
+
+model Label {
+  id          String @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks     TaskLabel[]
+
+  @@unique([workspaceId, name])
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@index([labelId])
+}
+
+// ─── Обсуждение, файлы, время ──────────────────────────────────────────────
+
+model Comment {
+  id        String    @id @default(cuid())
+  taskId    String
+  authorId  String
+  body      String
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  taskId       String
+  uploadedById String
+  fileName     String
+  contentType  String
+  sizeBytes    Int
+  storageKey   String // ключ объекта в S3-совместимом хранилище
+  createdAt    DateTime @default(now())
+
+  task       Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([taskId])
+}
+
+model TimeEntry {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  date      DateTime @db.Date
+  hours     Decimal  @db.Decimal(6, 2)
+  note      String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId, date])
+}
+
+// ─── Пользовательские поля и журнал ────────────────────────────────────────
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  MULTI_SELECT
+  CHECKBOX
+  USER
+}
+
+model CustomFieldDef {
+  id          String          @id @default(cuid())
+  workspaceId String
+  projectId   String? // null — поле доступно во всём пространстве
+  key         String // ключ внутри Task.customFields
+  name        String
+  type        CustomFieldType
+  options     Json? // варианты для SELECT / MULTI_SELECT
+  required    Boolean         @default(false)
+  position    Int             @default(0)
+  createdAt   DateTime        @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, projectId, key])
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String?
+  entityType  String // "Task" | "Project" | "Milestone" | ...
+  entityId    String
+  action      String // "created" | "updated" | "deleted" | "commented"
+  field       String?
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([workspaceId, createdAt])
+}
