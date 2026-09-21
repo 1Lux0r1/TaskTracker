@@ -1,0 +1,40 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
+import { type ActionResult, formatZodError, memberInputSchema } from "@/lib/validation";
+
+export async function createMember(
+  _state: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = memberInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
+
+  if (parsed.data.email) {
+    const duplicate = await prisma.member.findUnique({ where: { email: parsed.data.email } });
+    if (duplicate) return { ok: false, error: "Сотрудник с таким email уже есть" };
+  }
+
+  await prisma.member.create({ data: parsed.data });
+  revalidatePath("/members");
+  return { ok: true, message: "Сотрудник добавлен" };
+}
+
+/**
+ * Сотрудников не удаляем: на них ссылаются закрытые задачи и история проектов.
+ * Вместо этого снимаем флаг активности — из списков выбора он исчезает.
+ */
+export async function toggleMemberActive(formData: FormData): Promise<void> {
+  const memberId = String(formData.get("memberId") ?? "");
+  if (!memberId) return;
+
+  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  if (!member) return;
+
+  await prisma.member.update({
+    where: { id: memberId },
+    data: { isActive: !member.isActive },
+  });
+  revalidatePath("/members");
+}
