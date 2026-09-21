@@ -358,15 +358,21 @@ async function importTasks(
 
       const data = {
         title,
-        description: cellText(row.cells.get("description") ?? null),
+        // Если ответственных несколько, ячейка сохраняется целиком: в файле там
+        // бывает разделение зон («первая — техническая фактура, вторая —
+        // переписка»), и оно ценнее аккуратного списка фамилий.
+        description:
+          [
+            cellText(row.cells.get("description") ?? null),
+            hasMoreEntries(rawAssignee) ? `Ответственные: ${rawAssignee}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n\n") || null,
         status,
         priority: parsePriority(cellText(row.cells.get("priority") ?? null)) ?? "MEDIUM",
         track: parseTrack(cellText(row.cells.get("track") ?? null)),
         assigneeId: await resolveMember(assigneeName, members, options, report),
-        externalAssignee:
-          cellText(row.cells.get("externalAssignee") ?? null) ??
-          // Остальных из многострочной ячейки не теряем: они идут вторым полем.
-          (hasMoreEntries(rawAssignee) ? rawAssignee : null),
+        externalAssignee: cellText(row.cells.get("externalAssignee") ?? null),
         // Журнал остаётся целиком: лента ниже его разбирает, но текст не теряем.
         progressNote: rawStatus.length > 0 ? rawStatus : null,
         resultLink: cellText(row.cells.get("resultLink") ?? null),
@@ -534,6 +540,20 @@ async function importDocuments(
   const members = await loadMemberIndex();
   const kind = options.documentKind ?? "REGULATION";
 
+  // Заголовок колонки с организацией («РСО») повторяется в названии одной из
+  // колонок подписания («Статус подписания РСО»). Это не обобщённая сторона, а
+  // подстановка организации строки, и такую сторону связываем со справочником.
+  const counterpartyHeaderIndex = [...header.columns.entries()].find(
+    ([, key]) => key === "counterparty",
+  )?.[0];
+  // Ключи шапки нумеруются с нуля, ячейки листа — с единицы.
+  const counterpartyParty =
+    counterpartyHeaderIndex === undefined
+      ? null
+      : normalizeHeader(
+          sheet.getRow(header.rowNumber).getCell(counterpartyHeaderIndex + 1).value,
+        );
+
   for (const row of rows) {
     const rawCounterparty = cellText(row.cells.get("counterparty") ?? null);
     const counterpartyName = firstEntry(rawCounterparty);
@@ -555,7 +575,10 @@ async function importDocuments(
           const raw = cellText(sheet.getRow(row.rowNumber).getCell(columnIndex).value);
           return {
             party,
-            counterpartyId: null as string | null,
+            counterpartyId:
+              counterpartyParty && normalizeHeader(party) === counterpartyParty
+                ? counterpartyId
+                : null,
             status: parsePartyStatus(raw) ?? "PENDING",
             note: raw && parsePartyStatus(raw) === null ? raw : null,
             sortOrder: order,

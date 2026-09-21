@@ -16,16 +16,31 @@ import type { Prisma } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
 
+const WAITING = [
+  { value: "", label: "Все" },
+  { value: "us", label: "Ждут нашей подписи" },
+  { value: "them", label: "Ждём подпись контрагента" },
+] as const;
+
 export default async function DocumentsPage(props: PageProps<"/documents">) {
   const params = await props.searchParams;
   const kind = single(params.kind) ?? "";
   const status = single(params.status) ?? "";
   const counterpartyId = single(params.counterpartyId) ?? "";
+  const waiting = single(params.waiting) ?? "";
 
   const where: Prisma.DocumentWhereInput = {};
   if (kind && DOCUMENT_KINDS.includes(kind as DocumentKind)) where.kind = kind;
   if (status && DOCUMENT_STATUSES.includes(status as DocumentStatus)) where.status = status;
   if (counterpartyId) where.counterpartyId = counterpartyId;
+  // Сторона, связанная со справочником, — это контрагент; остальные стороны
+  // наши. Отсюда главный вопрос по документу: чьей подписи ждём.
+  if (waiting === "us") {
+    where.signatures = { some: { status: "PENDING", counterpartyId: null } };
+  }
+  if (waiting === "them") {
+    where.signatures = { some: { status: "PENDING", counterpartyId: { not: null } } };
+  }
 
   const [documents, counterparties] = await Promise.all([
     prisma.document.findMany({
@@ -86,6 +101,16 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
             {DOCUMENT_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {DOCUMENT_STATUS_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Ждём
+          <select name="waiting" defaultValue={waiting} className="input w-56">
+            {WAITING.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
               </option>
             ))}
           </select>
