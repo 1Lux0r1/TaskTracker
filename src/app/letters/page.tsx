@@ -22,6 +22,8 @@ const PRESETS = [
   { value: "open", label: "В работе" },
   { value: "overdue", label: "Просроченные" },
   { value: "due7", label: "Срок в ближайшую неделю" },
+  { value: "waitingUs", label: "Ждут нашего ответа" },
+  { value: "waitingThem", label: "Ждём их ответа" },
   { value: "noOwner", label: "Без ответственного" },
   { value: "noDue", label: "Без срока" },
   { value: "all", label: "Все" },
@@ -46,6 +48,16 @@ export default async function LettersPage(props: PageProps<"/letters">) {
   if (preset === "due7") {
     where.status = { notIn: CLOSED_LETTER_STATUSES };
     where.dueDate = { gte: today, lte: new Date(today.getTime() + 7 * 86_400_000) };
+  }
+  // Главный вопрос на любом статусе: мяч на нашей стороне или на их.
+  // Незакрытое входящее ждёт ответа от нас, незакрытое исходящее — от них.
+  if (preset === "waitingUs") {
+    where.status = { notIn: CLOSED_LETTER_STATUSES };
+    where.direction = "INCOMING";
+  }
+  if (preset === "waitingThem") {
+    where.status = { notIn: CLOSED_LETTER_STATUSES };
+    where.direction = "OUTGOING";
   }
   if (preset === "noOwner") {
     where.status = { notIn: CLOSED_LETTER_STATUSES };
