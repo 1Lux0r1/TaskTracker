@@ -19,6 +19,24 @@ CREATE TYPE "DependencyType" AS ENUM ('FINISH_TO_START', 'START_TO_START', 'FINI
 -- CreateEnum
 CREATE TYPE "CustomFieldType" AS ENUM ('TEXT', 'NUMBER', 'DATE', 'SELECT', 'MULTI_SELECT', 'CHECKBOX', 'USER');
 
+-- CreateEnum
+CREATE TYPE "LetterDirection" AS ENUM ('INCOMING', 'OUTGOING');
+
+-- CreateEnum
+CREATE TYPE "LetterStatus" AS ENUM ('DRAFT', 'SENT', 'IN_PROGRESS', 'UNDER_REVIEW', 'ANSWERED', 'SIGNED', 'NOTED', 'CLOSED_NO_ACTION');
+
+-- CreateEnum
+CREATE TYPE "DocumentKind" AS ENUM ('REGULATION', 'NDA', 'NDA_ANNEX', 'CONTRACT', 'ACT', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "DocumentState" AS ENUM ('DRAFT', 'SENT', 'UNDER_REVIEW', 'PARTIALLY_SIGNED', 'SIGNED', 'REJECTED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "PartyStatus" AS ENUM ('NOT_SENT', 'SENT', 'UNDER_REVIEW', 'AGREED', 'SIGNED', 'REFUSED');
+
+-- CreateEnum
+CREATE TYPE "ReportState" AS ENUM ('DRAFT', 'SUBMITTED');
+
 -- CreateTable
 CREATE TABLE "Workspace" (
     "id" TEXT NOT NULL,
@@ -123,6 +141,10 @@ CREATE TABLE "Task" (
     "priority" "Priority" NOT NULL DEFAULT 'MEDIUM',
     "parentId" TEXT,
     "milestoneId" TEXT,
+    "trackId" TEXT,
+    "counterpartyId" TEXT,
+    "externalAssignee" TEXT,
+    "jiraKey" TEXT,
     "plannedStart" TIMESTAMP(3),
     "plannedEnd" TIMESTAMP(3),
     "actualStart" TIMESTAMP(3),
@@ -252,6 +274,177 @@ CREATE TABLE "ActivityLog" (
     CONSTRAINT "ActivityLog_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Track" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT,
+    "position" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "Track_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Counterparty" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "shortName" TEXT,
+    "isInternal" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Counterparty_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CounterpartyAlias" (
+    "id" TEXT NOT NULL,
+    "counterpartyId" TEXT NOT NULL,
+    "alias" TEXT NOT NULL,
+
+    CONSTRAINT "CounterpartyAlias_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Letter" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "number" TEXT NOT NULL,
+    "letterDate" DATE NOT NULL,
+    "subject" TEXT NOT NULL,
+    "direction" "LetterDirection" NOT NULL,
+    "status" "LetterStatus" NOT NULL DEFAULT 'IN_PROGRESS',
+    "counterpartyId" TEXT,
+    "ownerId" TEXT,
+    "externalUrl" TEXT,
+    "dueDate" DATE,
+    "responseRequisites" TEXT,
+    "responseToId" TEXT,
+    "jiraKey" TEXT,
+    "comment" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Letter_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LetterTask" (
+    "letterId" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+
+    CONSTRAINT "LetterTask_pkey" PRIMARY KEY ("letterId","taskId")
+);
+
+-- CreateTable
+CREATE TABLE "Document" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "kind" "DocumentKind" NOT NULL,
+    "title" TEXT NOT NULL,
+    "counterpartyId" TEXT,
+    "state" "DocumentState" NOT NULL DEFAULT 'DRAFT',
+    "stateNote" TEXT,
+    "integrationDueDate" DATE,
+    "signedAt" DATE,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DocumentParty" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "counterpartyId" TEXT NOT NULL,
+    "role" TEXT,
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "status" "PartyStatus" NOT NULL DEFAULT 'NOT_SENT',
+    "refusalReason" TEXT,
+    "sentAt" DATE,
+    "respondedAt" DATE,
+    "signedAt" DATE,
+    "basisLetterId" TEXT,
+    "ownerId" TEXT,
+    "comment" TEXT,
+
+    CONSTRAINT "DocumentParty_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DocumentTask" (
+    "documentId" TEXT NOT NULL,
+    "taskId" TEXT NOT NULL,
+
+    CONSTRAINT "DocumentTask_pkey" PRIMARY KEY ("documentId","taskId")
+);
+
+-- CreateTable
+CREATE TABLE "CounterpartyMilestone" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "counterpartyId" TEXT NOT NULL,
+    "stage" TEXT NOT NULL,
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "plannedDate" DATE,
+    "actualDate" DATE,
+    "comment" TEXT,
+
+    CONSTRAINT "CounterpartyMilestone_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Note" (
+    "id" TEXT NOT NULL,
+    "authorId" TEXT,
+    "taskId" TEXT,
+    "letterId" TEXT,
+    "documentId" TEXT,
+    "body" TEXT NOT NULL,
+    "occurredOn" DATE NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Note_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "StatusReport" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "periodStart" DATE NOT NULL,
+    "periodEnd" DATE NOT NULL,
+    "state" "ReportState" NOT NULL DEFAULT 'DRAFT',
+    "projectLead" TEXT,
+    "contractStatus" TEXT,
+    "nextRelease" TEXT,
+    "developmentPlan" TEXT,
+    "authorId" TEXT,
+    "submittedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "StatusReport_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReportSection" (
+    "id" TEXT NOT NULL,
+    "reportId" TEXT NOT NULL,
+    "trackId" TEXT,
+    "title" TEXT NOT NULL,
+    "doneText" TEXT,
+    "blockersText" TEXT,
+    "solutionsText" TEXT,
+    "plannedText" TEXT,
+    "responsible" TEXT,
+    "position" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "ReportSection_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Workspace_slug_key" ON "Workspace"("slug");
 
@@ -298,6 +491,15 @@ CREATE INDEX "Task_parentId_idx" ON "Task"("parentId");
 CREATE INDEX "Task_milestoneId_idx" ON "Task"("milestoneId");
 
 -- CreateIndex
+CREATE INDEX "Task_trackId_idx" ON "Task"("trackId");
+
+-- CreateIndex
+CREATE INDEX "Task_counterpartyId_idx" ON "Task"("counterpartyId");
+
+-- CreateIndex
+CREATE INDEX "Task_jiraKey_idx" ON "Task"("jiraKey");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Task_projectId_number_key" ON "Task"("projectId", "number");
 
 -- CreateIndex
@@ -336,6 +538,72 @@ CREATE INDEX "ActivityLog_entityType_entityId_createdAt_idx" ON "ActivityLog"("e
 -- CreateIndex
 CREATE INDEX "ActivityLog_workspaceId_createdAt_idx" ON "ActivityLog"("workspaceId", "createdAt");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "Track_projectId_name_key" ON "Track"("projectId", "name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Counterparty_workspaceId_name_key" ON "Counterparty"("workspaceId", "name");
+
+-- CreateIndex
+CREATE INDEX "CounterpartyAlias_alias_idx" ON "CounterpartyAlias"("alias");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CounterpartyAlias_counterpartyId_alias_key" ON "CounterpartyAlias"("counterpartyId", "alias");
+
+-- CreateIndex
+CREATE INDEX "Letter_projectId_dueDate_idx" ON "Letter"("projectId", "dueDate");
+
+-- CreateIndex
+CREATE INDEX "Letter_counterpartyId_idx" ON "Letter"("counterpartyId");
+
+-- CreateIndex
+CREATE INDEX "Letter_projectId_letterDate_idx" ON "Letter"("projectId", "letterDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Letter_projectId_number_direction_key" ON "Letter"("projectId", "number", "direction");
+
+-- CreateIndex
+CREATE INDEX "LetterTask_taskId_idx" ON "LetterTask"("taskId");
+
+-- CreateIndex
+CREATE INDEX "Document_projectId_kind_state_idx" ON "Document"("projectId", "kind", "state");
+
+-- CreateIndex
+CREATE INDEX "Document_counterpartyId_idx" ON "Document"("counterpartyId");
+
+-- CreateIndex
+CREATE INDEX "DocumentParty_documentId_position_idx" ON "DocumentParty"("documentId", "position");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DocumentParty_documentId_counterpartyId_key" ON "DocumentParty"("documentId", "counterpartyId");
+
+-- CreateIndex
+CREATE INDEX "DocumentTask_taskId_idx" ON "DocumentTask"("taskId");
+
+-- CreateIndex
+CREATE INDEX "CounterpartyMilestone_projectId_plannedDate_idx" ON "CounterpartyMilestone"("projectId", "plannedDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CounterpartyMilestone_projectId_counterpartyId_stage_key" ON "CounterpartyMilestone"("projectId", "counterpartyId", "stage");
+
+-- CreateIndex
+CREATE INDEX "Note_taskId_occurredOn_idx" ON "Note"("taskId", "occurredOn");
+
+-- CreateIndex
+CREATE INDEX "Note_letterId_occurredOn_idx" ON "Note"("letterId", "occurredOn");
+
+-- CreateIndex
+CREATE INDEX "Note_documentId_occurredOn_idx" ON "Note"("documentId", "occurredOn");
+
+-- CreateIndex
+CREATE INDEX "StatusReport_projectId_periodEnd_idx" ON "StatusReport"("projectId", "periodEnd");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "StatusReport_projectId_periodStart_periodEnd_key" ON "StatusReport"("projectId", "periodStart", "periodEnd");
+
+-- CreateIndex
+CREATE INDEX "ReportSection_reportId_position_idx" ON "ReportSection"("reportId", "position");
+
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -362,6 +630,12 @@ ALTER TABLE "Task" ADD CONSTRAINT "Task_projectId_fkey" FOREIGN KEY ("projectId"
 
 -- AddForeignKey
 ALTER TABLE "Task" ADD CONSTRAINT "Task_statusId_fkey" FOREIGN KEY ("statusId") REFERENCES "ProjectStatus"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_trackId_fkey" FOREIGN KEY ("trackId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Task" ADD CONSTRAINT "Task_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Task" ADD CONSTRAINT "Task_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -423,6 +697,87 @@ ALTER TABLE "ActivityLog" ADD CONSTRAINT "ActivityLog_workspaceId_fkey" FOREIGN 
 -- AddForeignKey
 ALTER TABLE "ActivityLog" ADD CONSTRAINT "ActivityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- GIN-индекс по пользовательским полям: Prisma не умеет описать его в schema.prisma,
--- поэтому он добавляется здесь и сохраняется при последующих миграциях.
+-- AddForeignKey
+ALTER TABLE "Track" ADD CONSTRAINT "Track_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Counterparty" ADD CONSTRAINT "Counterparty_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CounterpartyAlias" ADD CONSTRAINT "CounterpartyAlias_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Letter" ADD CONSTRAINT "Letter_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Letter" ADD CONSTRAINT "Letter_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Letter" ADD CONSTRAINT "Letter_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Letter" ADD CONSTRAINT "Letter_responseToId_fkey" FOREIGN KEY ("responseToId") REFERENCES "Letter"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LetterTask" ADD CONSTRAINT "LetterTask_letterId_fkey" FOREIGN KEY ("letterId") REFERENCES "Letter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LetterTask" ADD CONSTRAINT "LetterTask_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Document" ADD CONSTRAINT "Document_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Document" ADD CONSTRAINT "Document_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentParty" ADD CONSTRAINT "DocumentParty_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentParty" ADD CONSTRAINT "DocumentParty_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentParty" ADD CONSTRAINT "DocumentParty_basisLetterId_fkey" FOREIGN KEY ("basisLetterId") REFERENCES "Letter"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentParty" ADD CONSTRAINT "DocumentParty_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentTask" ADD CONSTRAINT "DocumentTask_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DocumentTask" ADD CONSTRAINT "DocumentTask_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CounterpartyMilestone" ADD CONSTRAINT "CounterpartyMilestone_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CounterpartyMilestone" ADD CONSTRAINT "CounterpartyMilestone_counterpartyId_fkey" FOREIGN KEY ("counterpartyId") REFERENCES "Counterparty"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Note" ADD CONSTRAINT "Note_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Note" ADD CONSTRAINT "Note_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Note" ADD CONSTRAINT "Note_letterId_fkey" FOREIGN KEY ("letterId") REFERENCES "Letter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Note" ADD CONSTRAINT "Note_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StatusReport" ADD CONSTRAINT "StatusReport_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StatusReport" ADD CONSTRAINT "StatusReport_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReportSection" ADD CONSTRAINT "ReportSection_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "StatusReport"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReportSection" ADD CONSTRAINT "ReportSection_trackId_fkey" FOREIGN KEY ("trackId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+-- GIN-индекс по пользовательским полям: Prisma не умеет описать его в schema.prisma.
 CREATE INDEX "Task_customFields_gin_idx" ON "Task" USING GIN ("customFields" jsonb_path_ops);

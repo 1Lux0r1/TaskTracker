@@ -24,6 +24,7 @@ model Workspace {
   labels          Label[]
   customFieldDefs CustomFieldDef[]
   activityLog     ActivityLog[]
+  counterparties  Counterparty[]
 }
 
 model User {
@@ -44,6 +45,10 @@ model User {
   timeEntries    TimeEntry[]
   attachments    Attachment[]
   activityLog    ActivityLog[]
+  notes          Note[]
+  ownedLetters   Letter[]        @relation("LetterOwner")
+  ownedDocuments DocumentParty[] @relation("DocumentPartyOwner")
+  reports        StatusReport[]  @relation("ReportAuthor")
 }
 
 enum Role {
@@ -97,12 +102,17 @@ model Project {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  statuses   ProjectStatus[]
-  milestones Milestone[]
-  members    ProjectMember[]
-  tasks      Task[]
-  fieldDefs  CustomFieldDef[]
+  workspace     Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  statuses      ProjectStatus[]
+  milestones    Milestone[]
+  members       ProjectMember[]
+  tasks         Task[]
+  fieldDefs     CustomFieldDef[]
+  tracks        Track[]
+  letters       Letter[]
+  documents     Document[]
+  reports       StatusReport[]
+  cpMilestones  CounterpartyMilestone[]
 
   @@unique([workspaceId, key])
   @@index([workspaceId, state])
@@ -179,6 +189,15 @@ model Task {
   priority    Priority @default(MEDIUM)
   parentId    String?
   milestoneId String?
+  trackId     String?
+  counterpartyId String?
+
+  // Внешний ответственный на стороне контрагента: сотрудников контрагента
+  // в системе не заводят, поэтому имя хранится текстом.
+  externalAssignee String?
+
+  // Производственный трек ведётся в Jira; здесь только ключ задачи.
+  jiraKey String?
 
   plannedStart DateTime?
   plannedEnd   DateTime?
@@ -200,6 +219,11 @@ model Task {
 
   project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   status       ProjectStatus    @relation(fields: [statusId], references: [id])
+  track        Track?           @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  counterparty Counterparty?    @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  notes        Note[]
+  letters      LetterTask[]
+  documents    DocumentTask[]
   parent       Task?            @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children     Task[]           @relation("TaskHierarchy")
   milestone    Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
@@ -217,6 +241,9 @@ model Task {
   @@index([workspaceId, dueDate])
   @@index([parentId])
   @@index([milestoneId])
+  @@index([trackId])
+  @@index([counterpartyId])
+  @@index([jiraKey])
 }
 
 model TaskAssignee {
@@ -372,4 +399,349 @@ model ActivityLog {
 
   @@index([entityType, entityId, createdAt])
   @@index([workspaceId, createdAt])
+}
+
+// ─── Треки работ ───────────────────────────────────────────────────────────
+// Официальный, юридический, производственный, аналитический и т.д.
+// По трекам разделяется ответственность и собирается отчёт руководству.
+
+model Track {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String
+  color     String?
+  position  Int     @default(0)
+
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+  sections ReportSection[]
+
+  @@unique([projectId, name])
+}
+
+// ─── Контрагенты ───────────────────────────────────────────────────────────
+
+model Counterparty {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String // каноничное название
+  shortName   String?
+  isInternal  Boolean  @default(false) // собственное подразделение
+  createdAt   DateTime @default(now())
+
+  workspace  Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  aliases    CounterpartyAlias[]
+  tasks      Task[]
+  letters    Letter[]
+  documents  Document[]
+  parties    DocumentParty[]
+  milestones CounterpartyMilestone[]
+
+  @@unique([workspaceId, name])
+}
+
+// Варианты написания организации, встреченные в таблицах и письмах.
+// Нужны, чтобы импорт схлопывал «ПАО "ФСК Россети"» и «ПАО Россети МР»
+// в одну организацию, иначе отчёт по контрагенту не собирается.
+model CounterpartyAlias {
+  id             String @id @default(cuid())
+  counterpartyId String
+  alias          String
+
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+
+  @@unique([counterpartyId, alias])
+  @@index([alias])
+}
+
+// ─── Переписка (ЭДО) ───────────────────────────────────────────────────────
+
+enum LetterDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum LetterStatus {
+  DRAFT // готовится
+  SENT // отправлено
+  IN_PROGRESS // в работе
+  UNDER_REVIEW // ответ на согласовании
+  ANSWERED // дан ответ
+  SIGNED // подписано
+  NOTED // принято к сведению
+  CLOSED_NO_ACTION // ответ не требуется
+}
+
+model Letter {
+  id          String @id @default(cuid())
+  workspaceId String
+  projectId   String
+
+  number    String // номер письма, напр. 64-01-16906/26
+  letterDate DateTime @db.Date
+  subject   String
+  direction LetterDirection
+  status    LetterStatus    @default(IN_PROGRESS)
+
+  counterpartyId String?
+  ownerId        String? // ответственный за отработку письма
+
+  externalUrl String? // карточка в системе ЭДО
+  dueDate     DateTime? @db.Date // срок исполнения
+
+  // Реквизиты ответного письма: номер и дата, как их пишут в реестре.
+  // Отдельным текстом, потому что ответ может быть не заведён в системе.
+  responseRequisites String?
+  // Ответ как письмо в системе, когда он заведён.
+  responseToId String?
+
+  jiraKey String?
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty Counterparty? @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  owner        User?         @relation("LetterOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  responseTo   Letter?       @relation("LetterThread", fields: [responseToId], references: [id], onDelete: SetNull)
+  responses    Letter[]      @relation("LetterThread")
+
+  tasks     LetterTask[]
+  basisFor  DocumentParty[] @relation("PartyBasisLetter")
+  notes     Note[]
+
+  // Просрочка НЕ хранится: считается как dueDate < today при незакрытом статусе.
+  // В исходной таблице она записана текстом и устаревает в тот же день.
+
+  @@unique([projectId, number, direction])
+  @@index([projectId, dueDate])
+  @@index([counterpartyId])
+  @@index([projectId, letterDate])
+}
+
+model LetterTask {
+  letterId String
+  taskId   String
+
+  letter Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([letterId, taskId])
+  @@index([taskId])
+}
+
+// ─── Юридически значимые документы и подписание ────────────────────────────
+
+enum DocumentKind {
+  REGULATION // регламент информационного взаимодействия
+  NDA
+  NDA_ANNEX // дополнительное соглашение к NDA
+  CONTRACT
+  ACT
+  OTHER
+}
+
+enum DocumentState {
+  DRAFT
+  SENT
+  UNDER_REVIEW
+  PARTIALLY_SIGNED
+  SIGNED
+  REJECTED
+  CANCELLED
+}
+
+model Document {
+  id        String @id @default(cuid())
+  projectId String
+
+  kind  DocumentKind
+  title String
+
+  // Организация, вокруг которой документ: в исходных реестрах строка — это РСО.
+  counterpartyId String?
+
+  // Состояние выводится из статусов сторон и пересчитывается при их изменении.
+  // Хранится денормализованно, чтобы реестр документов читался одним запросом.
+  state DocumentState @default(DRAFT)
+
+  // Свободный текст «актуальный статус» из исходного реестра: там пишут
+  // пояснение вроде «в наличии в 3 экз.», которое не выводится из статусов.
+  stateNote String?
+
+  integrationDueDate DateTime? @db.Date // срок интеграции, факт
+  signedAt           DateTime? @db.Date
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty Counterparty?  @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  parties      DocumentParty[]
+  tasks        DocumentTask[]
+  notes        Note[]
+
+  @@index([projectId, kind, state])
+  @@index([counterpartyId])
+}
+
+enum PartyStatus {
+  NOT_SENT // «Нет»
+  SENT // «Отправлен», «Заслан»
+  UNDER_REVIEW // на рассмотрении
+  AGREED // «Согласован»
+  SIGNED // «Подписан»
+  REFUSED // отказ, причина обязательна
+}
+
+// Сторона подписания. В исходном реестре это отдельные колонки «Статус
+// подписания ДИТ / РСО / ДЖКХ» — три независимых статуса у одного документа.
+// Линейным статусом это не описывается, поэтому стороны вынесены в таблицу.
+model DocumentParty {
+  id         String @id @default(cuid())
+  documentId String
+
+  counterpartyId String // кто подписывает
+  role           String? // роль в подписании: инициатор, согласующий, утверждающий
+  position       Int     @default(0)
+
+  status         PartyStatus @default(NOT_SENT)
+  refusalReason  String? // обязателен при status = REFUSED (проверяется в домене)
+  sentAt         DateTime?   @db.Date
+  respondedAt    DateTime?   @db.Date
+  signedAt       DateTime?   @db.Date
+
+  // Письмо-основание: чем документ ушёл стороне или чем она ответила.
+  basisLetterId String?
+  ownerId       String? // ответственный за продвижение у этой стороны
+  comment       String?
+
+  document     Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id])
+  basisLetter  Letter?      @relation("PartyBasisLetter", fields: [basisLetterId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("DocumentPartyOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, counterpartyId])
+  @@index([documentId, position])
+}
+
+model DocumentTask {
+  documentId String
+  taskId     String
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, taskId])
+  @@index([taskId])
+}
+
+// ─── График интеграций: вехи по контрагенту ────────────────────────────────
+// Матрица «контрагент × этап»: строка реестра — организация, колонка — этап.
+// Вехами проекта это не выражается.
+
+model CounterpartyMilestone {
+  id             String @id @default(cuid())
+  projectId      String
+  counterpartyId String
+
+  stage       String // «Регламент отправлен», «Интеграция в dev» и т.д.
+  position    Int       @default(0)
+  plannedDate DateTime? @db.Date
+  actualDate  DateTime? @db.Date
+  comment     String?
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, counterpartyId, stage])
+  @@index([projectId, plannedDate])
+}
+
+// ─── Датированные записи ───────────────────────────────────────────────────
+// В исходных таблицах колонка «Статус» содержит хронику с датами, а не
+// состояние. Лента записей — то место, куда эта хроника переезжает без потерь.
+
+model Note {
+  id       String @id @default(cuid())
+  authorId String?
+
+  taskId     String?
+  letterId   String?
+  documentId String?
+
+  body String
+
+  // Дата события задаётся пользователем: событие было пятого, записали седьмого.
+  // При импорте сюда попадает дата, распарсенная из текста ячейки.
+  occurredOn DateTime @db.Date
+  createdAt  DateTime @default(now())
+
+  author   User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  letter   Letter?   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, occurredOn])
+  @@index([letterId, occurredOn])
+  @@index([documentId, occurredOn])
+}
+
+// ─── Отчёт руководству ─────────────────────────────────────────────────────
+
+enum ReportState {
+  DRAFT // собран системой, правится руками
+  SUBMITTED // отправлен, дальше только чтение
+}
+
+// Снимок за период. После отправки замораживается: иначе через неделю отчёт
+// покажет не то, что ушло руководству, и сверить его будет нельзя.
+model StatusReport {
+  id        String @id @default(cuid())
+  projectId String
+
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  state       ReportState @default(DRAFT)
+
+  // Шапка отчёта: руководитель, наличие контракта, ближайший релиз,
+  // план развития. В исходной таблице это отдельные колонки.
+  projectLead    String?
+  contractStatus String?
+  nextRelease    String?
+  developmentPlan String?
+
+  authorId    String?
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author   User?           @relation("ReportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  sections ReportSection[]
+
+  @@unique([projectId, periodStart, periodEnd])
+  @@index([projectId, periodEnd])
+}
+
+// Раздел отчёта по треку. Текст собирается системой из задач за период,
+// затем правится руками — «блокеры» и «предлагаемые решения» это аналитика,
+// а не выборка.
+model ReportSection {
+  id       String @id @default(cuid())
+  reportId String
+  trackId  String?
+
+  title          String
+  doneText       String? // выполнено за период
+  blockersText   String? // текущие блокеры
+  solutionsText  String? // предлагаемые решения: кто и когда устраняет
+  plannedText    String? // план на следующий период
+  responsible    String? // ответственные за заполнение раздела
+  position       Int     @default(0)
+
+  report StatusReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  track  Track?       @relation(fields: [trackId], references: [id], onDelete: SetNull)
+
+  @@index([reportId, position])
 }
