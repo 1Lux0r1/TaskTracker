@@ -159,8 +159,112 @@ async function main() {
     });
   }
 
-  const total = await prisma.task.count();
-  console.log(`Готово: ${await prisma.project.count()} проекта, ${total} задач, ${members.length} сотрудника.`);
+  await seedLegalTrack(erp.id, ivanov.id, petrova.id);
+
+  console.log(
+    [
+      `проектов: ${await prisma.project.count()}`,
+      `задач: ${await prisma.task.count()}`,
+      `писем: ${await prisma.letter.count()}`,
+      `документов: ${await prisma.document.count()}`,
+      `сотрудников: ${members.length}`,
+    ].join(", "),
+  );
+}
+
+/**
+ * Юридический трек: переписка и документ с тремя сторонами подписания —
+ * чтобы на демо-данных было видно, как считается итоговый статус.
+ */
+async function seedLegalTrack(
+  projectId: string,
+  ownerId: string,
+  analystId: string,
+): Promise<void> {
+  const counterparties = ["ДЖКХ", "АО ОЭК", "ПАО Россети"];
+  const ids: Record<string, string> = {};
+  for (const name of counterparties) {
+    const record = await prisma.counterparty.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    ids[name] = record.id;
+  }
+
+  const outgoing = await prisma.letter.upsert({
+    where: {
+      projectId_number_direction: {
+        projectId,
+        number: "64-03-1001/26",
+        direction: "OUTGOING",
+      },
+    },
+    update: {},
+    create: {
+      projectId,
+      number: "64-03-1001/26",
+      direction: "OUTGOING",
+      date: shift(-30),
+      subject: "Направление регламента информационного взаимодействия на подписание",
+      counterpartyId: ids["АО ОЭК"],
+      ownerId,
+      dueDate: shift(-10),
+      status: "ANSWERED",
+      closedAt: shift(-12),
+      searchIndex: "64-03-1001/26 направление регламента информационного взаимодействия ао оэк",
+    },
+  });
+
+  await prisma.letter.upsert({
+    where: {
+      projectId_number_direction: {
+        projectId,
+        number: "64-01-2050/26",
+        direction: "INCOMING",
+      },
+    },
+    update: {},
+    create: {
+      projectId,
+      number: "64-01-2050/26",
+      direction: "INCOMING",
+      date: shift(-6),
+      subject: "О согласовании технического задания на распределительные сети",
+      counterpartyId: ids["ДЖКХ"],
+      ownerId: analystId,
+      dueDate: shift(-1),
+      status: "IN_PROGRESS",
+      searchIndex: "64-01-2050/26 о согласовании технического задания джкх",
+    },
+  });
+
+  const existing = await prisma.document.findFirst({
+    where: { projectId, title: "Регламент — АО ОЭК" },
+  });
+  if (existing) return;
+
+  await prisma.document.create({
+    data: {
+      projectId,
+      kind: "REGULATION",
+      title: "Регламент — АО ОЭК",
+      counterpartyId: ids["АО ОЭК"],
+      ownerId,
+      status: "SIGNING",
+      statusNote: "В наличии в 3 экземплярах",
+      nextAction: "Передать подписанный экземпляр в ДЖКХ",
+      dueDate: shift(20),
+      outgoingLetterId: outgoing.id,
+      signatures: {
+        create: [
+          { party: "ДИТ", status: "SIGNED", signedAt: shift(-20), sortOrder: 0 },
+          { party: "РСО", status: "SIGNED", signedAt: shift(-8), sortOrder: 1 },
+          { party: "ДЖКХ", status: "PENDING", sortOrder: 2 },
+        ],
+      },
+    },
+  });
 }
 
 async function nextNumber(projectId: string): Promise<number> {

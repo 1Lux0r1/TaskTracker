@@ -7,6 +7,8 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
   TASK_STATUSES,
+  TASK_TRACK_LABELS,
+  TASK_TRACKS,
   toDateInputValue,
 } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
@@ -18,6 +20,11 @@ export type TaskFormValues = {
   status: string;
   priority: string;
   assigneeId: string | null;
+  externalAssignee: string | null;
+  track: string;
+  progressNote: string | null;
+  resultLink: string | null;
+  letterId: string | null;
   parentId: string | null;
   startDate: Date | null;
   dueDate: Date | null;
@@ -32,6 +39,8 @@ type Props = {
   members: { id: string; fullName: string }[];
   /** Задачи того же проекта — кандидаты в родительские. */
   parentCandidates?: { id: string; number: number; title: string }[];
+  /** Письма проекта: задача часто заводится по конкретному письму. */
+  letters?: { id: string; number: string; subject: string }[];
   defaults?: TaskFormValues;
   lockProject?: boolean;
   submitLabel: string;
@@ -42,6 +51,7 @@ export function TaskForm({
   projects,
   members,
   parentCandidates = [],
+  letters = [],
   defaults,
   lockProject = false,
   submitLabel,
@@ -73,10 +83,22 @@ export function TaskForm({
         </label>
       )}
 
-      <label className="field">
-        Задача
-        <input name="title" required defaultValue={defaults?.title} className="input" />
-      </label>
+      <div className="grid gap-4 sm:grid-cols-4">
+        <label className="field sm:col-span-3">
+          Задача
+          <input name="title" required defaultValue={defaults?.title} className="input" />
+        </label>
+        <label className="field">
+          Трек
+          <select name="track" defaultValue={defaults?.track ?? "PRODUCTION"} className="input">
+            {TASK_TRACKS.map((track) => (
+              <option key={track} value={track}>
+                {TASK_TRACK_LABELS[track]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <label className="field">
         Описание
@@ -132,6 +154,50 @@ export function TaskForm({
           </select>
         </label>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="field">
+          Внешний ответственный
+          <input
+            name="externalAssignee"
+            defaultValue={defaults?.externalAssignee ?? ""}
+            placeholder="Организация и контактное лицо"
+            className="input"
+          />
+        </label>
+        <label className="field">
+          Письмо-основание
+          <select name="letterId" defaultValue={defaults?.letterId ?? ""} className="input">
+            <option value="">— без письма —</option>
+            {letters.map((letter) => (
+              <option key={letter.id} value={letter.id}>
+                № {letter.number} — {letter.subject.slice(0, 60)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="field">
+        Ход работы
+        <textarea
+          name="progressNote"
+          rows={3}
+          defaultValue={defaults?.progressNote ?? ""}
+          placeholder="Хронология: что и когда произошло по задаче"
+          className="input"
+        />
+      </label>
+
+      <label className="field">
+        Ссылка на результат
+        <input
+          name="resultLink"
+          defaultValue={defaults?.resultLink ?? ""}
+          placeholder="https://…"
+          className="input"
+        />
+      </label>
 
       <div className="grid gap-4 sm:grid-cols-5">
         <label className="field">

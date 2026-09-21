@@ -102,3 +102,155 @@ export function toDateInputValue(value: Date | null | undefined): string {
   const offset = value.getTimezoneOffset() * 60_000;
   return new Date(value.getTime() - offset).toISOString().slice(0, 10);
 }
+
+
+/* ─── Треки работ ─────────────────────────────────────────────────────────── */
+
+export const TASK_TRACKS = ["PRODUCTION", "INTERNAL", "EXTERNAL", "LEGAL"] as const;
+export type TaskTrack = (typeof TASK_TRACKS)[number];
+
+export const TASK_TRACK_LABELS: Record<TaskTrack, string> = {
+  PRODUCTION: "Производственный",
+  INTERNAL: "Внутренний",
+  EXTERNAL: "Внешний",
+  LEGAL: "Юридический",
+};
+
+export function taskTrackLabel(value: string): string {
+  return TASK_TRACK_LABELS[value as TaskTrack] ?? value;
+}
+
+/* ─── Письма ЭДО ──────────────────────────────────────────────────────────── */
+
+export const LETTER_DIRECTIONS = ["INCOMING", "OUTGOING"] as const;
+export type LetterDirection = (typeof LETTER_DIRECTIONS)[number];
+
+export const LETTER_DIRECTION_LABELS: Record<LetterDirection, string> = {
+  INCOMING: "Входящее",
+  OUTGOING: "Исходящее",
+};
+
+export const LETTER_STATUSES = [
+  "NEW",
+  "IN_PROGRESS",
+  "ON_APPROVAL",
+  "ANSWERED",
+  "SIGNED",
+  "NOTED",
+  "CLOSED",
+] as const;
+export type LetterStatus = (typeof LETTER_STATUSES)[number];
+
+export const LETTER_STATUS_LABELS: Record<LetterStatus, string> = {
+  NEW: "Новое",
+  IN_PROGRESS: "В работе",
+  ON_APPROVAL: "На согласовании",
+  ANSWERED: "Дан ответ",
+  SIGNED: "Подписано",
+  NOTED: "Принято к сведению",
+  CLOSED: "Закрыто",
+};
+
+/** Письмо отработано: срок по нему больше не горит. */
+export const CLOSED_LETTER_STATUSES: LetterStatus[] = ["ANSWERED", "SIGNED", "NOTED", "CLOSED"];
+
+export function letterStatusLabel(value: string): string {
+  return LETTER_STATUS_LABELS[value as LetterStatus] ?? value;
+}
+
+export function letterDirectionLabel(value: string): string {
+  return LETTER_DIRECTION_LABELS[value as LetterDirection] ?? value;
+}
+
+export function isLetterOpen(status: string): boolean {
+  return !CLOSED_LETTER_STATUSES.includes(status as LetterStatus);
+}
+
+/* ─── Юридически значимые документы ───────────────────────────────────────── */
+
+export const DOCUMENT_KINDS = [
+  "REGULATION",
+  "NDA_ADDENDUM",
+  "CONTRACT",
+  "STATEMENT",
+  "OTHER",
+] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
+  REGULATION: "Регламент",
+  NDA_ADDENDUM: "ДС к NDA",
+  CONTRACT: "Контракт",
+  STATEMENT: "Положение",
+  OTHER: "Другое",
+};
+
+export const DOCUMENT_STATUSES = [
+  "DRAFT",
+  "REVIEW",
+  "SENT",
+  "SIGNING",
+  "SIGNED",
+  "DECLINED",
+] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
+
+export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
+  DRAFT: "Черновик",
+  REVIEW: "На согласовании",
+  SENT: "Направлен стороне",
+  SIGNING: "На подписании",
+  SIGNED: "Подписан",
+  DECLINED: "Отказ в подписании",
+};
+
+export const SIGNATURE_STATUSES = ["PENDING", "SIGNED", "DECLINED", "NOT_REQUIRED"] as const;
+export type SignatureStatus = (typeof SIGNATURE_STATUSES)[number];
+
+export const SIGNATURE_STATUS_LABELS: Record<SignatureStatus, string> = {
+  PENDING: "Ожидает",
+  SIGNED: "Подписано",
+  DECLINED: "Отказ",
+  NOT_REQUIRED: "Не требуется",
+};
+
+export function documentKindLabel(value: string): string {
+  return DOCUMENT_KIND_LABELS[value as DocumentKind] ?? value;
+}
+
+export function documentStatusLabel(value: string): string {
+  return DOCUMENT_STATUS_LABELS[value as DocumentStatus] ?? value;
+}
+
+export function signatureStatusLabel(value: string): string {
+  return SIGNATURE_STATUS_LABELS[value as SignatureStatus] ?? value;
+}
+
+/**
+ * Статус документа выводится из подписей сторон: пока хоть одна обязательная
+ * сторона не подписала, документ не подписан. Отказ любой стороны — блокер.
+ */
+export function deriveDocumentStatus(
+  signatures: { status: string }[],
+  fallback: string,
+): string {
+  const required = signatures.filter((item) => item.status !== "NOT_REQUIRED");
+  if (required.length === 0) return fallback;
+  if (required.some((item) => item.status === "DECLINED")) return "DECLINED";
+  if (required.every((item) => item.status === "SIGNED")) return "SIGNED";
+  if (required.some((item) => item.status === "SIGNED")) return "SIGNING";
+  return fallback;
+}
+
+/** Доля подписавших сторон — для полосы прогресса в списке документов. */
+export function signatureProgress(signatures: { status: string }[]): number {
+  const required = signatures.filter((item) => item.status !== "NOT_REQUIRED");
+  if (required.length === 0) return 0;
+  const signed = required.filter((item) => item.status === "SIGNED").length;
+  return Math.round((signed / required.length) * 100);
+}
+
+/** Период отчёта: две недели по умолчанию, как в исходных таблицах. */
+export function formatPeriod(start: Date, end: Date): string {
+  return `${formatDate(start)} — ${formatDate(end)}`;
+}

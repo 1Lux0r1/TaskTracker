@@ -98,14 +98,49 @@ export async function deleteTask(formData: FormData): Promise<void> {
   revalidatePath("/tasks");
 }
 
-export async function addComment(formData: FormData): Promise<void> {
-  const taskId = String(formData.get("taskId") ?? "");
+/**
+ * Запись в ленту хроники. Дата события задаётся отдельно от даты внесения:
+ * в исходных таблицах пишут «05.05.2026 драфт загружен в ЭДО» задним числом.
+ */
+export async function addNote(formData: FormData): Promise<void> {
   const body = String(formData.get("body") ?? "").trim();
-  const authorId = String(formData.get("authorId") ?? "") || null;
-  if (!taskId || !body) return;
+  if (!body) return;
 
-  await prisma.comment.create({ data: { taskId, body, authorId } });
-  revalidatePath(`/tasks/${taskId}`);
+  const taskId = String(formData.get("taskId") ?? "") || null;
+  const letterId = String(formData.get("letterId") ?? "") || null;
+  const documentId = String(formData.get("documentId") ?? "") || null;
+  if (!taskId && !letterId && !documentId) return;
+
+  const rawDate = String(formData.get("occurredOn") ?? "").trim();
+  const occurredOn = rawDate ? new Date(`${rawDate}T00:00:00`) : new Date();
+
+  await prisma.note.create({
+    data: {
+      body,
+      occurredOn: Number.isNaN(occurredOn.getTime()) ? new Date() : occurredOn,
+      authorId: String(formData.get("authorId") ?? "") || null,
+      taskId,
+      letterId,
+      documentId,
+    },
+  });
+
+  if (taskId) revalidatePath(`/tasks/${taskId}`);
+  if (letterId) revalidatePath(`/letters/${letterId}`);
+  if (documentId) revalidatePath(`/documents/${documentId}`);
+}
+
+export async function deleteNote(formData: FormData): Promise<void> {
+  const noteId = String(formData.get("noteId") ?? "");
+  if (!noteId) return;
+
+  const note = await prisma.note.findUnique({ where: { id: noteId } });
+  if (!note) return;
+
+  await prisma.note.delete({ where: { id: noteId } });
+  if (note.taskId) revalidatePath(`/tasks/${note.taskId}`);
+  if (note.letterId) revalidatePath(`/letters/${note.letterId}`);
+  if (note.documentId) revalidatePath(`/documents/${note.documentId}`);
 }
 
 /** Дата закрытия ставится при переходе в «Готово» и снимается при возврате в работу. */

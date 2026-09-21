@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ImportForm } from "@/components/import-form";
 import { prisma } from "@/lib/db";
-import { TASK_COLUMNS } from "@/lib/excel/columns";
+import { LETTER_COLUMNS, TASK_COLUMNS } from "@/lib/excel/columns";
 import { formatDate } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
@@ -41,17 +41,44 @@ export default async function ImportPage() {
       <section className="card space-y-3 p-5">
         <h2 className="text-sm font-semibold text-gray-900">Какие колонки распознаются</h2>
         <p className="text-sm text-gray-600">
-          Шапка ищется в первых десяти строках листа. Обязательна колонка «Задача»; остальные
-          подхватываются по названию, регистр и синонимы учитываются.
+          Шапка ищется в первых десяти строках листа — над таблицей часто стоит название
+          отчёта. Названия колонок сопоставляются по синонимам, регистр и «ё» не мешают.
+          Строки итогов пропускаются.
         </p>
-        <ul className="grid gap-x-6 gap-y-1 text-sm text-gray-700 sm:grid-cols-2">
-          {TASK_COLUMNS.map((column) => (
-            <li key={column.key}>
-              <span className="font-medium">{column.header}</span>
-              <span className="text-gray-500"> — {column.aliases.slice(0, 4).join(", ")}</span>
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm text-gray-600">
+          Если колонка «Статус» в вашем файле ведётся как журнал с датами
+          («05.05.2026 драфт загружен в ЭДО»), он разбирается на записи хроники: текст
+          сохраняется целиком, а даты событий попадают в ленту задачи.
+        </p>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <h3 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              Реестр задач
+            </h3>
+            <ul className="mt-2 space-y-1 text-sm text-gray-700">
+              {TASK_COLUMNS.map((column) => (
+                <li key={column.key}>
+                  <span className="font-medium">{column.header}</span>
+                  <span className="text-gray-500"> — {column.aliases.slice(0, 3).join(", ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+              Реестр переписки ЭДО
+            </h3>
+            <ul className="mt-2 space-y-1 text-sm text-gray-700">
+              {LETTER_COLUMNS.map((column) => (
+                <li key={column.key}>
+                  <span className="font-medium">{column.header}</span>
+                  <span className="text-gray-500"> — {column.aliases.slice(0, 3).join(", ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
         <Link href="/api/export?template=1" className="btn-secondary w-fit">
           Скачать файл-образец
         </Link>

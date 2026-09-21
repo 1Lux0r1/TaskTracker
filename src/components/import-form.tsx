@@ -17,16 +17,25 @@ export function ImportForm({ projects }: Props) {
   return (
     <div className="space-y-4">
       <form action={formAction} className="card space-y-4 p-5">
-        <label className="field">
-          Проект
-          <select name="projectId" required defaultValue={projects[0]?.id} className="input">
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.code} — {project.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="field">
+            Проект
+            <select name="projectId" required defaultValue={projects[0]?.id} className="input">
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.code} — {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Что загружаем
+            <select name="kind" defaultValue="tasks" className="input">
+              <option value="tasks">Реестр задач</option>
+              <option value="letters">Реестр переписки ЭДО</option>
+            </select>
+          </label>
+        </div>
 
         <label className="field">
           Файл .xlsx
@@ -39,14 +48,36 @@ export function ImportForm({ projects }: Props) {
           />
         </label>
 
+        <label className="field">
+          Лист книги
+          <input
+            name="sheetName"
+            placeholder="Пусто — выбрать автоматически"
+            className="input"
+          />
+          <span className="mt-1 block text-xs font-normal text-gray-500">
+            Если в файле несколько реестров, укажите имя листа точно как в Excel.
+          </span>
+        </label>
+
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" name="createMissingMembers" defaultChecked className="size-4" />
           Заводить сотрудников, которых нет в справочнике
         </label>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            name="createMissingCounterparties"
+            defaultChecked
+            className="size-4"
+          />
+          Заводить контрагентов, которых нет в справочнике
+        </label>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" name="dryRun" className="size-4" />
-          Только проверить разбор, ничего не записывать
+          Только разобрать файл и показать, что в нём нашлось
         </label>
 
         <SubmitButton pendingLabel="Загружаем…">Загрузить</SubmitButton>
@@ -71,12 +102,46 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
         {isDryRun ? "Проверка разбора" : "Результат загрузки"}: {report.fileName}
       </h2>
 
-      <dl className="grid gap-3 text-sm sm:grid-cols-4">
+      <dl className="grid gap-3 text-sm sm:grid-cols-5">
         <Stat label="Строк найдено" value={report.rowsTotal} />
         <Stat label="Создано" value={report.created} />
         <Stat label="Обновлено" value={report.updated} />
         <Stat label="Пропущено" value={report.skipped} />
+        <Stat label="Записей хроники" value={report.notesCreated} />
       </dl>
+
+      {report.sheets.length > 1 && (
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="table-head">Лист в файле</th>
+                <th className="table-head w-28">Строк</th>
+                <th className="table-head w-40">Похож на</th>
+                <th className="table-head">Распознанные колонки</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {report.sheets.map((sheet) => (
+                <tr key={sheet.name} className={sheet.name === report.sheetName ? "bg-amber-50" : ""}>
+                  <td className="table-cell font-medium text-gray-900">{sheet.name}</td>
+                  <td className="table-cell tabular-nums">{sheet.rowCount}</td>
+                  <td className="table-cell">
+                    {sheet.suggestedKind === "letters"
+                      ? "переписку"
+                      : sheet.suggestedKind === "tasks"
+                        ? "реестр задач"
+                        : "не распознан"}
+                  </td>
+                  <td className="table-cell text-xs text-gray-500">
+                    {sheet.recognizedColumns.join(", ") || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <p className="text-sm text-gray-600">
         Лист «{report.sheetName ?? "—"}», шапка в строке {report.headerRow ?? "—"}. Распознаны
@@ -86,6 +151,12 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
       {report.membersCreated.length > 0 && (
         <p className="text-sm text-gray-600">
           Заведены сотрудники: {[...new Set(report.membersCreated)].join(", ")}
+        </p>
+      )}
+
+      {report.counterpartiesCreated.length > 0 && (
+        <p className="text-sm text-gray-600">
+          Заведены контрагенты: {[...new Set(report.counterpartiesCreated)].join(", ")}
         </p>
       )}
 
@@ -103,8 +174,8 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
       )}
 
       {!isDryRun && (
-        <Link href="/tasks" className="btn-secondary w-fit">
-          Открыть задачи
+        <Link href={report.kind === "letters" ? "/letters" : "/tasks"} className="btn-secondary w-fit">
+          {report.kind === "letters" ? "Открыть переписку" : "Открыть задачи"}
         </Link>
       )}
     </div>

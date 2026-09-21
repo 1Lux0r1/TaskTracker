@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addComment, deleteTask, updateTask } from "@/app/actions/tasks";
+import { deleteTask, updateTask } from "@/app/actions/tasks";
+import { NoteFeed } from "@/components/note-feed";
 import { SubmitButton } from "@/components/submit-button";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
@@ -16,13 +17,13 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
     include: {
       project: true,
       children: { include: { assignee: true }, orderBy: { number: "asc" } },
-      comments: { include: { author: true }, orderBy: { createdAt: "desc" } },
+      notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
     },
   });
 
   if (!task) notFound();
 
-  const [projects, members, parentCandidates] = await Promise.all([
+  const [projects, members, parentCandidates, letters] = await Promise.all([
     prisma.project.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
     prisma.member.findMany({
       where: { isActive: true },
@@ -33,6 +34,12 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       where: { projectId: task.projectId, parentId: null, id: { not: id } },
       orderBy: { number: "asc" },
       select: { id: true, number: true, title: true },
+      take: 200,
+    }),
+    prisma.letter.findMany({
+      where: { projectId: task.projectId },
+      orderBy: { date: "desc" },
+      select: { id: true, number: true, subject: true },
       take: 200,
     }),
   ]);
@@ -63,6 +70,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         projects={projects}
         members={members}
         parentCandidates={parentCandidates}
+        letters={letters}
         defaults={task}
         submitLabel="Сохранить"
       />
@@ -83,46 +91,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         </section>
       )}
 
-      <section className="card space-y-3 p-5">
-        <h2 className="text-sm font-semibold text-gray-900">Комментарии</h2>
-
-        <form action={addComment} className="space-y-2">
-          <input type="hidden" name="taskId" value={task.id} />
-          <textarea
-            name="body"
-            rows={3}
-            required
-            placeholder="Что изменилось по задаче?"
-            className="input"
-          />
-          <div className="flex items-center gap-2">
-            <select name="authorId" defaultValue="" className="input w-56">
-              <option value="">Без автора</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.fullName}
-                </option>
-              ))}
-            </select>
-            <SubmitButton pendingLabel="Отправляем…">Добавить</SubmitButton>
-          </div>
-        </form>
-
-        {task.comments.length === 0 ? (
-          <p className="text-sm text-gray-500">Комментариев пока нет.</p>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {task.comments.map((comment) => (
-              <li key={comment.id} className="py-3">
-                <p className="text-xs text-gray-500">
-                  {comment.author?.fullName ?? "Аноним"} · {formatDate(comment.createdAt)}
-                </p>
-                <p className="mt-1 text-sm whitespace-pre-line text-gray-800">{comment.body}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <NoteFeed notes={task.notes} members={members} taskId={task.id} />
 
       <form action={deleteTask} className="card space-y-2 p-5">
         <h2 className="text-sm font-semibold text-gray-900">Удалить задачу</h2>

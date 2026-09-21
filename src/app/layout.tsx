@@ -17,8 +17,14 @@ const NAV_LINKS = [
   { href: "/", label: "Сводка" },
   { href: "/projects", label: "Проекты" },
   { href: "/tasks", label: "Задачи" },
+  { href: "/letters", label: "Переписка" },
+  { href: "/documents", label: "Документы" },
+  { href: "/calendar", label: "Календарь" },
+  { href: "/reports", label: "Отчёты" },
+  { href: "/analytics", label: "Аналитика" },
+  { href: "/counterparties", label: "Контрагенты" },
   { href: "/members", label: "Сотрудники" },
-  { href: "/import", label: "Импорт из Excel" },
+  { href: "/import", label: "Импорт" },
 ];
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

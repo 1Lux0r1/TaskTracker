@@ -35,12 +35,20 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   }
 
   const selected = projectId && projects.some((p) => p.id === projectId) ? projectId : projects[0].id;
-  const parentCandidates = await prisma.task.findMany({
-    where: { projectId: selected, parentId: null },
-    orderBy: { number: "asc" },
-    select: { id: true, number: true, title: true },
-    take: 200,
-  });
+  const [parentCandidates, letters] = await Promise.all([
+    prisma.task.findMany({
+      where: { projectId: selected, parentId: null },
+      orderBy: { number: "asc" },
+      select: { id: true, number: true, title: true },
+      take: 200,
+    }),
+    prisma.letter.findMany({
+      where: { projectId: selected },
+      orderBy: { date: "desc" },
+      select: { id: true, number: true, subject: true },
+      take: 200,
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -55,6 +63,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
         projects={projects}
         members={members}
         parentCandidates={parentCandidates}
+        letters={letters}
         defaults={{
           projectId: selected,
           title: "",
@@ -62,6 +71,11 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           status: "TODO",
           priority: "MEDIUM",
           assigneeId: null,
+          externalAssignee: null,
+          track: "PRODUCTION",
+          progressNote: null,
+          resultLink: null,
+          letterId: null,
           parentId: null,
           startDate: null,
           dueDate: null,
