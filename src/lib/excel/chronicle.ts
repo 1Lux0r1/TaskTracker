@@ -19,7 +19,10 @@ export function parseChronicle(raw: string): ChronicleEntry[] {
     .map((line) => {
       const leading = LEADING_DATE.exec(line);
       if (leading) {
-        return { occurredOn: toDate(leading[1], leading[2], leading[3]), body: line.slice(leading[0].length).trim() };
+        return {
+          occurredOn: toDate(leading[1], leading[2], leading[3]),
+          body: stripLeadingPunctuation(line.slice(leading[0].length)),
+        };
       }
       const trailing = TRAILING_DATE.exec(line);
       if (trailing) {
@@ -57,6 +60,11 @@ export function completionDate(entries: ChronicleEntry[]): Date | null {
     }
   }
   return null;
+}
+
+/** После вырезанной даты часто остаётся хвост пунктуации: «15.11.2025, замечаний нет». */
+function stripLeadingPunctuation(value: string): string {
+  return value.replace(/^[\s,;:–—-]+/, "").trim();
 }
 
 function toDate(day: string, month: string, year: string): Date | null {

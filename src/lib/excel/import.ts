@@ -221,6 +221,37 @@ function partyColumns(sheet: ExcelJS.Worksheet, headerRow: number): Map<number, 
   return new Map([...best.entries()].map(([party, { index }]) => [index, party]));
 }
 
+/**
+ * Есть ли на листе колонки «Статус подписания <сторона>».
+ * Если есть — стороны берутся только из них, а «Статус согласования» остаётся
+ * текстом. Если нет, как в реестре допсоглашений, статус согласования и есть
+ * статус контрагента: другой колонки под него в файле не предусмотрено.
+ */
+function hasSigningHeaders(sheet: ExcelJS.Worksheet, headerRow: number): boolean {
+  return rowValues(sheet.getRow(headerRow)).some(
+    (raw) => partyFromHeader(raw) !== null && String(raw).toLowerCase().includes("подписан"),
+  );
+}
+
+/** «Письмо № 64-03-604/25 от 01.10.2025» — дату письма забираем в дату события. */
+const REQUISITE_DATE = /(?:^|\s)от\s+(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})/;
+
+function prefixed(label: string, value: string | null): { occurredOn: Date; body: string } | null {
+  if (!value) return null;
+  const match = REQUISITE_DATE.exec(value);
+  const occurredOn = match
+    ? new Date(
+        match[3].length === 2 ? 2000 + Number(match[3]) : Number(match[3]),
+        Number(match[2]) - 1,
+        Number(match[1]),
+      )
+    : new Date();
+  return {
+    occurredOn: Number.isNaN(occurredOn.getTime()) ? new Date() : occurredOn,
+    body: `${label}: ${value}`,
+  };
+}
+
 function pickSheet(
   workbook: ExcelJS.Workbook,
   options: ImportOptions,
@@ -375,7 +406,7 @@ async function importTasks(
         report.created += 1;
       }
 
-      report.notesCreated += await syncChronicle(taskId, chronicle);
+      report.notesCreated += await syncChronicle({ taskId }, chronicle);
     } catch (error) {
       report.skipped += 1;
       report.errors.push({ row: row.rowNumber, message: errorMessage(error) });
@@ -489,6 +520,7 @@ async function importDocuments(
   report: ImportReport,
 ): Promise<void> {
   const parties = partyColumns(sheet, header.rowNumber);
+  const explicitSigning = hasSigningHeaders(sheet, header.rowNumber);
   if (parties.size === 0) {
     report.errors.push({
       row: header.rowNumber,
@@ -523,15 +555,49 @@ async function importDocuments(
           const raw = cellText(sheet.getRow(row.rowNumber).getCell(columnIndex).value);
           return {
             party,
+            counterpartyId: null as string | null,
             status: parsePartyStatus(raw) ?? "PENDING",
             note: raw && parsePartyStatus(raw) === null ? raw : null,
             sortOrder: order,
           };
         });
 
+      // «Статус согласования» без колонок подписания — это статус контрагента.
+      // В реестре регламентов та же колонка содержит свободный текст с датами,
+      // поэтому решает не заголовок, а значение: стороной она становится,
+      // только если в ячейке стоит слово из словаря статусов.
+      const approvalRaw = cellText(row.cells.get("approvalNote") ?? null);
+      // Длинная ячейка — это комментарий, даже если начинается со слова из
+      // словаря: «На рассмотрении. В рабочем порядке сообщили…» статусом не является.
+      const approvalStatus =
+        explicitSigning || !approvalRaw || approvalRaw.length > 40
+          ? null
+          : parsePartyStatus(approvalRaw);
+      if (approvalStatus && ![...parties.values()].includes(counterpartyName)) {
+        signatures.unshift({
+          party: counterpartyName,
+          counterpartyId,
+          status: approvalStatus,
+          note: null,
+          sortOrder: -1,
+        });
+      }
+
+      // Статус согласования, который не свёлся к словарю, — это хроника.
+      // Датированные куски уходят лентой, недатированные остаются в примечании:
+      // терять их нельзя, в реестре регламентов там половина смысла строки.
+      const approvalChronicle = approvalStatus || !approvalRaw ? [] : parseChronicle(approvalRaw);
+      const undatedApproval = approvalChronicle
+        .filter((entry) => !entry.occurredOn)
+        .map((entry) => entry.body);
+
       // Итоговая колонка реестра важнее промежуточной: берём её, если есть.
       const finalStatus = cellText(row.cells.get("finalStatus") ?? null);
-      const statusNote = [finalStatus, cellText(row.cells.get("statusNote") ?? null)]
+      const statusNote = [
+        finalStatus,
+        cellText(row.cells.get("statusNote") ?? null),
+        ...undatedApproval,
+      ]
         .filter(Boolean)
         .join(" · ") || null;
       const data = {
@@ -559,6 +625,7 @@ async function importDocuments(
         where: { projectId: options.projectId, title },
       });
 
+      let documentId: string;
       if (existing) {
         await prisma.document.update({ where: { id: existing.id }, data });
         // Стороны пересобираем целиком: в реестре они и есть источник правды.
@@ -566,16 +633,37 @@ async function importDocuments(
         await prisma.documentSignature.createMany({
           data: signatures.map((item) => ({ ...item, documentId: existing.id })),
         });
+        documentId = existing.id;
         report.updated += 1;
       } else {
-        await prisma.document.create({
+        const created = await prisma.document.create({
           data: {
             ...data,
             projectId: options.projectId,
             signatures: { create: signatures },
           },
         });
+        documentId = created.id;
         report.created += 1;
+      }
+
+      // Если статус согласования не свёлся к словарю, это хроника с датами —
+      // в реестре регламентов там половина смысла строки. Кладём её лентой.
+      if (approvalChronicle.length > 0) {
+        report.notesCreated += await syncChronicle({ documentId }, approvalChronicle);
+      }
+
+      // Реквизиты писем-оснований и ссылка на карточку ЭДО. Связать их с
+      // письмами реестра нельзя: в реестре переписки этих писем нет — он ведёт
+      // другой год. Поэтому сохраняем текстом, а связывание остаётся за
+      // человеком.
+      const basis = [
+        prefixed("Отправлено", cellText(row.cells.get("outgoingLetter") ?? null)),
+        prefixed("Ответ", cellText(row.cells.get("incomingLetter") ?? null)),
+        prefixed("Карточка ЭДО", cellText(row.cells.get("url") ?? null)),
+      ].filter((entry) => entry !== null);
+      if (basis.length > 0) {
+        report.notesCreated += await syncChronicle({ documentId }, basis);
       }
     } catch (error) {
       report.skipped += 1;
@@ -653,13 +741,13 @@ async function resolveCounterparty(
 
 /** Записи журнала, которых ещё нет: повторный импорт не должен их дублировать. */
 async function syncChronicle(
-  taskId: string,
+  target: { taskId: string } | { documentId: string },
   entries: { occurredOn: Date | null; body: string }[],
 ): Promise<number> {
   if (entries.length === 0) return 0;
 
   const existing = await prisma.note.findMany({
-    where: { taskId },
+    where: target,
     select: { body: true },
   });
   const known = new Set(existing.map((note) => note.body));
@@ -668,7 +756,7 @@ async function syncChronicle(
   if (fresh.length === 0) return 0;
 
   await prisma.note.createMany({
-    data: fresh.map((entry) => ({ taskId, body: entry.body, occurredOn: entry.occurredOn! })),
+    data: fresh.map((entry) => ({ ...target, body: entry.body, occurredOn: entry.occurredOn! })),
   });
   return fresh.length;
 }
