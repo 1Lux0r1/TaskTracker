@@ -575,10 +575,14 @@ async function importDocuments(
           const raw = cellText(sheet.getRow(row.rowNumber).getCell(columnIndex).value);
           return {
             party,
+            // Заголовок «Статус подписания РСО» — подстановка организации
+            // строки; остальные стороны ищем в справочнике по названию.
+            // Несвязанная сторона — это не «мы»: соседний департамент такая же
+            // внешняя сторона, поэтому свою организацию отмечают флагом.
             counterpartyId:
               counterpartyParty && normalizeHeader(party) === counterpartyParty
                 ? counterpartyId
-                : null,
+                : (counterparties.get(normalizeHeader(party)) ?? null),
             status: parsePartyStatus(raw) ?? "PENDING",
             note: raw && parsePartyStatus(raw) === null ? raw : null,
             sortOrder: order,

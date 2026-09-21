@@ -29,6 +29,10 @@ export function CounterpartyForm({ action }: Props) {
         Сокращение
         <input name="shortName" placeholder="Например: ДЖКХ" className="input w-48" />
       </label>
+      <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
+        <input type="checkbox" name="isInternal" className="size-4" />
+        Наша организация
+      </label>
       <SubmitButton>Добавить</SubmitButton>
     </form>
   );

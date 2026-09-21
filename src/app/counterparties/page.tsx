@@ -3,6 +3,7 @@ import {
   createCounterparty,
   deleteCounterparty,
   restoreCounterparty,
+  toggleInternalCounterparty,
 } from "@/app/actions/counterparties";
 import { CounterpartyForm } from "@/components/counterparty-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -25,7 +26,8 @@ export default async function CounterpartiesPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Контрагенты</h1>
         <p className="text-sm text-gray-500">
           Ведомства и организации — адресаты писем и стороны документов. Варианты написания
-          заводятся при импорте, чтобы одна организация не двоилась в отчётах.
+          заводятся при импорте, чтобы одна организация не двоилась в отчётах. Свою
+          организацию отметьте как нашу: по этой отметке видно, чьей подписи ждёт документ.
         </p>
       </div>
 
@@ -43,13 +45,21 @@ export default async function CounterpartiesPage() {
                 <th className="table-head">Варианты написания</th>
                 <th className="table-head w-24">Писем</th>
                 <th className="table-head w-28">Документов</th>
+                <th className="table-head w-40">Сторона</th>
                 <th className="table-head w-36">Действие</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {counterparties.map((item) => (
                 <tr key={item.id} className={item.isActive ? "" : "text-gray-400"}>
-                  <td className="table-cell font-medium text-gray-900">{item.name}</td>
+                  <td className="table-cell font-medium text-gray-900">
+                    {item.name}
+                    {item.isInternal && (
+                      <span className="ml-2 rounded bg-gray-900 px-1.5 py-0.5 text-xs font-normal text-white">
+                        наша
+                      </span>
+                    )}
+                  </td>
                   <td className="table-cell">{item.shortName ?? "—"}</td>
                   <td className="table-cell text-xs text-gray-500">
                     {item.aliases.length === 0
@@ -68,6 +78,14 @@ export default async function CounterpartiesPage() {
                     <Link href={`/documents?counterpartyId=${item.id}`} className="hover:underline">
                       {item._count.documents}
                     </Link>
+                  </td>
+                  <td className="table-cell">
+                    <form action={toggleInternalCounterparty}>
+                      <input type="hidden" name="counterpartyId" value={item.id} />
+                      <SubmitButton className="btn-secondary" pendingLabel="…">
+                        {item.isInternal ? "Убрать отметку" : "Сделать нашей"}
+                      </SubmitButton>
+                    </form>
                   </td>
                   <td className="table-cell">
                     <form action={item.isActive ? deleteCounterparty : restoreCounterparty}>

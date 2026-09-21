@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 const WAITING = [
   { value: "", label: "Все" },
   { value: "us", label: "Ждут нашей подписи" },
-  { value: "them", label: "Ждём подпись контрагента" },
+  { value: "them", label: "Ждём другую сторону" },
 ] as const;
 
 export default async function DocumentsPage(props: PageProps<"/documents">) {
@@ -33,16 +33,22 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
   if (kind && DOCUMENT_KINDS.includes(kind as DocumentKind)) where.kind = kind;
   if (status && DOCUMENT_STATUSES.includes(status as DocumentStatus)) where.status = status;
   if (counterpartyId) where.counterpartyId = counterpartyId;
-  // Сторона, связанная со справочником, — это контрагент; остальные стороны
-  // наши. Отсюда главный вопрос по документу: чьей подписи ждём.
+  // Чьей подписи ждём. Наша сторона — организация с флагом «наша» в
+  // справочнике: соседний департамент в матрице подписания такая же внешняя
+  // сторона, как контрагент, и записывать его в «нас» нельзя.
   if (waiting === "us") {
-    where.signatures = { some: { status: "PENDING", counterpartyId: null } };
+    where.signatures = { some: { status: "PENDING", counterparty: { isInternal: true } } };
   }
   if (waiting === "them") {
-    where.signatures = { some: { status: "PENDING", counterpartyId: { not: null } } };
+    where.signatures = {
+      some: {
+        status: "PENDING",
+        OR: [{ counterpartyId: null }, { counterparty: { isInternal: false } }],
+      },
+    };
   }
 
-  const [documents, counterparties] = await Promise.all([
+  const [documents, counterparties, internalCount] = await Promise.all([
     prisma.document.findMany({
       where,
       include: { counterparty: true, owner: true, signatures: true },
@@ -53,6 +59,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.counterparty.count({ where: { isInternal: true } }),
   ]);
 
   const declined = documents.filter((item) => item.status === "DECLINED").length;
@@ -75,6 +82,17 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
           </Link>
         </div>
       </div>
+
+      {internalCount === 0 && (
+        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Чтобы выборка «ждут нашей подписи» работала, отметьте свою организацию
+          в{" "}
+          <Link href="/counterparties" className="underline">
+            справочнике контрагентов
+          </Link>
+          : остальные стороны подписания считаются внешними.
+        </p>
+      )}
 
       {declined > 0 && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">

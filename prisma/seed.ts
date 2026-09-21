@@ -181,13 +181,21 @@ async function seedLegalTrack(
   ownerId: string,
   analystId: string,
 ): Promise<void> {
-  const counterparties = ["ДЖКХ", "АО ОЭК", "ПАО Россети"];
+  // «Наша» организация тоже живёт в справочнике: по этой отметке видно,
+  // ждёт ли документ нашей подписи или чужой. Соседний департамент (ДЖКХ) —
+  // внешняя сторона, хотя и подписывает вместе с нами.
+  const counterparties = [
+    { name: "ДИТ", isInternal: true },
+    { name: "ДЖКХ", isInternal: false },
+    { name: "АО ОЭК", isInternal: false },
+    { name: "ПАО Россети", isInternal: false },
+  ];
   const ids: Record<string, string> = {};
-  for (const name of counterparties) {
+  for (const { name, isInternal } of counterparties) {
     const record = await prisma.counterparty.upsert({
       where: { name },
-      update: {},
-      create: { name },
+      update: { isInternal },
+      create: { name, isInternal },
     });
     ids[name] = record.id;
   }
@@ -258,9 +266,21 @@ async function seedLegalTrack(
       outgoingLetterId: outgoing.id,
       signatures: {
         create: [
-          { party: "ДИТ", status: "SIGNED", signedAt: shift(-20), sortOrder: 0 },
-          { party: "РСО", status: "SIGNED", signedAt: shift(-8), sortOrder: 1 },
-          { party: "ДЖКХ", status: "PENDING", sortOrder: 2 },
+          {
+            party: "ДИТ",
+            counterpartyId: ids["ДИТ"],
+            status: "SIGNED",
+            signedAt: shift(-20),
+            sortOrder: 0,
+          },
+          {
+            party: "РСО",
+            counterpartyId: ids["АО ОЭК"],
+            status: "SIGNED",
+            signedAt: shift(-8),
+            sortOrder: 1,
+          },
+          { party: "ДЖКХ", counterpartyId: ids["ДЖКХ"], status: "PENDING", sortOrder: 2 },
         ],
       },
     },

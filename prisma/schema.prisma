@@ -140,11 +140,15 @@ model ImportBatch {
 
 /// Контрагент: ведомство, организация или подрядчик — адресат писем и сторона документов.
 model Counterparty {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  shortName String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  name       String   @unique
+  shortName  String?
+  isActive   Boolean  @default(true)
+  /// Наша сторона: организация, которая ведёт реестр. Нужна, чтобы отличать
+  /// «ждут нашей подписи» от «ждём другую сторону»: в матрице подписания
+  /// соседний департамент — такая же внешняя сторона, как контрагент.
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   letters    Letter[]
   documents  Document[]

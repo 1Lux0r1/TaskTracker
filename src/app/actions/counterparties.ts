@@ -63,6 +63,29 @@ export async function deleteCounterparty(formData: FormData): Promise<void> {
   revalidatePath("/counterparties");
 }
 
+/**
+ * Отметка «наша организация». Нужна матрице подписания: сторона без отметки
+ * считается внешней, даже если это соседний департамент, — иначе выборка
+ * «ждут нашей подписи» показывает чужие подписи как свои.
+ */
+export async function toggleInternalCounterparty(formData: FormData): Promise<void> {
+  const counterpartyId = String(formData.get("counterpartyId") ?? "");
+  if (!counterpartyId) return;
+
+  const current = await prisma.counterparty.findUnique({
+    where: { id: counterpartyId },
+    select: { isInternal: true },
+  });
+  if (!current) return;
+
+  await prisma.counterparty.update({
+    where: { id: counterpartyId },
+    data: { isInternal: !current.isInternal },
+  });
+  revalidatePath("/counterparties");
+  revalidatePath("/documents");
+}
+
 export async function restoreCounterparty(formData: FormData): Promise<void> {
   const counterpartyId = String(formData.get("counterpartyId") ?? "");
   if (!counterpartyId) return;
