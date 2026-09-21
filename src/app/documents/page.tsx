@@ -51,7 +51,11 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
   const [documents, counterparties, internalCount] = await Promise.all([
     prisma.document.findMany({
       where,
-      include: { counterparty: true, owner: true, signatures: true },
+      include: {
+        counterparty: true,
+        owner: true,
+        signatures: { include: { counterparty: { select: { isInternal: true } } } },
+      },
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
     }),
     prisma.counterparty.findMany({
@@ -190,6 +194,11 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
                   </td>
                   <td className="table-cell">
                     <ProgressBar value={signatureProgress(document.signatures)} />
+                    {pendingParties(document.signatures).length > 0 && (
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        ждём: {pendingParties(document.signatures).join(", ")}
+                      </p>
+                    )}
                   </td>
                   <td className="table-cell tabular-nums">{formatDate(document.dueDate)}</td>
                 </tr>
@@ -200,6 +209,18 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
       )}
     </div>
   );
+}
+
+/**
+ * Кого ждём поимённо. Название стороны полезнее категории: «ждём ДЖКХ» сразу
+ * говорит, к кому идти, а «ждём третью сторону» требует открыть документ.
+ */
+function pendingParties(
+  signatures: { party: string; status: string; counterparty: { isInternal: boolean } | null }[],
+): string[] {
+  return signatures
+    .filter((item) => item.status === "PENDING")
+    .map((item) => (item.counterparty?.isInternal ? `${item.party} (мы)` : item.party));
 }
 
 function single(value: string | string[] | undefined): string | undefined {
