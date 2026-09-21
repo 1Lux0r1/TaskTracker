@@ -37,6 +37,9 @@ CREATE TYPE "PartyStatus" AS ENUM ('NOT_SENT', 'SENT', 'UNDER_REVIEW', 'AGREED',
 -- CreateEnum
 CREATE TYPE "ReportState" AS ENUM ('DRAFT', 'SUBMITTED');
 
+-- CreateEnum
+CREATE TYPE "FilterSubject" AS ENUM ('LETTER', 'TASK', 'DOCUMENT');
+
 -- CreateTable
 CREATE TABLE "Workspace" (
     "id" TEXT NOT NULL,
@@ -445,6 +448,46 @@ CREATE TABLE "ReportSection" (
     CONSTRAINT "ReportSection_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "SavedFilter" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "ownerId" TEXT,
+    "subject" "FilterSubject" NOT NULL,
+    "name" TEXT NOT NULL,
+    "isPinned" BOOLEAN NOT NULL DEFAULT false,
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "definition" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SavedFilter_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NonWorkingDay" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "name" TEXT,
+    "isWorkingDay" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "NonWorkingDay_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MetricSnapshot" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "capturedOn" DATE NOT NULL,
+    "metric" TEXT NOT NULL,
+    "dimension" TEXT,
+    "dimensionValue" TEXT,
+    "value" DECIMAL(14,2) NOT NULL,
+
+    CONSTRAINT "MetricSnapshot_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Workspace_slug_key" ON "Workspace"("slug");
 
@@ -603,6 +646,24 @@ CREATE UNIQUE INDEX "StatusReport_projectId_periodStart_periodEnd_key" ON "Statu
 
 -- CreateIndex
 CREATE INDEX "ReportSection_reportId_position_idx" ON "ReportSection"("reportId", "position");
+
+-- CreateIndex
+CREATE INDEX "SavedFilter_workspaceId_subject_position_idx" ON "SavedFilter"("workspaceId", "subject", "position");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SavedFilter_workspaceId_ownerId_subject_name_key" ON "SavedFilter"("workspaceId", "ownerId", "subject", "name");
+
+-- CreateIndex
+CREATE INDEX "NonWorkingDay_workspaceId_date_idx" ON "NonWorkingDay"("workspaceId", "date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NonWorkingDay_workspaceId_date_key" ON "NonWorkingDay"("workspaceId", "date");
+
+-- CreateIndex
+CREATE INDEX "MetricSnapshot_projectId_metric_capturedOn_idx" ON "MetricSnapshot"("projectId", "metric", "capturedOn");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MetricSnapshot_projectId_capturedOn_metric_dimension_dimens_key" ON "MetricSnapshot"("projectId", "capturedOn", "metric", "dimension", "dimensionValue");
 
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -777,6 +838,18 @@ ALTER TABLE "ReportSection" ADD CONSTRAINT "ReportSection_reportId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "ReportSection" ADD CONSTRAINT "ReportSection_trackId_fkey" FOREIGN KEY ("trackId") REFERENCES "Track"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SavedFilter" ADD CONSTRAINT "SavedFilter_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SavedFilter" ADD CONSTRAINT "SavedFilter_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NonWorkingDay" ADD CONSTRAINT "NonWorkingDay_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MetricSnapshot" ADD CONSTRAINT "MetricSnapshot_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
 -- GIN-индекс по пользовательским полям: Prisma не умеет описать его в schema.prisma.

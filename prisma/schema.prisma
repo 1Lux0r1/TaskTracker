@@ -25,6 +25,8 @@ model Workspace {
   customFieldDefs CustomFieldDef[]
   activityLog     ActivityLog[]
   counterparties  Counterparty[]
+  savedFilters    SavedFilter[]
+  nonWorkingDays  NonWorkingDay[]
 }
 
 model User {
@@ -46,6 +48,7 @@ model User {
   attachments    Attachment[]
   activityLog    ActivityLog[]
   notes          Note[]
+  savedFilters   SavedFilter[]
   ownedLetters   Letter[]        @relation("LetterOwner")
   ownedDocuments DocumentParty[] @relation("DocumentPartyOwner")
   reports        StatusReport[]  @relation("ReportAuthor")
@@ -113,6 +116,7 @@ model Project {
   documents     Document[]
   reports       StatusReport[]
   cpMilestones  CounterpartyMilestone[]
+  metrics       MetricSnapshot[]
 
   @@unique([workspaceId, key])
   @@index([workspaceId, state])
@@ -744,4 +748,84 @@ model ReportSection {
   track  Track?       @relation(fields: [trackId], references: [id], onDelete: SetNull)
 
   @@index([reportId, position])
+}
+
+// ─── Поиск и фильтрация ────────────────────────────────────────────────────
+// Полнотекстовый поиск и поиск по фрагменту номера реализованы в SQL:
+// генерируемые колонки tsvector и индексы pg_trgm живут в отдельной миграции
+// (Prisma не описывает генерируемые колонки). См. docs/search-and-analytics.md.
+
+enum FilterSubject {
+  LETTER
+  TASK
+  DOCUMENT
+}
+
+// Сохранённый набор условий: «мои просроченные письма по ДЖКХ»,
+// «документы, где ждём сторону». Личный или общий на пространство.
+model SavedFilter {
+  id          String @id @default(cuid())
+  workspaceId String
+  ownerId     String? // null — общий фильтр пространства
+
+  subject  FilterSubject
+  name     String
+  isPinned Boolean @default(false) // закреплён в боковой панели
+  position Int     @default(0)
+
+  // Дерево условий: { op: "and", children: [{ field, operator, value }, ...] }
+  // Поля и операторы валидируются zod-схемой в packages/shared, чтобы
+  // сохранённый фильтр нельзя было превратить в произвольный запрос.
+  definition Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner     User?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, ownerId, subject, name])
+  @@index([workspaceId, subject, position])
+}
+
+// ─── Производственный календарь ────────────────────────────────────────────
+// Нерабочие дни нужны, чтобы срок «десять рабочих дней» считался правильно:
+// для официальной переписки сроки исчисляются в рабочих днях.
+
+model NonWorkingDay {
+  id          String @id @default(cuid())
+  workspaceId String
+  date        DateTime @db.Date
+  name        String? // «Новогодние каникулы», «Перенос рабочего дня»
+  isWorkingDay Boolean @default(false) // true — рабочая суббота из переноса
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, date])
+  @@index([workspaceId, date])
+}
+
+// ─── Аналитика ─────────────────────────────────────────────────────────────
+
+// Суточный срез метрики. Текущие значения считаются запросом по живым данным
+// (объёмы это позволяют), а снимки нужны только для графиков динамики:
+// восстановить «сколько было просрочено месяц назад» по журналу изменений
+// дороже и менее надёжно, чем записать значение в тот день.
+model MetricSnapshot {
+  id        String @id @default(cuid())
+  projectId String
+
+  capturedOn DateTime @db.Date
+  metric     String // «letters.overdue», «documents.awaiting_party», «tasks.done»
+
+  // Разрез метрики: контрагент, трек, исполнитель. null — значение по проекту.
+  dimension      String?
+  dimensionValue String?
+
+  value Decimal @db.Decimal(14, 2)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, capturedOn, metric, dimension, dimensionValue])
+  @@index([projectId, metric, capturedOn])
 }
