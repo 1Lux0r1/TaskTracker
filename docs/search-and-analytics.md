@@ -181,3 +181,81 @@ PostgreSQL тоже не связывает части речи («соглас�
   будет выдумкой.
 - Выгрузки в BI-систему. Появится, если аналитика перерастёт встроенные
   панели.
+
+## 5. Приложение: SQL представлений для справки
+
+Схема и миграции из этой ветки в основную кодовую базу не переносятся — за
+основу взято приложение из ветки `claude/project-thread-74ojym`. Но логика двух
+представлений от выбора базы не зависит, поэтому сохранена здесь. Это справка,
+а не миграция.
+
+### calendar_event — все даты проекта в одной выборке
+
+Собирает шесть источников дат. Признак `is_open` показывает, требует ли событие
+внимания: незакрытое письмо, невыполненная задача, недостигнутая веха.
+
+```sql
+CREATE VIEW calendar_event AS
+  SELECT 'letter_due' AS kind, l.id AS entity_id, l."projectId" AS project_id,
+         l."dueDate" AS event_date, 'Срок исполнения: ' || l.number AS title,
+         l."counterpartyId" AS counterparty_id,
+         (l.status NOT IN ('ANSWERED','SIGNED','NOTED','CLOSED_NO_ACTION')) AS is_open
+  FROM "Letter" l WHERE l."dueDate" IS NOT NULL
+
+  UNION ALL
+  SELECT 'task_due', t.id, t."projectId", t."dueDate", t.title, t."counterpartyId",
+         (s.category NOT IN ('DONE','CANCELLED'))
+  FROM "Task" t JOIN "ProjectStatus" s ON s.id = t."statusId"
+  WHERE t."dueDate" IS NOT NULL AND t."deletedAt" IS NULL
+
+  UNION ALL
+  SELECT 'milestone', m.id, m."projectId", m."dueDate", m.name, NULL,
+         (m."reachedAt" IS NULL)
+  FROM "Milestone" m
+
+  UNION ALL
+  SELECT 'integration_stage', cm.id, cm."projectId", cm."plannedDate", cm.stage,
+         cm."counterpartyId", (cm."actualDate" IS NULL)
+  FROM "CounterpartyMilestone" cm WHERE cm."plannedDate" IS NOT NULL;
+  -- плюс плановые даты задач, сроки интеграции документов и границы
+  -- отчётных периодов тем же приёмом
+```
+
+### document_signing_state — состояние подписания по сторонам
+
+Опора и для воронки подписания, и для ответа «на какой стороне документ
+стоит».
+
+```sql
+CREATE VIEW document_signing_state AS
+  SELECT d.id AS document_id, d."projectId" AS project_id, d.kind,
+         d."counterpartyId" AS counterparty_id,
+         count(p.id) AS parties_total,
+         count(p.id) FILTER (WHERE p.status = 'SIGNED')  AS parties_signed,
+         count(p.id) FILTER (WHERE p.status = 'REFUSED') AS parties_refused,
+         count(p.id) FILTER (WHERE p.status IN ('NOT_SENT','SENT','UNDER_REVIEW','AGREED'))
+           AS parties_pending,
+         min(p."sentAt") FILTER (WHERE p.status <> 'NOT_SENT') AS first_sent_at,
+         max(p."signedAt") AS last_signed_at
+  FROM "Document" d
+  LEFT JOIN "DocumentParty" p ON p."documentId" = d.id
+  GROUP BY d.id, d."projectId", d.kind, d."counterpartyId";
+```
+
+В SQLite `FILTER` не поддерживается — заменяется на
+`sum(CASE WHEN … THEN 1 ELSE 0 END)`, остальное переносится дословно.
+
+### Порядок расчёта состояния документа
+
+Не забыть при переносе: явный исход перебивает вывод из сторон.
+
+```
+если stateOverride задан        -> он и есть состояние
+иначе если есть отказ           -> REJECTED
+иначе если подписали все        -> SIGNED
+иначе если подписал кто-то      -> PARTIALLY_SIGNED
+иначе                           -> DRAFT
+```
+
+Перебор нужен потому, что в реестре «ДС к NDA» сторон по колонкам нет, а отказ
+записан только итоговой формулировкой.
