@@ -3,10 +3,12 @@ import { createLetter } from "@/app/actions/letters";
 import { QuickLetterForm, type StickyLetterValues } from "@/components/quick-letter-form";
 import { prisma } from "@/lib/db";
 import { startOfToday, toDateInputValue } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewLetterPage() {
+  await requireUser();
   const [projects, counterparties, members, last] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },

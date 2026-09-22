@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -22,6 +23,7 @@ export async function createLetter(
   state: QuickLetterState | null,
   formData: FormData,
 ): Promise<QuickLetterState> {
+  await requireUser();
   const saved = state?.saved ?? [];
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error), saved };
@@ -53,6 +55,7 @@ export async function updateLetter(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -86,6 +89,7 @@ export async function updateLetter(
 }
 
 export async function deleteLetter(formData: FormData): Promise<void> {
+  await requireUser();
   const letterId = String(formData.get("letterId") ?? "");
   if (!letterId) return;
 

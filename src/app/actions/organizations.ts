@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import {
@@ -12,6 +13,7 @@ export async function createCounterparty(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = counterpartyInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -28,6 +30,7 @@ export async function updateCounterparty(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = counterpartyInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -46,6 +49,7 @@ export async function updateCounterparty(
  * история переписки важнее чистоты справочника.
  */
 export async function deleteCounterparty(formData: FormData): Promise<void> {
+  await requireUser();
   const counterpartyId = String(formData.get("counterpartyId") ?? "");
   if (!counterpartyId) return;
 
@@ -69,6 +73,7 @@ export async function deleteCounterparty(formData: FormData): Promise<void> {
  * «ждут нашей подписи» показывает чужие подписи как свои.
  */
 export async function toggleInternalCounterparty(formData: FormData): Promise<void> {
+  await requireUser();
   const counterpartyId = String(formData.get("counterpartyId") ?? "");
   if (!counterpartyId) return;
 
@@ -87,6 +92,7 @@ export async function toggleInternalCounterparty(formData: FormData): Promise<vo
 }
 
 export async function restoreCounterparty(formData: FormData): Promise<void> {
+  await requireUser();
   const counterpartyId = String(formData.get("counterpartyId") ?? "");
   if (!counterpartyId) return;
 

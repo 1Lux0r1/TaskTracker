@@ -13,6 +13,7 @@ import {
   type DocumentStatus,
 } from "@/lib/domain";
 import type { Prisma } from "@/generated/prisma/client";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ const WAITING = [
 ] as const;
 
 export default async function DocumentsPage(props: PageProps<"/documents">) {
+  await requireUser();
   const params = await props.searchParams;
   const kind = single(params.kind) ?? "";
   const status = single(params.status) ?? "";

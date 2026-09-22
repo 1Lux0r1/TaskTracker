@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -18,6 +19,7 @@ export async function createDocument(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = documentInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -39,6 +41,7 @@ export async function updateDocument(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = documentInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -56,6 +59,7 @@ export async function updateDocument(
 }
 
 export async function deleteDocument(formData: FormData): Promise<void> {
+  await requireUser();
   const documentId = String(formData.get("documentId") ?? "");
   if (!documentId) return;
 
@@ -68,6 +72,7 @@ export async function addSignature(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = signatureInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -94,6 +99,7 @@ export async function addSignature(
 
 /** Отметка подписи одной стороной прямо из карточки документа. */
 export async function setSignatureStatus(formData: FormData): Promise<void> {
+  await requireUser();
   const signatureId = String(formData.get("signatureId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!signatureId || !status) return;
@@ -115,6 +121,7 @@ export async function setSignatureStatus(formData: FormData): Promise<void> {
 }
 
 export async function deleteSignature(formData: FormData): Promise<void> {
+  await requireUser();
   const signatureId = String(formData.get("signatureId") ?? "");
   if (!signatureId) return;
 

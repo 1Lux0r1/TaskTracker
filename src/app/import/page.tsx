@@ -3,10 +3,12 @@ import { ImportForm } from "@/components/import-form";
 import { prisma } from "@/lib/db";
 import { LETTER_COLUMNS, TASK_COLUMNS } from "@/lib/excel/columns";
 import { formatDate } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
+  await requireUser();
   const [projects, history] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },

@@ -4,10 +4,12 @@ import { deleteProject, updateProject } from "@/app/actions/projects";
 import { ProjectForm } from "@/components/project-form";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditProjectPage(props: PageProps<"/projects/[id]/edit">) {
+  await requireUser();
   const { id } = await props.params;
 
   const [project, members] = await Promise.all([

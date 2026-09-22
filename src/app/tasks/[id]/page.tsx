@@ -6,10 +6,12 @@ import { SubmitButton } from "@/components/submit-button";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { formatDate, isOverdue } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
+  await requireUser();
   const { id } = await props.params;
 
   const task = await prisma.task.findUnique({

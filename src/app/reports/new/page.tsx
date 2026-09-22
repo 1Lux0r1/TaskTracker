@@ -2,10 +2,12 @@ import Link from "next/link";
 import { createReport } from "@/app/actions/reports";
 import { ReportForm } from "@/components/report-form";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewReportPage() {
+  await requireUser();
   const [projects, members] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },

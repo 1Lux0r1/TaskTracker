@@ -2,10 +2,12 @@ import Link from "next/link";
 import { createTask } from "@/app/actions/tasks";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
+  await requireUser();
   const params = await props.searchParams;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
 

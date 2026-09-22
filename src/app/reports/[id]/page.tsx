@@ -5,10 +5,12 @@ import { ReportForm } from "@/components/report-form";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { formatDate, formatPeriod } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportPage(props: PageProps<"/reports/[id]">) {
+  await requireUser();
   const { id } = await props.params;
 
   const report = await prisma.weeklyReport.findUnique({

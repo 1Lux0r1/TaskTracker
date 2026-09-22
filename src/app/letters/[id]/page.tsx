@@ -7,10 +7,12 @@ import { NoteFeed } from "@/components/note-feed";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { formatDate, isLetterOpen, startOfToday } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function LetterPage(props: PageProps<"/letters/[id]">) {
+  await requireUser();
   const { id } = await props.params;
 
   const letter = await prisma.letter.findUnique({

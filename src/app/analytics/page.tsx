@@ -12,10 +12,12 @@ import {
   taskTrackLabel,
   type TaskStatus,
 } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage(props: PageProps<"/analytics">) {
+  await requireUser();
   const params = await props.searchParams;
   const projectId = single(params.projectId) ?? "";
 

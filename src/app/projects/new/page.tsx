@@ -2,10 +2,12 @@ import Link from "next/link";
 import { createProject } from "@/app/actions/projects";
 import { ProjectForm } from "@/components/project-form";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewProjectPage() {
+  await requireUser();
   const members = await prisma.member.findMany({
     where: { isActive: true },
     orderBy: { fullName: "asc" },

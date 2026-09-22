@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ProjectStatusBadge } from "@/components/badges";
 import { prisma } from "@/lib/db";
 import { CLOSED_TASK_STATUSES, formatDate } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
+  await requireUser();
   const projects = await prisma.project.findMany({
     include: {
       owner: true,

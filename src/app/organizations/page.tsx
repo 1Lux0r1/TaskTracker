@@ -8,10 +8,12 @@ import {
 import { CounterpartyForm } from "@/components/counterparty-form";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrganizationsPage() {
+  await requireUser();
   const counterparties = await prisma.counterparty.findMany({
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     include: {

@@ -4,10 +4,12 @@ import { ProjectStatusBadge } from "@/components/badges";
 import { TaskTable } from "@/components/task-table";
 import { prisma } from "@/lib/db";
 import { CLOSED_TASK_STATUSES, formatDate, isOverdue, projectStatusLabel } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectPage(props: PageProps<"/projects/[id]">) {
+  await requireUser();
   const { id } = await props.params;
 
   const project = await prisma.project.findUnique({

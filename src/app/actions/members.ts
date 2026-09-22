@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { type ActionResult, formatZodError, memberInputSchema } from "@/lib/validation";
@@ -8,6 +9,7 @@ export async function createMember(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = memberInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -26,6 +28,7 @@ export async function createMember(
  * Вместо этого снимаем флаг активности — из списков выбора он исчезает.
  */
 export async function toggleMemberActive(formData: FormData): Promise<void> {
+  await requireUser();
   const memberId = String(formData.get("memberId") ?? "");
   if (!memberId) return;
 

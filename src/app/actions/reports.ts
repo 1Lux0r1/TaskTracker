@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -10,6 +11,7 @@ export async function createReport(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = weeklyReportInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -36,6 +38,7 @@ export async function updateReport(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = weeklyReportInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -57,6 +60,7 @@ export async function updateReport(
 }
 
 export async function deleteReport(formData: FormData): Promise<void> {
+  await requireUser();
   const reportId = String(formData.get("reportId") ?? "");
   if (!reportId) return;
 
@@ -70,6 +74,7 @@ export async function deleteReport(formData: FormData): Promise<void> {
  * что ушло руководству, и сверить его будет нечем.
  */
 export async function submitReport(formData: FormData): Promise<void> {
+  await requireUser();
   const reportId = String(formData.get("reportId") ?? "");
   if (!reportId) return;
 
@@ -87,6 +92,7 @@ export async function submitReport(formData: FormData): Promise<void> {
  * чтобы руководителю оставалось только вычитать текст, а не писать с нуля.
  */
 export async function generateReport(formData: FormData): Promise<void> {
+  await requireUser();
   const projectId = String(formData.get("projectId") ?? "");
   const weeks = Number(formData.get("weeks") ?? 2);
   if (!projectId) return;

@@ -3,10 +3,12 @@ import { generateReport } from "@/app/actions/reports";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { formatPeriod } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
+  await requireUser();
   const [reports, projects] = await Promise.all([
     prisma.weeklyReport.findMany({
       include: { project: true, author: true },

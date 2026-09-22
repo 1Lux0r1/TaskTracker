@@ -6,6 +6,7 @@ import {
   formatDate,
   startOfToday,
 } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ type CalendarEvent = {
 };
 
 export default async function CalendarPage(props: PageProps<"/calendar">) {
+  await requireUser();
   const params = await props.searchParams;
   const today = startOfToday();
   const month = clampMonth(single(params.month), today);

@@ -18,10 +18,12 @@ import {
   countActiveFilters,
   readLetterFilter,
 } from "@/lib/letter-filters";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function LettersPage(props: PageProps<"/letters">) {
+  await requireUser();
   const params = await props.searchParams;
   const filter = readLetterFilter(params);
   const today = startOfToday();

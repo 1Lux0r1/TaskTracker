@@ -3,10 +3,12 @@ import { ProjectStatusBadge } from "@/components/badges";
 import { TaskTable } from "@/components/task-table";
 import { prisma } from "@/lib/db";
 import { CLOSED_TASK_STATUSES, formatDate, startOfToday } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  await requireUser();
   const today = startOfToday();
   const weekAhead = new Date(today.getTime() + 7 * 86_400_000);
   const openStatuses = { notIn: CLOSED_TASK_STATUSES };

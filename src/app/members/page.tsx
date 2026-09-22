@@ -1,12 +1,17 @@
+import { revokeMemberAccess, setMemberPassword, toggleMemberRole } from "@/app/actions/auth";
 import { createMember, toggleMemberActive } from "@/app/actions/members";
+import { MemberAccess } from "@/components/member-access";
 import { MemberForm } from "@/components/member-form";
 import { SubmitButton } from "@/components/submit-button";
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CLOSED_TASK_STATUSES } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
+  const user = await requireUser();
+  const isAdmin = user.role === "ADMIN";
   const members = await prisma.member.findMany({
     orderBy: [{ isActive: "desc" }, { fullName: "asc" }],
     include: {
@@ -25,7 +30,14 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-gray-900">Сотрудники</h1>
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Сотрудники</h1>
+        <p className="text-sm text-gray-500">
+          {isAdmin
+            ? "Пароль и роль сотрудника заводит администратор. Роли различаются только правом вести пользователей: работать с задачами, письмами и документами могут все."
+            : "Пароли и роли ведёт администратор."}
+        </p>
+      </div>
 
       <MemberForm action={createMember} />
 
@@ -44,6 +56,8 @@ export default async function MembersPage() {
                 <th className="table-head w-36">Открытых задач</th>
                 <th className="table-head w-32">Проектов</th>
                 <th className="table-head w-40">Статус</th>
+                {isAdmin && <th className="table-head w-44">Роль</th>}
+                {isAdmin && <th className="table-head w-56">Доступ</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -62,6 +76,39 @@ export default async function MembersPage() {
                       </SubmitButton>
                     </form>
                   </td>
+                  {isAdmin && (
+                    <td className="table-cell">
+                      <form action={toggleMemberRole} className="flex items-center gap-2">
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <span className={member.role === "ADMIN" ? "font-medium text-gray-900" : ""}>
+                          {member.role === "ADMIN" ? "Администратор" : "Участник"}
+                        </span>
+                        <SubmitButton className="btn-secondary" pendingLabel="…">
+                          {member.role === "ADMIN" ? "Снять" : "Назначить"}
+                        </SubmitButton>
+                      </form>
+                    </td>
+                  )}
+                  {isAdmin && (
+                    <td className="table-cell">
+                      <div className="space-y-1">
+                        <MemberAccess
+                          memberId={member.id}
+                          hasEmail={Boolean(member.email)}
+                          hasPassword={Boolean(member.passwordHash)}
+                          setPassword={setMemberPassword}
+                        />
+                        {member.passwordHash && member.id !== user.id && (
+                          <form action={revokeMemberAccess}>
+                            <input type="hidden" name="memberId" value={member.id} />
+                            <SubmitButton className="btn-secondary" pendingLabel="…">
+                              Закрыть вход
+                            </SubmitButton>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

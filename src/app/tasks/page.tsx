@@ -9,6 +9,7 @@ import {
   type TaskStatus,
 } from "@/lib/domain";
 import type { Prisma } from "@/generated/prisma/client";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ const PRESETS = [
 ] as const;
 
 export default async function TasksPage(props: PageProps<"/tasks">) {
+  await requireUser();
   const params = await props.searchParams;
   const preset = single(params.preset) ?? "open";
   const projectId = single(params.projectId) ?? "";

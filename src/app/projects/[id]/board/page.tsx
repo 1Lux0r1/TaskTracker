@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KanbanBoard } from "@/components/kanban-board";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectBoardPage(props: PageProps<"/projects/[id]/board">) {
+  await requireUser();
   const { id } = await props.params;
 
   const project = await prisma.project.findUnique({

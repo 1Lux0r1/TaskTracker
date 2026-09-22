@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { importFromXlsx, type ImportKind, type ImportReport } from "@/lib/excel/import";
 
@@ -14,6 +15,7 @@ export async function importFromExcel(
   _state: ImportState,
   formData: FormData,
 ): Promise<ImportState> {
+  await requireUser();
   const file = formData.get("file");
   const projectId = String(formData.get("projectId") ?? "");
   const kind = (String(formData.get("kind") ?? "tasks") as ImportKind) satisfies ImportKind;

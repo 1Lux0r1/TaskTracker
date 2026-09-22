@@ -1,5 +1,6 @@
 "use server";
 
+import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
@@ -9,6 +10,7 @@ export async function createTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -39,6 +41,7 @@ export async function updateTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -66,6 +69,7 @@ export async function updateTask(
 
 /** Смена статуса с канбан-доски и из таблицы — одним запросом, без формы. */
 export async function changeTaskStatus(formData: FormData): Promise<void> {
+  await requireUser();
   const taskId = String(formData.get("taskId") ?? "");
   const status = String(formData.get("status") ?? "");
   if (!taskId || !TASK_STATUSES.includes(status as TaskStatus)) return;
@@ -87,6 +91,7 @@ export async function changeTaskStatus(formData: FormData): Promise<void> {
 }
 
 export async function deleteTask(formData: FormData): Promise<void> {
+  await requireUser();
   const taskId = String(formData.get("taskId") ?? "");
   if (!taskId) return;
 
@@ -103,6 +108,7 @@ export async function deleteTask(formData: FormData): Promise<void> {
  * в исходных таблицах пишут «05.05.2026 драфт загружен в ЭДО» задним числом.
  */
 export async function addNote(formData: FormData): Promise<void> {
+  await requireUser();
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return;
 
@@ -131,6 +137,7 @@ export async function addNote(formData: FormData): Promise<void> {
 }
 
 export async function deleteNote(formData: FormData): Promise<void> {
+  await requireUser();
   const noteId = String(formData.get("noteId") ?? "");
   if (!noteId) return;
 

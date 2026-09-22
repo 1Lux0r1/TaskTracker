@@ -1,4 +1,5 @@
 import type ExcelJS from "exceljs";
+import { getCurrentUser } from "@/lib/auth";
 import {
   buildDocumentsWorkbook,
   buildImportTemplate,
@@ -14,6 +15,11 @@ const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
  * Без параметров выгружаются задачи по всем проектам.
  */
 export async function GET(request: Request) {
+  // Выгрузка отдаёт те же данные, что и экраны, поэтому закрыта так же.
+  if (!(await getCurrentUser())) {
+    return new Response("Требуется вход", { status: 401 });
+  }
+
   const url = new URL(request.url);
   const entity = url.searchParams.get("entity") ?? "tasks";
   const projectId = url.searchParams.get("projectId") ?? undefined;

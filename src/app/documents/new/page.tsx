@@ -2,10 +2,12 @@ import Link from "next/link";
 import { createDocument } from "@/app/actions/documents";
 import { DocumentForm } from "@/components/document-form";
 import { prisma } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewDocumentPage() {
+  await requireUser();
   const [projects, counterparties, members, letters] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },

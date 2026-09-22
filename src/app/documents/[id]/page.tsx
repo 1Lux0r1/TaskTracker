@@ -14,10 +14,12 @@ import { SignatureForm } from "@/components/signature-form";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { SIGNATURE_STATUS_LABELS, SIGNATURE_STATUSES, formatDate } from "@/lib/domain";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DocumentPage(props: PageProps<"/documents/[id]">) {
+  await requireUser();
   const { id } = await props.params;
 
   const document = await prisma.document.findUnique({
