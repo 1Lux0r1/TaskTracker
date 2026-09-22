@@ -20,7 +20,7 @@
     --warn-soft:#fdf0d8;
     --bad:#cf3f36;
     --bad-soft:#ffe6e3;
-    --c1:#3b6fd6; --c2:#12916b; --c3:#cf7a08; --c4:#a8449f;
+    --c1:#3b6fd6; --c2:#12916b; --c3:#cf7a08; --c4:#a8449f; --c4-soft:#f7e6f5;
     --seq1:#dce7f8; --seq2:#a8c2ee; --seq3:#5e8bdb; --seq4:#2a4f9e;
     --r:14px; --r-sm:9px;
     --shadow:0 10px 30px rgba(14,20,27,.12), 0 2px 6px rgba(14,20,27,.06);
@@ -36,7 +36,7 @@
       --good:#4fc09c; --good-soft:#12302a;
       --warn:#d7a04a; --warn-soft:#31271a;
       --bad:#e08272; --bad-soft:#35201d;
-      --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8;
+      --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8; --c4-soft:#33203a;
       --seq1:#22344b; --seq2:#31547f; --seq3:#4e7cc0; --seq4:#8fb4f5;
       --shadow:0 10px 30px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
       color-scheme:dark;
@@ -51,7 +51,7 @@
     --good:#4fc09c; --good-soft:#12302a;
     --warn:#d7a04a; --warn-soft:#31271a;
     --bad:#e08272; --bad-soft:#35201d;
-    --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8;
+    --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8; --c4-soft:#33203a;
     --seq1:#22344b; --seq2:#31547f; --seq3:#4e7cc0; --seq4:#8fb4f5;
     --shadow:0 10px 30px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
     color-scheme:dark;
@@ -367,17 +367,42 @@
 
   /* плитки разделов */
   .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:14px}
-  .stat{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);
-    padding:18px 20px;cursor:pointer;transition:border-color .15s,transform .15s}
-  .stat:hover{border-color:var(--brand);transform:translateY(-1px)}
-  .stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-  .stat b{display:block;font-family:"Manrope";font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.03em;color:var(--brand)}
-  .stat span{display:block;font-size:14px;color:var(--ink);margin-top:6px;font-weight:500}
-  .stat em{display:block;font-style:normal;font-size:12.5px;color:var(--ink-3);margin-top:2px}
-  .stat em.on{color:var(--copper);font-weight:600}
-  .stat .go{position:absolute;right:16px;top:16px;font-size:15px;color:var(--ink-3);display:block;margin:0}
-  .stat:hover .go{color:var(--brand)}
-  @media (max-width:760px){ .stats{grid-template-columns:1fr} }
+  .stat{position:relative;overflow:hidden;cursor:pointer;border-radius:var(--r);padding:16px 18px 15px;
+    background:var(--surface);border:1px solid var(--hair);
+    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+  .stat::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(135deg,var(--acc-soft) 0%,transparent 62%);opacity:.9}
+  .stat::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--acc)}
+  .stat > *{position:relative}
+  .stat:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(16,32,64,.45);border-color:var(--acc)}
+  .stat:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .stat.s-task{--acc:var(--brand);--acc-soft:var(--brand-soft)}
+  .stat.s-letter{--acc:var(--copper);--acc-soft:var(--copper-soft)}
+  .stat.s-meet{--acc:var(--c4);--acc-soft:var(--c4-soft)}
+  .stat .sh{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .stat .ic{width:32px;height:32px;border-radius:10px;background:var(--acc);color:#fff;flex:none;
+    display:flex;align-items:center;justify-content:center}
+  :root[data-theme="dark"] .stat .ic{color:#0f1318}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .stat .ic{color:#0f1318}}
+  .stat .ic svg{width:17px;height:17px}
+  .stat .lbl{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .stat .go{margin-left:auto;font-size:16px;color:var(--ink-3);transition:transform .16s ease,color .16s ease}
+  .stat:hover .go{color:var(--acc);transform:translateX(3px)}
+  .stat .sn{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .stat .sn b{font-family:"Manrope";font-size:38px;font-weight:800;line-height:1;letter-spacing:-.035em;color:var(--acc)}
+  .stat .chip{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;
+    background:var(--surface);border:1px solid var(--hair);color:var(--ink-3);white-space:nowrap}
+  .stat .chip.on{background:var(--acc);border-color:transparent;color:#fff}
+  :root[data-theme="dark"] .stat .chip.on{color:#0f1318}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .stat .chip.on{color:#0f1318}}
+  .stat .sbar{display:flex;gap:3px;height:6px;margin:14px 0 9px}
+  .stat .sbar i{border-radius:99px;min-width:6px;background:var(--acc);transition:width .2s ease}
+  .stat .sbar i.r{background:var(--bad)}
+  .stat .sbar i.m{background:var(--hair)}
+  .stat .sfoot{font-size:12.5px;color:var(--ink-3)}
+  .stat .sfoot b{font-weight:600;color:var(--ink-2)}
+  .stat .sfoot b.r{color:var(--bad)}
+  @media (max-width:860px){ .stats{grid-template-columns:1fr} }
 
   /* реестр */
   .reg{border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);overflow:hidden}
@@ -870,11 +895,27 @@
     var newTasks = state.tasks.filter(function(t){ return t.st === "NEW"; });
     var newMail = state.letters.filter(function(l){ return l.st === "NEW"; });
 
-    function stat(total, label, fresh, word, go){
-      return '<div class="stat" data-go="' + go + '" role="button" tabindex="0">' +
-        '<b>' + total + '</b><span>' + label + '</span>' +
-        '<em' + (fresh ? ' class="on"' : "") + '>' + (fresh ? "новых: " + fresh : word) + '</em>' +
-        '<span class="go" aria-hidden="true">→</span></div>';
+    var SICON = {
+      tasks: '<path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10"/>',
+      letters: '<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
+      meetings: '<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'
+    };
+    function stat(cfg){
+      var tot = 0;
+      cfg.segs.forEach(function(x){ tot += x.n; });
+      var bar = tot ? cfg.segs.filter(function(x){ return x.n > 0; }).map(function(x){
+        return '<i class="' + (x.c || "") + '" style="width:' + (x.n / tot * 100).toFixed(1) + '%"></i>';
+      }).join("") : '<i class="m" style="width:100%"></i>';
+      return '<div class="stat s-' + cfg.tone + '" data-go="' + cfg.go + '" role="button" tabindex="0" ' +
+        'aria-label="' + esc(cfg.label + ": " + cfg.total) + '">' +
+        '<div class="sh"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + SICON[cfg.go] + '</svg></span>' +
+        '<span class="lbl">' + cfg.label + '</span>' +
+        '<span class="go" aria-hidden="true">→</span></div>' +
+        '<div class="sn"><b>' + cfg.total + '</b>' +
+        '<span class="chip' + (cfg.fresh ? " on" : "") + '">' + (cfg.fresh ? cfg.freshWord : cfg.emptyWord) + '</span></div>' +
+        '<div class="sbar" aria-hidden="true">' + bar + '</div>' +
+        '<div class="sfoot">' + cfg.foot + '</div></div>';
     }
     function block(title, sub, items, go){
       return '<div class="card"><h3>' + title + '</h3><div class="sub">' + sub + '</div>' +
@@ -909,10 +950,29 @@
       plural(needAnswer.length, ["письмо ждёт","письма ждут","писем ждут"]) + ' ответа.</p></div>' +
       '<button class="btn primary" type="button" data-new="task">Новая задача</button></div>';
 
+    var inWork = state.tasks.filter(function(t){ return t.st === "IN_PROGRESS"; });
+    var doneT = state.tasks.filter(taskDone);
+    var lateMail = state.letters.filter(function(l){ return !letterDone(l) && l.due && days(l.due) < 0; });
+    var openMail = state.letters.filter(function(l){ return !letterDone(l); });
+    var nextMeet = meets[0];
     var stats = '<div class="stats">' +
-      stat(state.tasks.length, "Задачи", newTasks.length, "новых нет", "tasks") +
-      stat(state.letters.length, "Письма ЭДО", newMail.length, "новых нет", "letters") +
-      stat(state.meetings.length, "Встречи", meets.length, "впереди нет", "meetings") +
+      stat({ go:"tasks", tone:"task", label:"Задачи", total:state.tasks.length,
+        fresh:newTasks.length, freshWord:"новых: " + newTasks.length, emptyWord:"новых нет",
+        segs:[{n:overdue.length, c:"r"}, {n:state.tasks.length - overdue.length - doneT.length},
+              {n:doneT.length, c:"m"}],
+        foot:'в работе <b>' + inWork.length + '</b> · просрочено <b class="r">' + overdue.length +
+             '</b> · готово <b>' + doneT.length + '</b>' }) +
+      stat({ go:"letters", tone:"letter", label:"Письма ЭДО", total:state.letters.length,
+        fresh:newMail.length, freshWord:"новых: " + newMail.length, emptyWord:"новых нет",
+        segs:[{n:lateMail.length, c:"r"}, {n:openMail.length - lateMail.length},
+              {n:state.letters.length - openMail.length, c:"m"}],
+        foot:'ждут ответа <b>' + needAnswer.length + '</b> · просрочено <b class="r">' + lateMail.length +
+             '</b> · закрыто <b>' + (state.letters.length - openMail.length) + '</b>' }) +
+      stat({ go:"meetings", tone:"meet", label:"Встречи", total:state.meetings.length,
+        fresh:meets.length, freshWord:"впереди: " + meets.length, emptyWord:"впереди нет",
+        segs:[{n:meets.length}, {n:state.meetings.length - meets.length, c:"m"}],
+        foot:nextMeet ? 'ближайшая <b>' + fmt(nextMeet.date) + ", " + esc(nextMeet.time) + '</b> · ' + esc(nextMeet.place)
+                      : "все встречи прошли" }) +
       '</div>';
 
     var cards = [
