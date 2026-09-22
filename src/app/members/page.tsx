@@ -28,6 +28,21 @@ export default async function MembersPage() {
     openCounts.map((row) => [row.assigneeId as string, row._count._all]),
   );
 
+  const activeAdmins = members.filter((item) => item.role === "ADMIN" && item.isActive).length;
+
+  /**
+   * Архив закрывает вход, поэтому кнопка есть только у администратора и никогда
+   * не появляется на себе и на последнем администраторе: систему нельзя
+   * оставить без того, кто вернёт доступ.
+   */
+  function canArchive(member: { id: string; role: string; isActive: boolean }): boolean {
+    if (!isAdmin) return false;
+    if (!member.isActive) return true;
+    if (member.id === user.id) return false;
+    if (member.role === "ADMIN" && activeAdmins <= 1) return false;
+    return true;
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -69,12 +84,18 @@ export default async function MembersPage() {
                   <td className="table-cell tabular-nums">{openByMember.get(member.id) ?? 0}</td>
                   <td className="table-cell tabular-nums">{member._count.ownedProjects}</td>
                   <td className="table-cell">
-                    <form action={toggleMemberActive}>
-                      <input type="hidden" name="memberId" value={member.id} />
-                      <SubmitButton className="btn-secondary" pendingLabel="…">
-                        {member.isActive ? "В архив" : "Вернуть"}
-                      </SubmitButton>
-                    </form>
+                    {canArchive(member) ? (
+                      <form action={toggleMemberActive}>
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <SubmitButton className="btn-secondary" pendingLabel="…">
+                          {member.isActive ? "В архив" : "Вернуть"}
+                        </SubmitButton>
+                      </form>
+                    ) : (
+                      <span className="text-xs text-gray-400">
+                        {member.isActive ? "Активен" : "В архиве"}
+                      </span>
+                    )}
                   </td>
                   {isAdmin && (
                     <td className="table-cell">

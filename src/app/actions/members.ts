@@ -1,6 +1,6 @@
 "use server";
 
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { type ActionResult, formatZodError, memberInputSchema } from "@/lib/validation";
@@ -26,18 +26,35 @@ export async function createMember(
 /**
  * Сотрудников не удаляем: на них ссылаются закрытые задачи и история проектов.
  * Вместо этого снимаем флаг активности — из списков выбора он исчезает.
+ *
+ * Архив закрывает и вход, поэтому право на кнопку есть только у администратора,
+ * себя отправить в архив нельзя, и последний активный администратор остаётся:
+ * иначе некому будет вернуть доступ.
  */
 export async function toggleMemberActive(formData: FormData): Promise<void> {
-  await requireUser();
+  const admin = await requireAdmin();
   const memberId = String(formData.get("memberId") ?? "");
   if (!memberId) return;
 
   const member = await prisma.member.findUnique({ where: { id: memberId } });
   if (!member) return;
 
+  const goingToArchive = member.isActive;
+  if (goingToArchive) {
+    if (member.id === admin.id) return;
+    if (member.role === "ADMIN") {
+      const admins = await prisma.member.count({ where: { role: "ADMIN", isActive: true } });
+      if (admins <= 1) return;
+    }
+  }
+
   await prisma.member.update({
     where: { id: memberId },
     data: { isActive: !member.isActive },
   });
+  // В архиве человек войти не может, поэтому и открытые сессии ему не нужны.
+  if (goingToArchive) {
+    await prisma.session.deleteMany({ where: { memberId } });
+  }
   revalidatePath("/members");
 }
