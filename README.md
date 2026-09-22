@@ -93,7 +93,7 @@
 ## Запуск
 
 ```bash
-npm install               # нужен Node 22 или новее
+npm install               # нужен Node 22 или новее; клиент Prisma создаётся сам
 cp .env.example .env      # при необходимости поменяйте путь к базе
 npm run db:deploy         # применить миграции
 npm run db:seed           # демо-данные: 2 проекта, 7 задач, 4 сотрудника
@@ -120,6 +120,7 @@ npm run dev               # http://localhost:3000
 | `npm run lint` / `npm run typecheck` | проверки кода |
 | `npm run db:migrate` | создать и применить миграцию после правки схемы |
 | `npm run db:seed` | демонстрационные данные |
+| `npm run db:generate` | создать клиент Prisma из схемы (запускается сам после установки) |
 | `npm run auth:admin` | завести администратора или сменить ему пароль |
 | `npm run db:studio` | просмотр базы в Prisma Studio |
 | `npm run db:reset` | пересоздать базу с нуля |
