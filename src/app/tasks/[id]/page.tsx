@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteTask, updateTask } from "@/app/actions/tasks";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
+import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
 import { SubmitButton } from "@/components/submit-button";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
+import { formatFileSize } from "@/lib/attachments";
 import { artifactKindLabel, formatDate, isLinkArtifact, isOverdue } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
 
@@ -20,6 +23,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       project: true,
       children: { include: { assignee: true }, orderBy: { number: "asc" } },
       artifacts: { orderBy: { sortOrder: "asc" } },
+      attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
     },
   });
@@ -152,6 +156,19 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
           </ul>
         </section>
       )}
+
+      <AttachmentPanel
+        attachments={task.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          size: formatFileSize(attachment.size),
+          uploadedBy: attachment.uploadedBy?.fullName ?? null,
+          createdAt: formatDate(attachment.createdAt),
+        }))}
+        owner={{ field: "taskId", id: task.id }}
+        upload={uploadAttachment}
+        remove={deleteAttachment}
+      />
 
       <NoteFeed notes={task.notes} members={members} taskId={task.id} />
 

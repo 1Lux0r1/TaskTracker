@@ -35,6 +35,7 @@ model Member {
   ownedDocuments Document[]     @relation("DocumentOwner")
   reports        WeeklyReport[] @relation("ReportAuthor")
   sessions       Session[]
+  attachments    Attachment[]   @relation("AttachmentAuthor")
 
   @@index([fullName])
 }
@@ -141,9 +142,10 @@ model Task {
   letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
   assignee Member? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Task[]         @relation("Subtasks")
-  notes     Note[]
-  artifacts TaskArtifact[]
+  children    Task[]         @relation("Subtasks")
+  notes       Note[]
+  artifacts   TaskArtifact[]
+  attachments Attachment[]
 
   @@unique([projectId, number])
   @@unique([projectId, externalKey])
@@ -171,6 +173,32 @@ model TaskArtifact {
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId, sortOrder])
+}
+
+/// Вложение — файл рядом с задачей, письмом или документом. Сам файл лежит на
+/// диске (каталог задаётся переменной ATTACHMENTS_DIR), в базе только карточка.
+model Attachment {
+  id         String   @id @default(cuid())
+  fileName   String
+  mimeType   String?
+  size       Int
+  /// Имя файла в каталоге хранения.
+  storageKey String   @unique
+  uploadedById String?
+  createdAt  DateTime @default(now())
+
+  taskId     String?
+  letterId   String?
+  documentId String?
+
+  uploadedBy Member?   @relation("AttachmentAuthor", fields: [uploadedById], references: [id], onDelete: SetNull)
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  letter     Letter?   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([letterId])
+  @@index([documentId])
 }
 
 /// Датированная запись хроники. В исходных таблицах колонка «Статус» содержит
@@ -298,6 +326,7 @@ model Letter {
   responseTo        Letter?       @relation("LetterThread", fields: [responseToId], references: [id], onDelete: SetNull)
   responses         Letter[]      @relation("LetterThread")
   tasks             Task[]
+  attachments       Attachment[]
   sentDocuments     Document[]    @relation("DocumentOutgoingLetter")
   receivedDocuments Document[]    @relation("DocumentIncomingLetter")
   notes             Note[]
@@ -337,6 +366,7 @@ model Document {
   incomingLetter Letter?             @relation("DocumentIncomingLetter", fields: [incomingLetterId], references: [id], onDelete: SetNull)
   signatures     DocumentSignature[]
   notes          Note[]
+  attachments    Attachment[]
 
   @@index([status])
   @@index([dueDate])

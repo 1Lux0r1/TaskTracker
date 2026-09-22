@@ -9,9 +9,12 @@ import {
 } from "@/app/actions/documents";
 import { DocumentKindBadge, DocumentStatusBadge, SignatureStatusBadge } from "@/components/letter-badges";
 import { DocumentForm } from "@/components/document-form";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
+import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
 import { SignatureForm } from "@/components/signature-form";
 import { SubmitButton } from "@/components/submit-button";
+import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { SIGNATURE_STATUS_LABELS, SIGNATURE_STATUSES, formatDate } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -27,6 +30,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
     include: {
       signatures: { include: { counterparty: true }, orderBy: { sortOrder: "asc" } },
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
+      attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       outgoingLetter: true,
       incomingLetter: true,
     },
@@ -182,6 +186,19 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
           </ul>
         </section>
       )}
+
+      <AttachmentPanel
+        attachments={document.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          size: formatFileSize(attachment.size),
+          uploadedBy: attachment.uploadedBy?.fullName ?? null,
+          createdAt: formatDate(attachment.createdAt),
+        }))}
+        owner={{ field: "documentId", id: document.id }}
+        upload={uploadAttachment}
+        remove={deleteAttachment}
+      />
 
       <NoteFeed notes={document.notes} members={members} documentId={document.id} />
 

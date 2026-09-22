@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { deleteLetter, updateLetter } from "@/app/actions/letters";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { LetterForm } from "@/components/letter-form";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
+import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
 import { SubmitButton } from "@/components/submit-button";
+import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { formatDate, isLetterOpen, startOfToday } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -19,6 +22,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
     where: { id },
     include: {
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
+      attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       tasks: { include: { assignee: true }, orderBy: { number: "asc" } },
       responses: true,
       responseTo: true,
@@ -99,6 +103,19 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
           </ul>
         </section>
       )}
+
+      <AttachmentPanel
+        attachments={letter.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          size: formatFileSize(attachment.size),
+          uploadedBy: attachment.uploadedBy?.fullName ?? null,
+          createdAt: formatDate(attachment.createdAt),
+        }))}
+        owner={{ field: "letterId", id: letter.id }}
+        upload={uploadAttachment}
+        remove={deleteAttachment}
+      />
 
       <NoteFeed notes={letter.notes} members={members} letterId={letter.id} />
 
