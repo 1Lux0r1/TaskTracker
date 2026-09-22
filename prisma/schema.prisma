@@ -1,0 +1,352 @@
+// Схема данных TaskTracker.
+// Провайдер по умолчанию — sqlite (запуск без внешней БД).
+// Для продакшена меняется на postgresql вместе с драйвер-адаптером в src/lib/db.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Сотрудник: исполнитель задач и руководитель проектов.
+/// Он же пользователь системы, если ему заведён пароль.
+model Member {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String?  @unique
+  position  String?
+  isActive  Boolean  @default(true)
+  /// Роль в системе: ADMIN или MEMBER. Права на данные одинаковые,
+  /// администратор дополнительно ведёт пользователей и доступы.
+  role      String   @default("MEMBER")
+  /// Пароль для входа: scrypt-хеш. Пусто — сотрудник в справочнике, но не входит.
+  passwordHash String?
+  lastLoginAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownedProjects  Project[]      @relation("ProjectOwner")
+  assignedTasks  Task[]         @relation("TaskAssignee")
+  notes          Note[]
+  ownedLetters   Letter[]       @relation("LetterOwner")
+  ownedDocuments Document[]     @relation("DocumentOwner")
+  reports        WeeklyReport[] @relation("ReportAuthor")
+  sessions       Session[]
+
+  @@index([fullName])
+}
+
+/// Сессия входа. В браузере лежит случайный токен, в базе — только его хеш,
+/// поэтому утечка базы не даёт войти под чужим именем.
+model Session {
+  id        String   @id @default(cuid())
+  memberId  String
+  tokenHash String   @unique
+  userAgent String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([expiresAt])
+}
+
+/// Проект — верхний уровень, аналог отдельного листа в Excel.
+model Project {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  description String?
+  status      String    @default("ACTIVE")
+  startDate   DateTime?
+  dueDate     DateTime?
+  ownerId     String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  owner      Member?                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  tasks      Task[]
+  letters    Letter[]
+  documents  Document[]
+  reports    WeeklyReport[]
+  milestones CounterpartyMilestone[]
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+/// Задача — строка таблицы. Поддерживает вложенность (подзадачи).
+model Task {
+  id               String    @id @default(cuid())
+  projectId        String
+  number           Int
+  title            String
+  description      String?
+  status           String    @default("TODO")
+  priority         String    @default("MEDIUM")
+  assigneeId       String?
+  parentId         String?
+  startDate        DateTime?
+  dueDate          DateTime?
+  completedAt      DateTime?
+  estimateHours    Float?
+  spentHours       Float?
+  progress         Int       @default(0)
+  sortOrder        Int       @default(0)
+  externalKey      String?
+  /// Трек работ: производственный, внутренний, внешний или юридический.
+  track            String    @default("PRODUCTION")
+  /// Ответственный вне компании — в исходных таблицах это отдельная колонка.
+  externalAssignee String?
+  /// Ключ задачи во внешнем трекере (Jira и подобные): проставляется руками.
+  externalTaskKey  String?
+  /// Ход работы: в исходных таблицах статус ведётся свободным текстом с датами.
+  progressNote     String?
+  /// Ссылки на результат: ЭДО, документы, дашборды.
+  resultLink       String?
+  letterId         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  assignee Member? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children Task[]  @relation("Subtasks")
+  notes    Note[]
+
+  @@unique([projectId, number])
+  @@unique([projectId, externalKey])
+  @@index([status])
+  @@index([dueDate])
+  @@index([assigneeId])
+  @@index([track])
+}
+
+/// Датированная запись хроники. В исходных таблицах колонка «Статус» содержит
+/// не состояние, а хронику с датами — здесь она живёт без потерь.
+/// Дата события отдельно от даты внесения: событие было пятого, записали седьмого.
+model Note {
+  id         String   @id @default(cuid())
+  taskId     String?
+  letterId   String?
+  documentId String?
+  authorId   String?
+  body       String
+  occurredOn DateTime
+  createdAt  DateTime @default(now())
+
+  task     Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  letter   Letter?   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author   Member?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, occurredOn])
+  @@index([letterId, occurredOn])
+  @@index([documentId, occurredOn])
+}
+
+/// Журнал импортов из Excel: что и когда загрузили, сколько строк принято.
+model ImportBatch {
+  id          String   @id @default(cuid())
+  fileName    String
+  projectId   String?
+  rowsTotal   Int      @default(0)
+  rowsCreated Int      @default(0)
+  rowsUpdated Int      @default(0)
+  rowsSkipped Int      @default(0)
+  errorsJson  String?
+  createdAt   DateTime @default(now())
+}
+
+/// Контрагент: ведомство, организация или подрядчик — адресат писем и сторона документов.
+model Counterparty {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  shortName  String?
+  isActive   Boolean  @default(true)
+  /// Наша сторона: организация, которая ведёт реестр. Нужна, чтобы отличать
+  /// «ждут нашей подписи» от «ждём другую сторону»: в матрице подписания
+  /// соседний департамент — такая же внешняя сторона, как контрагент.
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  letters    Letter[]
+  documents  Document[]
+  signatures DocumentSignature[]
+  aliases    CounterpartyAlias[]
+  milestones CounterpartyMilestone[]
+
+  @@index([name])
+}
+
+/// Варианты написания организации из таблиц и писем. Нужны, чтобы импорт
+/// схлопывал «ПАО "Россети Московский Регион"» и «ПАО Россети МР» в одну запись,
+/// иначе отчёт по контрагенту не собрать.
+model CounterpartyAlias {
+  id             String @id @default(cuid())
+  counterpartyId String
+  alias          String @unique
+
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+
+  @@index([counterpartyId])
+}
+
+/// График интеграций: матрица «контрагент x этап». Строка исходного реестра —
+/// организация, колонка — этап со своим плановым и фактическим сроком.
+model CounterpartyMilestone {
+  id             String    @id @default(cuid())
+  projectId      String
+  counterpartyId String
+  stage          String
+  sortOrder      Int       @default(0)
+  plannedDate    DateTime?
+  actualDate     DateTime?
+  comment        String?
+
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty Counterparty @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, counterpartyId, stage])
+  @@index([projectId, plannedDate])
+}
+
+/// Письмо электронного документооборота — входящее или исходящее.
+model Letter {
+  id              String    @id @default(cuid())
+  projectId       String
+  number          String
+  direction       String    @default("INCOMING")
+  date            DateTime?
+  subject         String
+  url             String?
+  counterpartyId  String?
+  ownerId         String?
+  dueDate         DateTime?
+  status          String    @default("IN_PROGRESS")
+  /// Исходный текст статуса из таблицы: он несёт детали, которых нет в справочнике.
+  statusNote      String?
+  /// Реквизиты ответа: номер и дата письма, которым закрыли это.
+  responseRef     String?
+  /// Ключ связанной задачи во внешнем трекере (Jira и подобные).
+  externalTaskKey String?
+  comment         String?
+  closedAt        DateTime?
+  /// Письмо, ответом на которое является это: реестр ведёт переписку цепочками.
+  responseToId    String?
+  /// Строчными буквами: номер, тема, контрагент и комментарии одной строкой.
+  /// SQLite не умеет регистронезависимый поиск по кириллице, поэтому
+  /// поисковая строка готовится при записи.
+  searchIndex     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty      Counterparty? @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  owner             Member?       @relation("LetterOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  responseTo        Letter?       @relation("LetterThread", fields: [responseToId], references: [id], onDelete: SetNull)
+  responses         Letter[]      @relation("LetterThread")
+  tasks             Task[]
+  sentDocuments     Document[]    @relation("DocumentOutgoingLetter")
+  receivedDocuments Document[]    @relation("DocumentIncomingLetter")
+  notes             Note[]
+
+  @@unique([projectId, number, direction])
+  @@index([status])
+  @@index([dueDate])
+  @@index([direction])
+  @@index([searchIndex])
+}
+
+/// Юридически значимый документ: регламент, допсоглашение, контракт.
+/// Подписание у каждой стороны ведётся отдельной записью DocumentSignature.
+model Document {
+  id               String    @id @default(cuid())
+  projectId        String
+  kind             String    @default("REGULATION")
+  title            String
+  counterpartyId   String?
+  ownerId          String?
+  status           String    @default("DRAFT")
+  /// Итоговая формулировка из таблицы — там она развёрнутая, с причинами отказа.
+  statusNote       String?
+  /// Что нужно сделать по документу прямо сейчас.
+  nextAction       String?
+  dueDate          DateTime?
+  signedAt         DateTime?
+  outgoingLetterId String?
+  incomingLetterId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  counterparty   Counterparty?       @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+  owner          Member?             @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  outgoingLetter Letter?             @relation("DocumentOutgoingLetter", fields: [outgoingLetterId], references: [id], onDelete: SetNull)
+  incomingLetter Letter?             @relation("DocumentIncomingLetter", fields: [incomingLetterId], references: [id], onDelete: SetNull)
+  signatures     DocumentSignature[]
+  notes          Note[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([kind])
+}
+
+/// Подпись одной стороны под документом. Документ согласуют несколько сторон,
+/// и «подписан» он только тогда, когда подписали все обязательные.
+model DocumentSignature {
+  id             String    @id @default(cuid())
+  documentId     String
+  /// Название стороны: своя организация или контрагент.
+  party          String
+  counterpartyId String?
+  status         String    @default("PENDING")
+  /// Обязательна при отказе: без причины отказ нечем отработать.
+  refusalReason  String?
+  sentAt         DateTime?
+  respondedAt    DateTime?
+  signedAt       DateTime?
+  /// Письмо-основание: чем документ ушёл стороне или чем она ответила.
+  basisLetterId  String?
+  url            String?
+  note           String?
+  sortOrder      Int       @default(0)
+
+  document     Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  counterparty Counterparty? @relation(fields: [counterpartyId], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, party])
+  @@index([status])
+}
+
+/// Отчёт руководству за период: что сделано, что дальше, блокеры и решения.
+model WeeklyReport {
+  id          String    @id @default(cuid())
+  projectId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  releaseInfo String?
+  done        String?
+  planned     String?
+  blockers    String?
+  solutions   String?
+  /// DRAFT правится, SUBMITTED заморожен: иначе отправленный отчёт со временем
+  /// покажет не то, что ушло руководству, и сверить его будет нечем.
+  state       String    @default("DRAFT")
+  submittedAt DateTime?
+  authorId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  Member? @relation("ReportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, periodStart, periodEnd])
+  @@index([periodEnd])
+}
