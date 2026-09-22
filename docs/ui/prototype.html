@@ -1,0 +1,1883 @@
+<title>Прототип TaskTracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f5f6f9;
+    --surface:#ffffff;
+    --surface-2:#f0f2f6;
+    --ink:#0e141b;
+    --ink-2:#556472;
+    --ink-3:#8b98a5;
+    --hair:#e4e8ee;
+    --hair-2:#d2d9e2;
+    --brand:#24508f;
+    --brand-soft:#e7eefa;
+    --copper:#b4622a;
+    --copper-soft:#fbeee3;
+    --good:#0f7a5f;
+    --good-soft:#e2f2ec;
+    --warn:#a3671a;
+    --warn-soft:#fbf0dd;
+    --bad:#b23a2f;
+    --bad-soft:#fce9e6;
+    --c1:#3b6fd6; --c2:#12916b; --c3:#cf7a08; --c4:#a8449f;
+    --seq1:#dce7f8; --seq2:#a8c2ee; --seq3:#5e8bdb; --seq4:#2a4f9e;
+    --r:14px; --r-sm:9px;
+    --shadow:0 10px 30px rgba(14,20,27,.12), 0 2px 6px rgba(14,20,27,.06);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#0f1318; --surface:#181d24; --surface-2:#1f262e;
+      --ink:#e9eef3; --ink-2:#a3b0bd; --ink-3:#77838f;
+      --hair:#28303a; --hair-2:#38424e;
+      --brand:#84aae4; --brand-soft:#1c2b41;
+      --copper:#dd9158; --copper-soft:#33241a;
+      --good:#4fc09c; --good-soft:#12302a;
+      --warn:#d7a04a; --warn-soft:#31271a;
+      --bad:#e08272; --bad-soft:#35201d;
+      --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8;
+      --seq1:#22344b; --seq2:#31547f; --seq3:#4e7cc0; --seq4:#8fb4f5;
+      --shadow:0 10px 30px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0f1318; --surface:#181d24; --surface-2:#1f262e;
+    --ink:#e9eef3; --ink-2:#a3b0bd; --ink-3:#77838f;
+    --hair:#28303a; --hair-2:#38424e;
+    --brand:#84aae4; --brand-soft:#1c2b41;
+    --copper:#dd9158; --copper-soft:#33241a;
+    --good:#4fc09c; --good-soft:#12302a;
+    --warn:#d7a04a; --warn-soft:#31271a;
+    --bad:#e08272; --bad-soft:#35201d;
+    --c1:#5b8ae8; --c2:#2aa87d; --c3:#cb830f; --c4:#c05cb8;
+    --seq1:#22344b; --seq2:#31547f; --seq3:#4e7cc0; --seq4:#8fb4f5;
+    --shadow:0 10px 30px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+    font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:"Manrope",system-ui,sans-serif;margin:0;text-wrap:balance;letter-spacing:-.015em}
+  h1{font-size:25px;font-weight:700;line-height:1.2}
+  h2{font-size:18px;font-weight:600}
+  h3{font-size:15.5px;font-weight:600}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .muted{color:var(--ink-2)}
+  .dim{color:var(--ink-3)}
+
+  /* ---------- оболочка ---------- */
+  .shell{display:grid;grid-template-columns:230px 1fr;min-height:100%}
+  .rail{
+    background:var(--surface);border-right:1px solid var(--hair);
+    padding:20px 14px 28px;display:flex;flex-direction:column;gap:22px;
+    position:sticky;top:env(safe-area-inset-top,0px);align-self:start;max-height:100vh;overflow-y:auto;
+  }
+  .logo{display:flex;align-items:center;gap:9px;padding:0 6px}
+  .logo i{
+    width:26px;height:26px;border-radius:8px;background:var(--brand);display:grid;place-items:center;
+    color:#fff;font-family:"Manrope";font-weight:700;font-size:13px;font-style:normal;flex:none;
+  }
+  :root[data-theme="dark"] .logo i{color:#0f1318}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .logo i{color:#0f1318}}
+  .logo b{font-family:"Manrope";font-weight:700;font-size:16px;letter-spacing:-.02em}
+  .proj-switch{
+    border:1px solid var(--hair);border-radius:var(--r-sm);padding:9px 11px;background:var(--surface-2);cursor:pointer;
+  }
+  .proj-switch b{display:block;font-family:"Manrope";font-size:13.5px;font-weight:600;line-height:1.25}
+  .proj-switch span{font-size:11.5px;color:var(--ink-3)}
+  .navgrp{display:flex;flex-direction:column;gap:2px}
+  .navgrp .cap{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);padding:0 8px 6px;font-weight:600}
+  .navgrp button{
+    all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:8px;
+    color:var(--ink-2);font-size:14px;
+  }
+  .navgrp button:hover{background:var(--surface-2);color:var(--ink)}
+  .navgrp button[aria-current="true"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .navgrp button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  .navgrp .ico{width:17px;text-align:center;font-size:14px;opacity:.85;flex:none}
+  .navgrp .n{margin-left:auto;font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+  .navgrp .n.hot{color:var(--bad);font-weight:600}
+
+  .col{display:flex;flex-direction:column;min-width:0}
+  .topbar{
+    position:sticky;top:0;z-index:12;background:color-mix(in srgb, var(--ground) 86%, transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);
+    padding:10px 26px;display:flex;align-items:center;gap:14px;
+    padding-top:calc(10px + env(safe-area-inset-top,0px));
+  }
+  .omni{
+    flex:1;max-width:520px;display:flex;align-items:center;gap:9px;cursor:text;
+    background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:7px 12px;color:var(--ink-3);font-size:14px;
+  }
+  .omni:hover{border-color:var(--hair-2)}
+  .omni kbd{
+    margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;border:1px solid var(--hair);
+    border-radius:5px;padding:1px 5px;color:var(--ink-3);background:var(--surface-2);
+  }
+  .me{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink-2)}
+
+  main{padding:24px 26px 56px;max-width:1240px;width:100%}
+  .phead{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+  .phead p{margin:5px 0 0;color:var(--ink-2);font-size:14px;max-width:62ch}
+
+  /* ---------- элементы ---------- */
+  .btn{
+    all:unset;cursor:pointer;font-size:13.5px;font-weight:500;padding:8px 14px;border-radius:9px;
+    border:1px solid var(--hair-2);color:var(--ink);background:var(--surface);white-space:nowrap;
+  }
+  .btn:hover{background:var(--surface-2)}
+  .btn:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  :root[data-theme="dark"] .btn.primary{color:#0f1318}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0f1318}}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+  .btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+  .btn.sm{padding:4px 10px;font-size:12.5px;border-radius:7px}
+  .btn.danger{color:var(--bad);border-color:var(--bad)}
+
+  .seg{display:inline-flex;background:var(--surface-2);border-radius:9px;padding:3px;gap:2px}
+  .seg button{all:unset;cursor:pointer;padding:5px 13px;border-radius:7px;font-size:13.5px;color:var(--ink-2)}
+  .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(14,20,27,.08)}
+  .seg button:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+
+  .filters{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .fchip{
+    all:unset;cursor:pointer;font-size:13px;padding:5px 12px;border-radius:99px;
+    border:1px solid var(--hair);color:var(--ink-2);background:var(--surface);
+  }
+  .fchip:hover{border-color:var(--hair-2);color:var(--ink)}
+  .fchip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground);font-weight:500}
+  .fchip:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  .fchip .b{opacity:.6;margin-left:5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+
+  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:18px}
+  .card h3{margin-bottom:3px}
+  .card .sub{font-size:13px;color:var(--ink-3);margin-bottom:14px}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:2px 9px;border-radius:99px;white-space:nowrap;font-weight:500}
+  .pill i{width:6px;height:6px;border-radius:50%;display:block;flex:none;background:currentColor}
+  .p-neutral{background:var(--surface-2);color:var(--ink-2)}
+  .p-brand{background:var(--brand-soft);color:var(--brand)}
+  .p-good{background:var(--good-soft);color:var(--good)}
+  .p-warn{background:var(--warn-soft);color:var(--warn)}
+  .p-bad{background:var(--bad-soft);color:var(--bad)}
+  .p-copper{background:var(--copper-soft);color:var(--copper)}
+
+  .ava{
+    width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-size:10.5px;font-weight:600;background:var(--brand-soft);color:var(--brand);
+    font-family:"Manrope";letter-spacing:.02em;
+  }
+  .ava.sm{width:21px;height:21px;font-size:9px}
+  .who{display:inline-flex;align-items:center;gap:7px;font-size:13.5px}
+
+  /* строки-списки вместо таблиц */
+  .list{display:flex;flex-direction:column}
+  .li{
+    display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--hair);
+    cursor:pointer;background:var(--surface);
+  }
+  .li:first-child{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
+  .li:last-child{border-bottom:0;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r)}
+  .li:hover{background:var(--surface-2)}
+  .li .main{min-width:0;flex:1}
+  .li .t{font-size:14.5px;line-height:1.35;display:block;overflow:hidden;text-overflow:ellipsis}
+  .li .m{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .li .rt{display:flex;align-items:center;gap:10px;flex:none}
+  .li.done .t{color:var(--ink-3);text-decoration:line-through}
+  .listbox{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+  .rowact{display:flex;gap:5px;opacity:0}
+  .li:hover .rowact{opacity:1}
+
+  .due{font-size:13px;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+  .due.over{color:var(--bad);font-weight:500}
+  .due.soon{color:var(--warn);font-weight:500}
+  .due.none{color:var(--ink-3)}
+
+  /* доска */
+  .board{display:grid;grid-auto-flow:column;grid-auto-columns:272px;gap:14px;overflow-x:auto;padding-bottom:8px}
+  .bcol{background:var(--surface-2);border-radius:var(--r);padding:11px}
+  .bcol h4{font-size:12.5px;font-weight:600;color:var(--ink-2);display:flex;justify-content:space-between;
+    align-items:center;margin-bottom:11px;padding:0 4px;font-family:"Manrope"}
+  .bcol h4 span{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3)}
+  .tcard{
+    background:var(--surface);border:1px solid var(--hair);border-radius:11px;padding:12px;margin-bottom:8px;
+    cursor:pointer;display:flex;flex-direction:column;gap:9px;
+  }
+  .tcard:hover{border-color:var(--hair-2)}
+  .tcard .t{font-size:14px;line-height:1.35}
+  .tcard .f{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tcard.hot{border-left:3px solid var(--bad)}
+
+  /* почта */
+  .inbox{display:grid;grid-template-columns:minmax(300px,1fr) 1.25fr;gap:14px;align-items:start}
+  .mailist{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--surface);max-height:640px;overflow-y:auto}
+  .mail{display:flex;gap:12px;padding:13px 15px;border-bottom:1px solid var(--hair);cursor:pointer}
+  .mail:last-child{border-bottom:0}
+  .mail:hover{background:var(--surface-2)}
+  .mail[aria-current="true"]{background:var(--brand-soft)}
+  .mail .dot{width:7px;height:7px;border-radius:50%;flex:none;margin-top:7px;background:transparent}
+  .mail.unread .dot{background:var(--copper)}
+  .mail .body{min-width:0;flex:1}
+  .mail .from{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink-3)}
+  .mail .subj{font-size:14px;margin:2px 0;line-height:1.3}
+  .mail.unread .subj{font-weight:600}
+  .mail .snip{font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reader{border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);padding:20px}
+  .reader .rh{border-bottom:1px solid var(--hair);padding-bottom:14px;margin-bottom:14px}
+  .reader .meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--ink-2);margin-top:10px}
+  .reader .meta b{color:var(--ink);font-weight:500}
+  .thread{display:flex;flex-direction:column;gap:0;margin-top:6px}
+  .tev{display:flex;gap:11px;padding:9px 0}
+  .tev .line{display:flex;flex-direction:column;align-items:center;flex:none}
+  .tev .line i{width:9px;height:9px;border-radius:50%;background:var(--hair-2);display:block;margin-top:5px}
+  .tev.now .line i{background:var(--brand)}
+  .tev .line span{flex:1;width:1px;background:var(--hair);margin:4px 0 -9px}
+  .tev:last-child .line span{display:none}
+  .tev .txt{font-size:13.5px}
+  .tev .txt em{font-style:normal;color:var(--ink-3);font-size:12.5px;display:block;margin-top:1px}
+
+  /* воронка документов */
+  .pipe{display:grid;grid-auto-flow:column;grid-auto-columns:250px;gap:12px;overflow-x:auto;padding-bottom:8px}
+  .pcol{background:var(--surface-2);border-radius:var(--r);padding:11px;min-height:120px}
+  .pcol h4{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:10px;display:flex;
+    justify-content:space-between;font-family:"Manrope"}
+  .dcard{background:var(--surface);border:1px solid var(--hair);border-radius:11px;padding:12px;margin-bottom:8px;cursor:pointer}
+  .dcard:hover{border-color:var(--hair-2)}
+  .dcard .cp{font-size:14px;font-weight:600;font-family:"Manrope";line-height:1.3}
+  .dcard .kind{font-size:12px;color:var(--ink-3);margin-top:1px}
+  .dcard .sigs{display:flex;align-items:center;gap:7px;margin-top:10px}
+  .ring{width:30px;height:30px;flex:none}
+  .dcard .waiting{font-size:12.5px;color:var(--ink-2);margin-top:9px;display:flex;gap:6px;align-items:flex-start}
+  .sigdots{display:flex;gap:4px}
+  .sigdots i{width:8px;height:8px;border-radius:50%;display:block;background:var(--hair-2)}
+  .sigdots i.ok{background:var(--good)} .sigdots i.no{background:var(--bad)}
+
+  /* календарь */
+  .cal{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+  .calhead{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--hair)}
+  .calhead div{padding:9px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  .calbody{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .cday{min-height:108px;padding:8px 9px;border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);
+    display:flex;flex-direction:column;gap:4px}
+  .cday:nth-child(7n){border-right:0}
+  .cday.out{background:var(--surface-2)}
+  .cday .d{font-size:12.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+  .cday.today .d{background:var(--brand);color:#fff;border-radius:6px;padding:1px 6px;align-self:flex-start;font-weight:600}
+  :root[data-theme="dark"] .cday.today .d{color:#0f1318}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cday.today .d{color:#0f1318}}
+  .ev{font-size:11.5px;padding:3px 7px;border-radius:6px;cursor:pointer;display:flex;gap:5px;align-items:center;
+    background:var(--surface-2);color:var(--ink-2);line-height:1.25}
+  .ev:hover{color:var(--ink)}
+  .ev i{width:6px;height:6px;border-radius:2px;flex:none}
+  .ev span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev.over{background:var(--bad-soft);color:var(--bad)}
+
+  /* цифры и графики */
+  .kpi{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:16px 18px}
+  .kpi b{display:block;font-family:"Manrope";font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.03em}
+  .kpi span{font-size:13px;color:var(--ink-2);display:block;margin-top:5px}
+  .kpi em{font-style:normal;font-size:12px;color:var(--ink-3);display:block;margin-top:2px}
+  .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.good b{color:var(--good)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-bottom:12px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:block}
+  figure{margin:0}
+  figcaption{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+  svg{max-width:100%;display:block}
+  svg text{font-family:"Source Sans 3",sans-serif}
+  .tip{position:fixed;z-index:50;background:var(--ink);color:var(--ground);font-size:12px;padding:5px 9px;
+    border-radius:6px;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
+
+  /* отчёт */
+  .doc{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;max-width:820px}
+  .doc .s{padding:18px 22px;border-bottom:1px solid var(--hair)}
+  .doc .s:last-child{border-bottom:0}
+  .doc .s h4{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:600;
+    display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .doc .s p,.doc .s ul{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.55}
+  .doc .s ul{padding-left:19px}
+  .doc .s li{margin-bottom:5px}
+  .doc .s b{color:var(--ink);font-weight:600}
+
+  /* формы и панель */
+  .scrim{position:fixed;inset:0;background:rgba(10,15,20,.4);z-index:30;backdrop-filter:blur(2px)}
+  .sheet{
+    position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--surface);
+    border-left:1px solid var(--hair);box-shadow:var(--shadow);z-index:31;overflow-y:auto;
+    padding:22px 24px calc(28px + env(safe-area-inset-bottom,0px));
+  }
+  .sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}
+  .props{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 16px;padding:16px 0;
+    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px}
+  .prop span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+  .prop div{font-size:14px}
+  .blk{margin-bottom:18px}
+  .blk h4{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:0 0 9px;font-weight:600}
+  .blk p{margin:0;font-size:14px;color:var(--ink-2)}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  .field input,.field select,.field textarea{
+    font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--hair-2);border-radius:9px;
+    background:var(--surface);color:var(--ink);width:100%;
+  }
+  .field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible{outline:2px solid var(--brand);outline-offset:0}
+  .field .err{font-size:12.5px;color:var(--bad)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .facts{display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--hair)}
+
+  /* командная строка */
+  /* фасеты, чекбоксы, формы ввода */
+  .facetbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px 14px;background:var(--surface);
+    border:1px solid var(--hair);border-radius:var(--r);padding:14px 16px;margin:-6px 0 16px}
+  .facetbar .field{margin-bottom:0}
+  .facetbar .field label{font-size:10.5px}
+  .facetbar .acts{display:flex;align-items:flex-end;gap:8px}
+  .chk{display:flex;align-items:flex-start;gap:9px;padding:6px 0;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+  .chk input{margin-top:3px;accent-color:var(--brand);width:15px;height:15px;flex:none}
+  .chk b{font-weight:500;color:var(--ink);font-size:13.5px;display:block}
+  .chk em{font-style:normal;display:block;font-size:11.5px;color:var(--ink-3)}
+  .hint{font-size:12.5px;color:var(--ink-3);margin:-6px 0 14px;line-height:1.45}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+  .quick button{all:unset;cursor:pointer;font-size:12px;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--ink-2)}
+  .quick button:hover{background:var(--brand-soft);color:var(--brand)}
+  .quick button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  .doc .s textarea{width:100%;font:inherit;font-size:14.5px;color:var(--ink);background:var(--surface-2);
+    border:1px solid var(--hair);border-radius:9px;padding:10px 12px;resize:vertical;line-height:1.55;box-sizing:border-box}
+  .doc .s textarea:focus-visible{outline:2px solid var(--brand);outline-offset:0}
+  .kbd{font-family:"IBM Plex Mono",monospace;font-size:11px;background:var(--surface-2);border:1px solid var(--hair);
+    border-radius:5px;padding:1px 5px;color:var(--ink-3)}
+  .palette{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:12vh 16px 16px}
+  .palette .bg{position:absolute;inset:0;background:rgba(10,15,20,.4)}
+  .pbox{position:relative;width:min(620px,100%);background:var(--surface);border:1px solid var(--hair);
+    border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .pbox input{all:unset;display:block;width:100%;padding:16px 18px;font-size:16px;color:var(--ink);
+    border-bottom:1px solid var(--hair);box-sizing:border-box}
+  .pbox .res{max-height:52vh;overflow-y:auto}
+  .pres{display:flex;gap:12px;align-items:center;padding:11px 18px;cursor:pointer;border-bottom:1px solid var(--hair)}
+  .pres:last-child{border-bottom:0}
+  .pres:hover,.pres[aria-selected="true"]{background:var(--surface-2)}
+  .pres .k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);width:74px;flex:none}
+  .pres .v{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pempty{padding:20px 18px;color:var(--ink-3);font-size:14px}
+  mark{background:var(--warn-soft);color:var(--ink);border-radius:3px;padding:0 1px}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:45;background:var(--ink);
+    color:var(--ground);font-size:13.5px;padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);
+    display:flex;gap:14px;align-items:center}
+  .toast button{all:unset;cursor:pointer;color:var(--ground);text-decoration:underline;font-size:13px}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--ink-3);font-size:14px}
+  .stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .stepper button{all:unset;cursor:pointer;display:flex;align-items:center;gap:9px;padding:8px 14px;border-radius:9px;
+    border:1px solid var(--hair);background:var(--surface);font-size:13.5px;color:var(--ink-2)}
+  .stepper button em{font-style:normal;width:19px;height:19px;border-radius:50%;background:var(--surface-2);
+    color:var(--ink-3);display:grid;place-items:center;font-size:11px;font-weight:600}
+  .stepper button[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .stepper button[aria-pressed="true"] em{background:var(--brand);color:var(--surface)}
+  .note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:9px;
+    font-size:13.5px;margin-top:12px}
+  .note.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+  .note.ok{border-left-color:var(--good);background:var(--good-soft)}
+  .note b{display:block;margin-bottom:3px}
+  .map{display:flex;flex-direction:column;gap:2px}
+  .maprow{display:grid;grid-template-columns:1fr 22px 1fr;gap:12px;align-items:center;padding:9px 10px;border-radius:8px}
+  .maprow:nth-child(odd){background:var(--surface-2)}
+  .maprow b{font-size:13.5px;display:block} .maprow .ex{font-size:12px;color:var(--ink-3)}
+  .mapdst{font-size:13.5px;border:1px solid var(--hair-2);border-radius:8px;padding:5px 10px;background:var(--surface);
+    display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .mapdst.ok{border-color:var(--good);color:var(--good)}
+  .mapdst.ask{border-color:var(--warn);color:var(--warn)}
+  .mapdst.skip{border-color:var(--bad);color:var(--bad)}
+  .mapdst small{font-size:10px;letter-spacing:.05em;text-transform:uppercase;opacity:.85}
+
+  @media (max-width:1080px){ .inbox{grid-template-columns:1fr} }
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr}
+    .rail{position:static;max-height:none;flex-direction:row;overflow-x:auto;gap:14px;align-items:center;padding:12px 16px}
+    .rail .navgrp{flex-direction:row}
+    .rail .navgrp .cap,.rail .proj-switch span,.rail .navgrp .n{display:none}
+    .rail .logo b{display:none}
+    main{padding:18px 16px 48px}
+    .topbar{padding-left:16px;padding-right:16px}
+    .props,.two{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="logo"><i>TT</i><b>TaskTracker</b></div>
+    <div class="proj-switch" data-go="projects">
+      <b>АИС «Развитие сетей»</b>
+      <span>Пилот · 3 участника</span>
+    </div>
+    <div class="navgrp" id="nav1"></div>
+    <div class="navgrp" id="nav2"></div>
+  </aside>
+
+  <div class="col">
+    <header class="topbar">
+      <div class="omni" id="omni" role="button" tabindex="0">
+        <span aria-hidden="true">⌕</span>
+        <span>Поиск по задачам, письмам и документам</span>
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="me"><span class="ava sm">ПР</span>Проскуряков</div>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var TODAY = new Date(2026, 8, 22);
+  var uid = 100;
+
+  var TSTATUS = {
+    BACKLOG:{label:"Бэклог", tone:"p-neutral"}, TODO:{label:"К выполнению", tone:"p-neutral"},
+    IN_PROGRESS:{label:"В работе", tone:"p-brand"}, REVIEW:{label:"На проверке", tone:"p-warn"},
+    DONE:{label:"Готово", tone:"p-good"}, CANCELLED:{label:"Отменена", tone:"p-neutral"}
+  };
+  var CLOSED_TASK = ["DONE","CANCELLED"];
+  var TRACKS = {PRODUCTION:"Производственный", INTERNAL:"Внутренний", EXTERNAL:"Внешний", LEGAL:"Юридический"};
+  var PRIO = {LOW:"Низкий", MEDIUM:"Средний", HIGH:"Высокий", CRITICAL:"Критичный"};
+  var LSTATUS = {
+    NEW:{label:"Новое", tone:"p-copper"}, IN_PROGRESS:{label:"В работе", tone:"p-brand"},
+    ON_APPROVAL:{label:"На согласовании", tone:"p-warn"}, ANSWERED:{label:"Дан ответ", tone:"p-good"},
+    SIGNED:{label:"Подписано", tone:"p-good"}, NOTED:{label:"Принято к сведению", tone:"p-neutral"},
+    CLOSED:{label:"Закрыто", tone:"p-neutral"}
+  };
+  var CLOSED_LETTER = ["ANSWERED","SIGNED","NOTED","CLOSED"];
+  var DKIND = {REGULATION:"Регламент", NDA_ADDENDUM:"ДС к NDA", CONTRACT:"Контракт", STATEMENT:"Положение", OTHER:"Другое"};
+  var DTITLE = {
+    REGULATION:"Регламент информационного взаимодействия",
+    NDA_ADDENDUM:"Допсоглашение к соглашению о неразглашении",
+    CONTRACT:"Контракт", STATEMENT:"Положение", OTHER:"Документ"
+  };
+  var DSTATUS = {
+    DRAFT:{label:"Черновик", tone:"p-neutral"}, REVIEW:{label:"На согласовании", tone:"p-warn"},
+    SENT:{label:"Направлен стороне", tone:"p-brand"}, SIGNING:{label:"На подписании", tone:"p-brand"},
+    SIGNED:{label:"Подписан", tone:"p-good"}, DECLINED:{label:"Отказ", tone:"p-bad"}
+  };
+  var SIG = {PENDING:"Ожидает", SIGNED:"Подписано", DECLINED:"Отказ", NOT_REQUIRED:"Не требуется"};
+  var PARTIES = [["dit","Наша сторона"],["rso","Организация"],["djkh","Согласующий орган"]];
+  var VIS = {
+    PUBLIC:{label:"Видят все участники проекта", short:"всем", tone:"p-good"},
+    TEAM:{label:"Только свой трек", short:"трек", tone:"p-brand"},
+    PRIVATE:{label:"Только автор и руководитель", short:"автор", tone:"p-neutral"}
+  };
+  var ME = "Проскуряков";
+  var MY_ROLE = "admin";
+
+  var state = {
+    members:[
+      {id:1, name:"Проскуряков", role:"Руководитель проекта", acc:"admin"},
+      {id:2, name:"Гончарова",   role:"Юридический трек",     acc:"member"},
+      {id:3, name:"Даренских",   role:"Аналитик",             acc:"member"}
+    ],
+    orgs:[
+      {id:1, name:"Профильный департамент", internal:true},
+      {id:2, name:"ПАО «Энергосеть»", internal:false},
+      {id:3, name:"АО «Электросети»", internal:false},
+      {id:4, name:"АО «Теплосеть»",   internal:false},
+      {id:5, name:"ПАО «Генерация»",  internal:false},
+      {id:6, name:"АО «Газсеть»",     internal:false},
+      {id:7, name:"АО «Водоканал»",   internal:false},
+      {id:8, name:"ГУП «Водосток»",   internal:false},
+      {id:9, name:"НПО «Импульс»",    internal:false}
+    ],
+    projects:[{id:1, code:"АИС-1", name:"АИС «Развитие сетей»", owner:"Даренских", start:"2026-01-15", due:"2026-12-25"}],
+    tasks:[
+      {id:1, track:"LEGAL", title:"Передать подписанный экземпляр регламента согласующему органу", who:"Гончарова", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-12", due:"2026-09-18", p:60, jira:"", res:"Экземпляры на руках", au:"Гончарова", vis:"PUBLIC"},
+      {id:2, track:"LEGAL", title:"Уточнить статус регламента у теплосети", who:"Проскуряков", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-08-20", due:"2026-09-25", p:30, jira:"", res:"", au:"Проскуряков", vis:"PUBLIC"},
+      {id:3, track:"INTERNAL", title:"Письмо о формировании официального запроса данных", who:"Проскуряков", st:"REVIEW", prio:"HIGH", created:"2026-09-01", due:"2026-09-19", p:80, jira:"", res:"Драфт загружен в ЭДО", au:"Проскуряков", vis:"PUBLIC"},
+      {id:4, track:"INTERNAL", title:"Регламент функционирования системы: проверить драфт", who:"Гончарова", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-09-03", due:"", p:40, jira:"", res:"Согласовать с руководителем", au:"Гончарова", vis:"TEAM"},
+      {id:5, track:"INTERNAL", title:"Закупка оборудования: подготовить драфт договора", who:"Гончарова", st:"TODO", prio:"MEDIUM", created:"2026-09-08", due:"2026-10-02", p:0, jira:"", res:"", au:"Гончарова", vis:"TEAM"},
+      {id:6, track:"PRODUCTION", title:"Загрузка данных теплоснабжения в графовую БД", who:"Даренских", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-28", due:"2026-09-30", p:55, jira:"AISRKII-9837", res:"", au:"Даренских", vis:"PUBLIC"},
+      {id:7, track:"PRODUCTION", title:"Доработать геослои и передать для визуализации", who:"Даренских", st:"DONE", prio:"MEDIUM", created:"2026-08-14", due:"2026-09-04", p:100, jira:"AISRKII-9702", res:"Передано", au:"Даренских", vis:"PUBLIC"},
+      {id:8, track:"PRODUCTION", title:"Подготовить релиз 2.7: анализ территории", who:"Даренских", st:"REVIEW", prio:"CRITICAL", created:"2026-08-25", due:"2026-09-24", p:75, jira:"AISRKII-9811", res:"", au:"Даренских", vis:"PUBLIC"},
+      {id:9, track:"EXTERNAL", title:"Получить данные по перспективной застройке", who:"Даренских", st:"TODO", prio:"HIGH", created:"2026-09-10", due:"", p:0, jira:"", ext:"Профильный департамент", res:"", au:"Даренских", vis:"PUBLIC"},
+      {id:10, track:"EXTERNAL", title:"Получить корректные паспорта объектов 2.0", who:"Даренских", st:"IN_PROGRESS", prio:"CRITICAL", created:"2026-07-15", due:"2026-09-11", p:25, jira:"", ext:"ПАО «Энергосеть»", res:"Качество данных низкое", au:"Даренских", vis:"PUBLIC"},
+      {id:11, track:"INTERNAL", title:"Подготовить презентацию по отраслевой аналитике", who:"Проскуряков", st:"DONE", prio:"LOW", created:"2026-08-30", due:"2026-09-12", p:100, jira:"", res:"Показана на ВКС", au:"Проскуряков", vis:"PUBLIC"},
+      {id:12, track:"PRODUCTION", title:"Отладка интеграции с газовой сетью в dev-среде", who:"Даренских", st:"BACKLOG", prio:"MEDIUM", created:"2026-09-15", due:"", p:0, jira:"AISRKII-9840", res:"", au:"Даренских", vis:"PUBLIC"},
+      {id:13, track:"LEGAL", title:"Организовать подписание допсоглашения к NDA", who:"Гончарова", st:"TODO", prio:"HIGH", created:"2026-09-16", due:"", p:0, jira:"", res:"", au:"Гончарова", vis:"TEAM"},
+      {id:14, track:"INTERNAL", title:"Собрать отчёт руководству за период", who:"Проскуряков", st:"IN_PROGRESS", prio:"HIGH", created:"2026-09-17", due:"2026-09-23", p:50, jira:"", res:"", au:"Проскуряков", vis:"PRIVATE"},
+      {id:15, track:"PRODUCTION", title:"Выгрузка реестра писем для еженедельного среза", who:"Даренских", st:"BACKLOG", prio:"LOW", created:"2026-09-18", due:"", p:0, jira:"", res:"", au:"Даренских", vis:"PUBLIC"}
+    ],
+    letters:[
+      {id:9, num:"64-03-249/26", date:"2026-09-16", dir:"out", subject:"Повторный запрос на подписание регламента", org:"ГУП «Водосток»", owner:"Гончарова", due:"2026-09-26", st:"NEW", jira:"", au:"Гончарова", vis:"PUBLIC",
+       snip:"Просим повторно рассмотреть и подписать регламент информационного взаимодействия…", thread:[["2026-09-16","Письмо отправлено через ЭДО","Гончарова"],["2026-09-18","Получено подтверждение регистрации","система"]]},
+      {id:8, num:"64-01-302/26", date:"2026-09-14", dir:"in", subject:"Предложение об интеграции интеллектуального учёта", org:"НПО «Импульс»", owner:"", due:"", st:"NOTED", jira:"", au:"Проскуряков", vis:"PUBLIC",
+       snip:"Предлагаем рассмотреть возможность интеграции системы интеллектуального учёта…", thread:[["2026-09-14","Письмо поступило","ЭДО"],["2026-09-15","Принято к сведению, ответ не требуется","Проскуряков"]]},
+      {id:7, num:"64-03-244/26", date:"2026-09-09", dir:"out", subject:"Направление регламента информационного обмена", org:"ГУП «Водосток»", owner:"Гончарова", due:"2026-09-30", st:"ON_APPROVAL", jira:"", au:"Гончарова", vis:"PUBLIC",
+       snip:"Направляем проект регламента для рассмотрения и подписания…", thread:[["2026-09-09","Письмо отправлено","Гончарова"],["2026-09-19","Организация сообщила, что регламент на юридической проверке","Гончарова"]]},
+      {id:6, num:"64-03-241/26", date:"2026-09-02", dir:"in", subject:"О сроках рассмотрения протокола разногласий", org:"АО «Теплосеть»", owner:"", due:"2026-09-15", st:"IN_PROGRESS", jira:"", au:"Проскуряков", vis:"PUBLIC",
+       snip:"Просим увеличить срок рассмотрения протокола разногласий на 10 рабочих дней…", thread:[["2026-09-02","Письмо поступило","ЭДО"],["2026-09-03","Требуется ответ, ответственный не назначен","система"]]},
+      {id:5, num:"64-03-193/26", date:"2026-08-22", dir:"out", subject:"Запрос сведений об удельных капитальных вложениях", org:"ПАО «Энергосеть»", owner:"Проскуряков", due:"2026-09-10", st:"IN_PROGRESS", jira:"AISRKII-9837", au:"Проскуряков", vis:"PUBLIC",
+       snip:"Для подготовки схемы развития просим предоставить сведения об удельных капитальных вложениях…", thread:[["2026-08-22","Письмо отправлено","Проскуряков"],["2026-09-11","Срок ответа истёк, направлено напоминание","Проскуряков"]]},
+      {id:4, num:"64-01-169/26", date:"2026-08-07", dir:"out", subject:"Ответ. Согласование проекта ТЗ на методику", org:"Профильный департамент", owner:"Гончарова", due:"", st:"SIGNED", jira:"", au:"Гончарова", vis:"PUBLIC",
+       snip:"Направляем согласованный проект технического задания…", thread:[["2026-08-07","Письмо подписано и отправлено","Гончарова"]]},
+      {id:3, num:"64-03-238/26", date:"2026-07-15", dir:"in", subject:"О согласовании материалов в рамках контракта", org:"Профильный департамент", owner:"Проскуряков", due:"2026-07-17", st:"SIGNED", jira:"", au:"Проскуряков", vis:"TEAM",
+       snip:"Направляем материалы на согласование в рамках заключённого контракта…", thread:[["2026-07-15","Письмо поступило","ЭДО"],["2026-07-17","Материалы согласованы и подписаны","Проскуряков"]]},
+      {id:2, num:"64-01-167/26", date:"2026-07-08", dir:"in", subject:"Согласование ТЗ на распределительные сети", org:"Профильный департамент", owner:"Гончарова", due:"2026-07-10", st:"ANSWERED", jira:"", au:"Гончарова", vis:"PUBLIC",
+       snip:"Просим согласовать техническое задание на распределительные сети…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-07-10","Дан ответ исходящим письмом","Гончарова"]]},
+      {id:1, num:"64-01-169/26", date:"2026-07-08", dir:"in", subject:"Согласование проекта ТЗ на разработку методики", org:"Профильный департамент", owner:"Гончарова", due:"2026-07-31", st:"ANSWERED", jira:"", au:"Гончарова", vis:"PUBLIC",
+       snip:"Просим согласовать проект технического задания на разработку методики…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-08-07","Дан ответ исходящим письмом","Гончарова"]]}
+    ],
+    docs:[
+      {id:1, kind:"REGULATION", name:"Регламент обмена с ПАО «Энергосеть»", st:"SIGNING", org:"ПАО «Энергосеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"PENDING", due:"2026-11-30", next:"Передать подписанный экземпляр согласующему органу", mile:[1,1,1,1,0], vis:"PUBLIC"},
+      {id:2, kind:"REGULATION", name:"Регламент обмена с АО «Электросети»", st:"SIGNED", org:"АО «Электросети»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-09-30", next:"", mile:[1,1,1,1,1], vis:"PUBLIC"},
+      {id:3, kind:"REGULATION", name:"Регламент обмена с АО «Теплосеть»", st:"SENT", org:"АО «Теплосеть»", owner:"Проскуряков", dit:"PENDING", rso:"PENDING", djkh:"PENDING", due:"2026-09-15", next:"Уточнить статус рассмотрения", mile:[1,0,0,0,0], vis:"PUBLIC"},
+      {id:4, kind:"REGULATION", name:"Регламент обмена с ПАО «Генерация»", st:"REVIEW", org:"ПАО «Генерация»", owner:"Проскуряков", dit:"PENDING", rso:"PENDING", djkh:"PENDING", due:"2026-12-30", next:"Узнать статус согласования", mile:[1,0,0,0,0], vis:"PUBLIC"},
+      {id:5, kind:"REGULATION", name:"Регламент обмена с АО «Газсеть»", st:"SIGNING", org:"АО «Газсеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-10-30", next:"Получить подписанный экземпляр", mile:[1,1,1,1,1], vis:"PUBLIC"},
+      {id:6, kind:"REGULATION", name:"Регламент обмена с АО «Водоканал»", st:"DECLINED", org:"АО «Водоканал»", owner:"Проскуряков", dit:"PENDING", rso:"DECLINED", djkh:"PENDING", due:"", next:"Запросить позицию согласующего органа", mile:[1,0,0,0,0], vis:"TEAM"},
+      {id:7, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: ПАО «Энергосеть»", st:"SIGNED", org:"ПАО «Энергосеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"NOT_REQUIRED", due:"2026-08-15", next:"", mile:[1,1,1,1,1], vis:"TEAM"},
+      {id:8, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: АО «Газсеть»", st:"DECLINED", org:"АО «Газсеть»", owner:"Гончарова", dit:"SIGNED", rso:"DECLINED", djkh:"NOT_REQUIRED", due:"2026-09-20", next:"Отказ по составу данных: согласовать формулировки", mile:[1,1,0,0,0], vis:"TEAM"}
+    ],
+    reports:[
+      {id:1, from:"2026-09-08", to:"2026-09-21", author:"Даренских", state:"Черновик собран"},
+      {id:2, from:"2026-08-25", to:"2026-09-07", author:"Даренских", state:"Отправлен"},
+      {id:3, from:"2026-08-11", to:"2026-08-24", author:"Проскуряков", state:"Отправлен"}
+    ]
+  };
+  var MILE_LABELS = ["Регламент направлен","Регламент подписан","Система готова","Интеграция в dev","Тестовая среда"];
+
+  /* ---------- утилиты ---------- */
+  function esc(v){ return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function parse(d){ if(!d) return null; var a = d.split("-"); return new Date(+a[0], +a[1]-1, +a[2]); }
+  function fmt(d){ if(!d) return ""; var a = d.split("-"); return a[2] + "." + a[1]; }
+  function fmtFull(d){ if(!d) return ""; var a = d.split("-"); return a[2] + "." + a[1] + "." + a[0]; }
+  function days(d){ var x = parse(d); return x ? Math.round((x - TODAY)/86400000) : null; }
+  function plural(n, forms){
+    var a = Math.abs(n) % 100, b = a % 10;
+    if(a > 10 && a < 20) return n + " " + forms[2];
+    if(b > 1 && b < 5) return n + " " + forms[1];
+    if(b === 1) return n + " " + forms[0];
+    return n + " " + forms[2];
+  }
+  function initials(n){ return n ? n.slice(0,2).toUpperCase() : "—"; }
+  function byId(coll, id){ return state[coll].filter(function(x){ return x.id === +id; })[0]; }
+  function pill(text, tone){ return '<span class="pill ' + tone + '"><i></i>' + esc(text) + '</span>'; }
+  function ava(name, sm){ return '<span class="ava' + (sm ? " sm" : "") + '">' + esc(initials(name)) + '</span>'; }
+  function who(name){ return name ? '<span class="who">' + ava(name, true) + esc(name) + '</span>' : '<span class="pill p-bad"><i></i>не назначен</span>'; }
+  function taskDone(t){ return CLOSED_TASK.indexOf(t.st) !== -1; }
+  function letterDone(l){ return CLOSED_LETTER.indexOf(l.st) !== -1; }
+  function docClosed(d){
+    return PARTIES.every(function(p){ return d[p[0]] === "SIGNED" || d[p[0]] === "NOT_REQUIRED"; });
+  }
+  function docWaiting(d){
+    if(PARTIES.some(function(p){ return d[p[0]] === "DECLINED"; })) return "отказ стороны";
+    var w = PARTIES.filter(function(p){ return d[p[0]] === "PENDING"; }).map(function(p){ return p[1].toLowerCase(); });
+    return w.length ? "ждём: " + w.join(", ") : "";
+  }
+  function sigCount(d){
+    var all = PARTIES.map(function(p){ return d[p[0]]; }).filter(function(v){ return v !== "NOT_REQUIRED"; });
+    return {done:all.filter(function(v){ return v === "SIGNED"; }).length, total:all.length};
+  }
+  function dueTag(due, finished, withWord){
+    if(!due) return '<span class="due none">без срока</span>';
+    if(finished) return '<span class="due">' + fmt(due) + '</span>';
+    var k = days(due);
+    var cls = k < 0 ? "over" : k <= 7 ? "soon" : "";
+    var txt = k < 0 ? (withWord ? "просрочка " + (-k) + " дн." : fmt(due))
+            : k === 0 ? "сегодня" : k <= 7 ? (withWord ? "через " + k + " дн." : fmt(due)) : fmt(due);
+    return '<span class="due ' + cls + '">' + txt + '</span>';
+  }
+  function letterState(l){
+    if(letterDone(l)) return {txt:"закрыто", tone:"p-good"};
+    if(!l.due) return {txt:"без срока", tone:"p-neutral"};
+    var k = days(l.due);
+    return k >= 0 ? {txt:"в срок", tone:"p-brand"} : {txt:"просрочка " + (-k) + " дн.", tone:"p-bad"};
+  }
+  function needsUs(l){ return !letterDone(l) && l.dir === "in"; }
+
+  /* ---------- уведомление ---------- */
+  var toastEl = null, toastTimer = null;
+  function toast(msg, undo){
+    if(toastEl){ toastEl.remove(); clearTimeout(toastTimer); }
+    toastEl = document.createElement("div");
+    toastEl.className = "toast";
+    toastEl.innerHTML = "<span>" + esc(msg) + "</span>";
+    if(undo){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = "Отменить";
+      b.addEventListener("click", function(){ undo(); toastEl.remove(); toastEl = null; render(); });
+      toastEl.appendChild(b);
+    }
+    document.body.appendChild(toastEl);
+    toastTimer = setTimeout(function(){ if(toastEl){ toastEl.remove(); toastEl = null; } }, 6000);
+  }
+
+  /* ---------- маршруты ---------- */
+  var NAV_MAIN = [
+    {k:"today", ico:"◎", label:"Сегодня"},
+    {k:"tasks", ico:"◧", label:"Задачи"},
+    {k:"letters", ico:"✉", label:"Переписка"},
+    {k:"docs", ico:"§", label:"Документы"},
+    {k:"calendar", ico:"▤", label:"Календарь"}
+  ];
+  var NAV_SEC = [
+    {k:"analytics", ico:"◔", label:"Аналитика"},
+    {k:"report", ico:"▦", label:"Отчёты"},
+    {k:"refs", ico:"≡", label:"Справочники"},
+    {k:"import", ico:"↧", label:"Импорт"}
+  ];
+  var route = "today";
+  var taskView = "board", taskFilter = "all";
+  var mailFilter = "needsUs", mailOpen = 9, mailQuery = "";
+  var docFilter = "all";
+  var calM = 8, calY = 2026;
+  var step = 2;
+
+  function counts(k){
+    if(k === "tasks") return state.tasks.filter(function(t){ return !taskDone(t); }).length;
+    if(k === "letters") return state.letters.filter(needsUs).length;
+    if(k === "docs") return state.docs.filter(function(d){ return !docClosed(d) && d.st !== "DECLINED"; }).length;
+    return "";
+  }
+  function hot(k){ return k === "letters"; }
+
+  function renderNav(){
+    function grp(items, cap){
+      return (cap ? '<div class="cap">' + cap + '</div>' : "") + items.map(function(i){
+        var n = counts(i.k);
+        return '<button type="button" data-go="' + i.k + '" aria-current="' + (route === i.k) + '">' +
+          '<span class="ico" aria-hidden="true">' + i.ico + '</span>' + i.label +
+          (n ? '<span class="n' + (hot(i.k) ? " hot" : "") + '">' + n + '</span>' : "") + '</button>';
+      }).join("");
+    }
+    document.getElementById("nav1").innerHTML = grp(NAV_MAIN, "Работа");
+    document.getElementById("nav2").innerHTML = grp(NAV_SEC, "Сводка");
+  }
+
+  /* ---------- экран «Сегодня» ---------- */
+  function screenToday(){
+    var overdue = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; });
+    var mine = state.tasks.filter(function(t){ return t.who === ME && !taskDone(t); });
+    var week = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) >= 0 && days(t.due) <= 7; });
+    var needAnswer = state.letters.filter(needsUs);
+    var signOnUs = state.docs.filter(function(d){ return !docClosed(d) && d.st !== "DECLINED"; });
+    var noDue = state.tasks.filter(function(t){ return !taskDone(t) && !t.due; });
+
+    function block(title, sub, items, tone, go){
+      return '<div class="card"><h3>' + title + '</h3><div class="sub">' + sub + '</div>' +
+        (items.length ? '<div class="list" style="margin:0 -18px">' + items.slice(0,3).join("") + '</div>'
+                      : '<p class="dim" style="margin:0;font-size:14px">Ничего не требует внимания.</p>') +
+        (items.length > 3 ? '<button class="btn ghost sm" style="margin-top:12px" type="button" data-go="' + go + '">Ещё ' + (items.length - 3) + '</button>' : "") +
+        '</div>';
+    }
+    function tline(t){
+      return '<div class="li" data-open="task:' + t.id + '"><div class="main"><span class="t">' + esc(t.title) + '</span>' +
+        '<span class="m">' + esc(TRACKS[t.track]) + ' · ' + esc(t.who) + '</span></div>' +
+        '<div class="rt">' + dueTag(t.due, false, true) + '</div></div>';
+    }
+    function lline(l){
+      return '<div class="li" data-open="letter:' + l.id + '"><div class="main"><span class="t">' + esc(l.subject) + '</span>' +
+        '<span class="m">' + esc(l.org) + ' · ' + (l.owner ? esc(l.owner) : "ответственный не назначен") + '</span></div>' +
+        '<div class="rt">' + dueTag(l.due, false, true) + '</div></div>';
+    }
+    function dline(d){
+      return '<div class="li" data-open="doc:' + d.id + '"><div class="main"><span class="t">' + esc(d.name) + '</span>' +
+        '<span class="m">' + esc(DKIND[d.kind]) + ' · ' + esc(docWaiting(d) || "все стороны подписали") + '</span></div>' +
+        '<div class="rt">' + dueTag(d.due, false, true) + '</div></div>';
+    }
+
+    return '<div class="phead"><div><h1>Доброе утро, Проскуряков</h1>' +
+      '<p>Вторник, 22 сентября. На вас ' + plural(mine.length, ["открытая задача","открытые задачи","открытых задач"]) + ', ' +
+      plural(needAnswer.length, ["письмо ждёт","письма ждут","писем ждут"]) + ' ответа, ' +
+      plural(signOnUs.length, ["документ ждёт","документа ждут","документов ждут"]) + ' подписей.</p></div>' +
+      '<button class="btn primary" type="button" data-new="task">Новая задача</button></div>' +
+
+      '<div class="grid g3" style="margin-bottom:14px">' +
+      kpi(overdue.length, "Просрочено", overdue.length ? "самая старая: " + (-days(overdue[0].due)) + " дн." : "чисто", overdue.length ? "bad" : "good") +
+      kpi(needAnswer.length, "Ждут нашего ответа", "входящие без ответа", needAnswer.length ? "warn" : "good") +
+      kpi(noDue.length, "Без срока", "не попадают в календарь", noDue.length ? "warn" : "good") +
+      kpi(sigDone() + " / " + state.docs.length, "Документов подписано", "всеми сторонами", "good") +
+      '</div>' +
+
+      '<div class="grid g2">' +
+      block("Просрочено", "Требует решения в первую очередь", overdue.map(tline), "bad", "tasks") +
+      block("Письма без ответа", "Мяч на нашей стороне", needAnswer.map(lline), "warn", "letters") +
+      block("Документы на подписании", "Видно, чьей подписи не хватает", signOnUs.map(dline), "warn", "docs") +
+      block("Сроки на этой неделе", "Успеть до понедельника", week.map(tline), "brand", "calendar") +
+      '</div>';
+  }
+  function kpi(v, label, sub, cls){
+    return '<div class="kpi ' + cls + '"><b>' + v + '</b><span>' + label + '</span><em>' + sub + '</em></div>';
+  }
+  function sigDone(){ return state.docs.filter(docClosed).length; }
+
+  /* ---------- задачи ---------- */
+  function visibleTasks(){
+    return state.tasks.filter(function(t){
+      if(taskFilter === "all") return true;
+      if(taskFilter === "mine") return t.who === ME;
+      if(taskFilter === "overdue") return !taskDone(t) && t.due && days(t.due) < 0;
+      if(taskFilter === "nodue") return !taskDone(t) && !t.due;
+      return t.track === taskFilter;
+    });
+  }
+  function screenTasks(){
+    var rows = visibleTasks();
+    var head = '<div class="phead"><div><h1>Задачи</h1>' +
+      '<p>Четыре трека в одном месте: производственный идёт в Jira и виден здесь ссылкой, остальные ведутся тут.</p></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+      '<div class="seg">' + ["board","list","timeline"].map(function(v){
+        return '<button type="button" data-tview="' + v + '" aria-pressed="' + (taskView === v) + '">' +
+          (v === "board" ? "Доска" : v === "list" ? "Список" : "Сроки") + '</button>'; }).join("") + '</div>' +
+      '<button class="btn primary" type="button" data-new="task">Новая задача</button></div></div>';
+
+    var chips = '<div class="filters">' +
+      [["all","Все"],["mine","Мои"],["overdue","Просроченные"],["nodue","Без срока"]].map(function(f){
+        var n = f[0] === "all" ? state.tasks.length : state.tasks.filter(function(t){
+          return f[0] === "mine" ? t.who === ME
+               : f[0] === "overdue" ? (!taskDone(t) && t.due && days(t.due) < 0)
+               : (!taskDone(t) && !t.due); }).length;
+        return '<button class="fchip" type="button" data-tfilter="' + f[0] + '" aria-pressed="' + (taskFilter === f[0]) + '">' +
+          f[1] + '<span class="b">' + n + '</span></button>';
+      }).join("") +
+      '<span style="width:10px"></span>' +
+      Object.keys(TRACKS).map(function(k){
+        return '<button class="fchip" type="button" data-tfilter="' + k + '" aria-pressed="' + (taskFilter === k) + '">' +
+          TRACKS[k] + '</button>'; }).join("") + '</div>';
+
+    if(taskView === "board") return head + chips + taskBoard(rows);
+    if(taskView === "list") return head + chips + taskList(rows);
+    return head + chips + taskTimeline(rows);
+  }
+  function taskBoard(rows){
+    return '<div class="board">' + Object.keys(TSTATUS).map(function(k){
+      var items = rows.filter(function(t){ return t.st === k; });
+      return '<div class="bcol"><h4>' + TSTATUS[k].label + '<span>' + items.length + '</span></h4>' +
+        items.map(function(t){
+          var over = !taskDone(t) && t.due && days(t.due) < 0;
+          return '<div class="tcard' + (over ? " hot" : "") + '" data-open="task:' + t.id + '" tabindex="0" role="button">' +
+            '<span class="t">' + esc(t.title) + '</span>' +
+            (t.jira ? '<span class="pill p-neutral"><i></i>' + esc(t.jira) + '</span>' : "") +
+            '<div class="f">' + who(t.who) + dueTag(t.due, taskDone(t)) + '</div></div>';
+        }).join("") +
+        (items.length ? "" : '<p class="dim" style="font-size:13px;margin:4px 4px 8px">Пусто</p>') + '</div>';
+    }).join("") + '</div>';
+  }
+  function taskList(rows){
+    if(!rows.length) return '<div class="listbox"><div class="empty">Под фильтр ничего не подошло.</div></div>';
+    return '<div class="listbox"><div class="list">' + rows.map(function(t){
+      return '<div class="li' + (taskDone(t) ? " done" : "") + '" data-open="task:' + t.id + '">' +
+        '<div class="main"><span class="t">' + esc(t.title) + '</span>' +
+        '<span class="m">' + esc(TRACKS[t.track]) + (t.jira ? ' · ' + esc(t.jira) : "") +
+        (t.prio === "CRITICAL" || t.prio === "HIGH" ? ' · <span style="color:var(--bad)">' + PRIO[t.prio] + '</span>' : "") + '</span></div>' +
+        '<div class="rt">' + who(t.who) + pill(TSTATUS[t.st].label, TSTATUS[t.st].tone) + dueTag(t.due, taskDone(t)) +
+        '<span class="rowact"><button class="btn sm" type="button" data-open="task:' + t.id + '">Открыть</button>' +
+        '<button class="btn sm danger" type="button" data-del="task:' + t.id + '">Удалить</button></span></div></div>';
+    }).join("") + '</div></div>';
+  }
+  function taskTimeline(rows){
+    var T0 = new Date(2026,6,1), T1 = new Date(2026,11,1), SPAN = T1 - T0;
+    var todayPct = ((TODAY - T0)/SPAN*100).toFixed(2);
+    var items = rows.filter(function(t){ return t.due; });
+    if(!items.length) return '<div class="listbox"><div class="empty">Ни у одной задачи в выборке нет срока.</div></div>';
+    return '<div class="card"><div class="legend">' +
+      '<span><i style="background:var(--c1)"></i>В работе</span>' +
+      '<span><i style="background:var(--c2)"></i>Готово</span>' +
+      '<span><i style="background:var(--bad)"></i>Просрочено</span>' +
+      '<span><i style="background:var(--copper);width:3px;height:12px;border-radius:1px"></i>Сегодня</span></div>' +
+      '<div style="overflow-x:auto"><div style="min-width:640px">' +
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);font-size:11.5px;color:var(--ink-3);' +
+      'text-transform:uppercase;letter-spacing:.06em;padding-left:240px;margin-bottom:8px">' +
+      ["Июль","Август","Сентябрь","Октябрь","Ноябрь"].map(function(m){ return "<span>" + m + "</span>"; }).join("") + '</div>' +
+      items.map(function(t){
+        var s = parse(t.created), d = parse(t.due);
+        if(s < T0) s = T0;
+        var left = (s - T0)/SPAN*100, width = Math.max((d - s)/SPAN*100, 1.2);
+        var color = taskDone(t) ? "var(--c2)" : (days(t.due) < 0 ? "var(--bad)" : "var(--c1)");
+        return '<div style="display:grid;grid-template-columns:240px 1fr;align-items:center;gap:12px;padding:5px 0" ' +
+          'data-open="task:' + t.id + '">' +
+          '<span style="font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" title="' + esc(t.title) + '">' + esc(t.title) + '</span>' +
+          '<div style="position:relative;height:22px">' +
+          '<span style="position:absolute;top:6px;left:' + left.toFixed(2) + '%;width:' + width.toFixed(2) + '%;height:10px;' +
+          'border-radius:5px;background:' + color + ';cursor:pointer"></span>' +
+          '<span style="position:absolute;top:0;bottom:0;left:' + todayPct + '%;width:2px;background:var(--copper)"></span>' +
+          '</div></div>';
+      }).join("") + '</div></div></div>';
+  }
+
+  /* ---------- переписка ---------- */
+  var MAIL_FILTERS = [
+    {k:"needsUs", label:"Ждут нашего ответа", f:needsUs},
+    {k:"waitThem", label:"Ждём ответа на наше", f:function(l){ return !letterDone(l) && l.dir === "out"; }},
+    {k:"overdue", label:"Просроченные", f:function(l){ return !letterDone(l) && l.due && days(l.due) < 0; }},
+    {k:"noOwner", label:"Без ответственного", f:function(l){ return !letterDone(l) && !l.owner; }},
+    {k:"all", label:"Все", f:function(){ return true; }}
+  ];
+  var FACETS = [
+    {k:"dir", label:"Направление", opts:[["","Любое"],["in","Входящие"],["out","Исходящие"]]},
+    {k:"st", label:"Статус", opts:[["","Любой"]].concat(Object.keys(LSTATUS).map(function(k){ return [k, LSTATUS[k].label]; }))},
+    {k:"org", label:"Организация", opts:null},
+    {k:"owner", label:"Ответственный", opts:null},
+    {k:"term", label:"Срок", opts:[["","Любой"],["over","Просрочен"],["week","Ближайшая неделя"],["none","Не задан"]]},
+    {k:"from", label:"Дата письма с", type:"date"},
+    {k:"to", label:"по", type:"date"}
+  ];
+  var SAVED = [
+    {k:"my_open", label:"Мои незакрытые", set:{owner:"Проскуряков", st:"", dir:"", term:"", from:"", to:""}, post:"open"},
+    {k:"in_over", label:"Входящие с просрочкой", set:{dir:"in", term:"over", owner:"", st:"", org:"", from:"", to:""}},
+    {k:"sign", label:"На подписании", set:{st:"ON_APPROVAL", dir:"", owner:"", org:"", term:"", from:"", to:""}}
+  ];
+  var mailFacets = {dir:"", st:"", org:"", owner:"", term:"", from:"", to:""};
+  var mailPanel = false, mailOpenOnly = false;
+
+  function norm(v){ return String(v || "").toLowerCase().replace(/ё/g,"е"); }
+  function mailMatch(l){
+    if(!mailQuery) return true;
+    var hay = norm(l.num + " " + l.subject + " " + l.org + " " + l.owner + " " + l.snip);
+    return norm(mailQuery).split(/\s+/).filter(Boolean).every(function(w){ return hay.indexOf(w) !== -1; });
+  }
+  function facetPass(l){
+    var f = mailFacets;
+    if(f.dir && l.dir !== f.dir) return false;
+    if(f.st && l.st !== f.st) return false;
+    if(f.org && l.org !== f.org) return false;
+    if(f.owner === "__none__"){ if(l.owner) return false; }
+    else if(f.owner && l.owner !== f.owner) return false;
+    if(f.term === "over" && !(!letterDone(l) && l.due && days(l.due) < 0)) return false;
+    if(f.term === "week" && !(l.due && days(l.due) >= 0 && days(l.due) <= 7)) return false;
+    if(f.term === "none" && l.due) return false;
+    if(f.from && l.date < f.from) return false;
+    if(f.to && l.date > f.to) return false;
+    if(mailOpenOnly && letterDone(l)) return false;
+    return true;
+  }
+  function facetCount(){
+    var n = 0;
+    Object.keys(mailFacets).forEach(function(k){ if(mailFacets[k]) n++; });
+    if(mailOpenOnly) n++;
+    return n;
+  }
+  function visibleMail(){
+    var f = MAIL_FILTERS.filter(function(x){ return x.k === mailFilter; })[0];
+    return state.letters.filter(function(l){ return f.f(l) && mailMatch(l) && facetPass(l); });
+  }
+  function facetBar(){
+    function sel(fa){
+      var opts;
+      if(fa.k === "org") opts = [["","Любое"]].concat(state.orgs.map(function(u){ return [u.name, u.name]; }));
+      else if(fa.k === "owner") opts = [["","Любой"],["__none__","Не назначен"]].concat(state.members.map(function(m){ return [m.name, m.name]; }));
+      else opts = fa.opts;
+      if(fa.type === "date"){
+        return '<div class="field"><label for="fa_' + fa.k + '">' + fa.label + '</label>' +
+          '<input id="fa_' + fa.k + '" type="date" data-facet="' + fa.k + '" value="' + esc(mailFacets[fa.k]) + '"></div>';
+      }
+      return '<div class="field"><label for="fa_' + fa.k + '">' + fa.label + '</label><select id="fa_' + fa.k + '" data-facet="' + fa.k + '">' +
+        opts.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (mailFacets[fa.k] === o[0] ? " selected" : "") + '>' + esc(o[1]) + '</option>'; }).join("") +
+        '</select></div>';
+    }
+    return '<div class="facetbar">' + FACETS.map(sel).join("") +
+      '<div class="acts"><label class="chk" style="padding:0"><input type="checkbox" data-mopen' + (mailOpenOnly ? " checked" : "") + '>' +
+      '<span><b>Только незакрытые</b></span></label></div>' +
+      '<div class="acts"><button class="btn sm" type="button" data-mreset>Сбросить</button>' +
+      '<button class="btn sm" type="button" data-act="Набор фильтров сохранён и доступен всей команде">Сохранить набор</button></div></div>';
+  }
+  function screenLetters(){
+    var rows = visibleMail();
+    if(rows.length && !rows.some(function(l){ return l.id === mailOpen; })) mailOpen = rows[0].id;
+    var head = '<div class="phead"><div><h1>Переписка</h1>' +
+      '<p>Реестр ведётся руками, поэтому письмо заводится одной формой за полминуты, а найти его можно по номеру, слову из темы или набору фильтров.</p></div>' +
+      '<button class="btn primary" type="button" data-new="letter">Завести письмо</button></div>';
+    var chips = '<div class="filters">' + MAIL_FILTERS.map(function(f){
+      var n = state.letters.filter(f.f).length;
+      return '<button class="fchip" type="button" data-mfilter="' + f.k + '" aria-pressed="' + (mailFilter === f.k) + '">' +
+        f.label + '<span class="b">' + n + '</span></button>'; }).join("") +
+      '<span style="flex:1"></span>' +
+      '<input id="mq" type="search" placeholder="Номер или слово из темы" value="' + esc(mailQuery) + '" ' +
+      'style="font:inherit;font-size:13.5px;padding:6px 12px;border:1px solid var(--hair);border-radius:99px;' +
+      'background:var(--surface);color:var(--ink);width:240px" aria-label="Поиск по письмам">' +
+      '<button class="fchip" type="button" data-mpanel aria-pressed="' + mailPanel + '">Фильтры' +
+      (facetCount() ? '<span class="b">' + facetCount() + '</span>' : "") + '</button></div>';
+    var saved = '<div class="filters" style="margin-top:-8px">' +
+      '<span class="dim" style="font-size:12.5px">Сохранённые:</span>' +
+      SAVED.map(function(sv){
+        return '<button class="fchip" type="button" data-msaved="' + sv.k + '">' + sv.label + '</button>'; }).join("") + '</div>';
+
+    var body;
+    if(!rows.length){
+      body = '<div class="listbox"><div class="empty">Ничего не нашлось. Попробуйте часть номера — например 64-03 — или сбросьте фильтры.</div></div>';
+    } else {
+      var list = '<div class="mailist">' + rows.map(function(l){
+        return '<div class="mail' + (needsUs(l) ? " unread" : "") + '" data-mail="' + l.id + '" aria-current="' + (l.id === mailOpen) + '">' +
+          '<span class="dot"></span><div class="body">' +
+          '<div class="from"><span>' + esc(l.org) + '</span><span class="mono">' + fmt(l.date) + '</span></div>' +
+          '<div class="subj">' + esc(l.subject) + '</div>' +
+          '<div class="snip">' + esc(l.snip) + '</div>' +
+          '<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">' +
+          pill(l.dir === "in" ? "Входящее" : "Исходящее", "p-neutral") +
+          pill(letterState(l).txt, letterState(l).tone) + '</div></div></div>';
+      }).join("") + '</div>';
+
+      var l = byId("letters", mailOpen) || rows[0];
+      var reader = '<div class="reader"><div class="rh">' +
+        '<h2>' + esc(l.subject) + '</h2>' +
+        '<div class="meta">' +
+        '<span>' + (l.dir === "in" ? "От: " : "Кому: ") + '<b>' + esc(l.org) + '</b></span>' +
+        '<span>№ <b class="mono">' + esc(l.num) + '</b></span>' +
+        '<span>Дата: <b class="mono">' + fmtFull(l.date) + '</b></span>' +
+        '<span>Ответственный: ' + (l.owner ? '<b>' + esc(l.owner) + '</b>' : '<b style="color:var(--bad)">не назначен</b>') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+        pill(LSTATUS[l.st].label, LSTATUS[l.st].tone) + pill(letterState(l).txt, letterState(l).tone) +
+        pill("Видят: " + VIS[l.vis || "PUBLIC"].short, VIS[l.vis || "PUBLIC"].tone) +
+        (l.jira ? pill(l.jira, "p-neutral") : "") + '</div></div>' +
+        '<p style="margin:0 0 16px;font-size:14.5px;color:var(--ink-2)">' + esc(l.snip) + '</p>' +
+        '<div class="blk"><h4>История</h4><div class="thread">' +
+        l.thread.map(function(ev, i){
+          return '<div class="tev' + (i === l.thread.length - 1 ? " now" : "") + '">' +
+            '<span class="line"><i></i><span></span></span>' +
+            '<span class="txt">' + esc(ev[1]) + '<em>' + fmtFull(ev[0]) + ' · ' + esc(ev[2]) + '</em></span></div>';
+        }).join("") + '</div></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn primary" type="button" data-act="Ответ подготовлен и отправлен на согласование">Подготовить ответ</button>' +
+        '<button class="btn" type="button" data-eletter="' + l.id + '">Редактировать</button>' +
+        '<button class="btn" type="button" data-new="task">Создать задачу</button>' +
+        '<button class="btn danger" type="button" data-del="letter:' + l.id + '">Удалить</button>' +
+        '</div></div>';
+      body = '<div class="inbox">' + list + reader + '</div>';
+    }
+    return head + chips + saved + (mailPanel ? facetBar() : "") + body;
+  }
+
+  /* ---------- документы ---------- */
+  function screenDocs(){
+    var rows = state.docs.filter(function(d){
+      if(docFilter === "all") return true;
+      if(docFilter === "declined") return d.st === "DECLINED";
+      if(docFilter === "mine") return d.owner === ME && !docClosed(d);
+      return d[docFilter] === "PENDING";
+    });
+    var head = '<div class="phead"><div><h1>Документы на подписании</h1>' +
+      '<p>У документа несколько подписывающих сторон, поэтому он движется по стадиям, а не имеет один статус. Кольцо показывает, сколько подписей собрано.</p></div>' +
+      '<button class="btn primary" type="button" data-new="doc">Новый документ</button></div>';
+    var chips = '<div class="filters">' +
+      [["all","Все"],["mine","На мне"],["dit","Ждут нашей подписи"],["rso","У организации"],["djkh","У согласующего органа"],["declined","Отказы"]].map(function(f){
+        var n = state.docs.filter(function(d){
+          return f[0] === "all" ? true
+               : f[0] === "declined" ? d.st === "DECLINED"
+               : f[0] === "mine" ? (d.owner === ME && !docClosed(d))
+               : d[f[0]] === "PENDING"; }).length;
+        return '<button class="fchip" type="button" data-dfilter="' + f[0] + '" aria-pressed="' + (docFilter === f[0]) + '">' +
+          f[1] + '<span class="b">' + n + '</span></button>'; }).join("") + '</div>';
+
+    var stages = Object.keys(DSTATUS);
+    var pipe = '<div class="pipe">' + stages.map(function(k){
+      var items = rows.filter(function(d){ return d.st === k; });
+      return '<div class="pcol"><h4>' + DSTATUS[k].label + '<span class="mono dim">' + items.length + '</span></h4>' +
+        items.map(function(d){
+          var c = sigCount(d), w = docWaiting(d);
+          return '<div class="dcard" data-open="doc:' + d.id + '" tabindex="0" role="button">' +
+            '<div class="cp">' + esc(d.name) + '</div><div class="kind">' + esc(DKIND[d.kind]) + ' · ' + esc(d.owner) + '</div>' +
+            '<div class="sigs">' + ring(c.done, c.total) +
+            '<div><div class="sigdots">' + PARTIES.map(function(p){
+              var v = d[p[0]];
+              return '<i class="' + (v === "SIGNED" ? "ok" : v === "DECLINED" ? "no" : "") + '" title="' + esc(p[1] + ": " + SIG[v]) + '"></i>';
+            }).join("") + '</div>' +
+            '<div style="font-size:12px;color:var(--ink-3);margin-top:4px">' + c.done + ' из ' + c.total + ' подписей</div></div></div>' +
+            (w ? '<div class="waiting">' + (w === "отказ стороны" ? '<span class="pill p-bad"><i></i>отказ</span>' : esc(w)) + '</div>' : "") +
+            '<div style="margin-top:9px">' + dueTag(d.due, docClosed(d), true) + '</div></div>';
+        }).join("") +
+        (items.length ? "" : '<p class="dim" style="font-size:13px;margin:2px 4px 6px">Пусто</p>') + '</div>';
+    }).join("") + '</div>';
+    return head + chips + pipe;
+  }
+  function ring(done, total){
+    var r = 12, c = 2 * Math.PI * r, pct = total ? done / total : 0;
+    return '<svg class="ring" viewBox="0 0 30 30" role="img" aria-label="Подписей: ' + done + ' из ' + total + '">' +
+      '<circle cx="15" cy="15" r="' + r + '" fill="none" stroke="var(--hair-2)" stroke-width="3"></circle>' +
+      '<circle cx="15" cy="15" r="' + r + '" fill="none" stroke="' + (pct === 1 ? "var(--good)" : "var(--brand)") + '" stroke-width="3" ' +
+      'stroke-dasharray="' + (c * pct).toFixed(1) + ' ' + c.toFixed(1) + '" stroke-linecap="round" transform="rotate(-90 15 15)"></circle>' +
+      '<text x="15" y="18.5" text-anchor="middle" font-size="10" font-weight="600" fill="var(--ink-2)">' + done + '</text></svg>';
+  }
+
+  /* ---------- календарь ---------- */
+  var MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  var DOW = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+  var EVK = {task:{label:"Задача", tok:"c1"}, letter:{label:"Письмо", tok:"c3"}, doc:{label:"Документ", tok:"c2"}};
+  var calShow = {task:true, letter:true, doc:true};
+  function events(){
+    var out = [];
+    if(calShow.task) state.tasks.forEach(function(t){
+      if(t.due) out.push({d:t.due, kind:"task", title:t.title, open:"task:" + t.id, over:!taskDone(t) && days(t.due) < 0});
+    });
+    if(calShow.letter) state.letters.forEach(function(l){
+      if(l.due) out.push({d:l.due, kind:"letter", title:l.subject, open:"letter:" + l.id, over:!letterDone(l) && days(l.due) < 0});
+    });
+    if(calShow.doc) state.docs.forEach(function(d){
+      if(d.due) out.push({d:d.due, kind:"doc", title:d.name, open:"doc:" + d.id, over:!docClosed(d) && days(d.due) < 0});
+    });
+    return out;
+  }
+  function screenCalendar(){
+    var evs = events(), byDay = {};
+    evs.forEach(function(e){ (byDay[e.d] = byDay[e.d] || []).push(e); });
+    var head = '<div class="phead"><div><h1>Календарь</h1>' +
+      '<p>Один календарь на задачи, письма и документы: срок есть у всех трёх, и разносить их по разным экранам незачем.</p></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+      '<button class="btn sm" type="button" data-cal="-1" aria-label="Предыдущий месяц">←</button>' +
+      '<b style="font-family:Manrope;min-width:150px;text-align:center">' + MONTHS[calM] + " " + calY + '</b>' +
+      '<button class="btn sm" type="button" data-cal="1" aria-label="Следующий месяц">→</button>' +
+      '<button class="btn sm" type="button" data-cal="0">Сегодня</button></div></div>';
+    var chips = '<div class="filters">' + Object.keys(EVK).map(function(k){
+      var n = evs.filter(function(e){ return e.kind === k; }).length;
+      return '<button class="fchip" type="button" data-calk="' + k + '" aria-pressed="' + calShow[k] + '">' +
+        '<span style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:7px;background:var(--' + EVK[k].tok + ')"></span>' +
+        EVK[k].label + '<span class="b">' + n + '</span></button>'; }).join("") + '</div>';
+
+    var first = new Date(calY, calM, 1), shift = (first.getDay() + 6) % 7;
+    var start = new Date(calY, calM, 1 - shift), cells = "";
+    for(var i = 0; i < 35; i++){
+      var day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      var iso = day.getFullYear() + "-" + String(day.getMonth()+1).padStart(2,"0") + "-" + String(day.getDate()).padStart(2,"0");
+      var list = byDay[iso] || [];
+      cells += '<div class="cday' + (day.getMonth() !== calM ? " out" : "") + (day.getTime() === TODAY.getTime() ? " today" : "") + '">' +
+        '<span class="d">' + day.getDate() + '</span>' +
+        list.slice(0,3).map(function(e){
+          return '<span class="ev' + (e.over ? " over" : "") + '" data-open="' + e.open + '" tabindex="0" role="button" title="' +
+            esc(EVK[e.kind].label + ": " + e.title) + '"><i style="background:var(--' + EVK[e.kind].tok + ')"></i>' +
+            '<span>' + esc(e.title) + '</span></span>';
+        }).join("") +
+        (list.length > 3 ? '<span class="dim" style="font-size:11px;padding-left:4px">ещё ' + (list.length - 3) + '</span>' : "") +
+        '</div>';
+    }
+    return head + chips + '<div class="cal"><div class="calhead">' + DOW.map(function(d){ return "<div>" + d + "</div>"; }).join("") +
+      '</div><div class="calbody">' + cells + '</div></div>';
+  }
+
+  /* ---------- аналитика ---------- */
+  function screenAnalytics(){
+    var open = state.tasks.filter(function(t){ return !taskDone(t); });
+    var over = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; });
+    var noDue = state.tasks.filter(function(t){ return !t.due; });
+    var lOver = state.letters.filter(function(l){ return !letterDone(l) && l.due && days(l.due) < 0; });
+    return '<div class="phead"><div><h1>Аналитика по проекту</h1>' +
+      '<p>Пять вопросов, которые задают на планёрке: где стоит работа, кто перегружен, с кем переписка не закрыта, где стоит подписание и что горит.</p></div>' +
+      '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Период изменён">Период: 30 дней</button>' +
+      '<button class="btn" type="button" data-act="Выгружено в .xlsx: данные всех графиков">Выгрузить</button></div></div>' +
+      '<div class="grid g3" style="margin-bottom:14px">' +
+      kpi(open.length, "Задач в работе", "из " + state.tasks.length + " всего", "") +
+      kpi(over.length, "Просрочено", over.length ? "самая старая: " + (-days(over[0].due)) + " дн." : "чисто", over.length ? "bad" : "good") +
+      kpi(noDue.length, "Без срока", "главный источник потерь", noDue.length ? "warn" : "good") +
+      kpi(lOver.length, "Писем просрочено", "из " + state.letters.length + " в реестре", lOver.length ? "warn" : "good") +
+      kpi(sigDone() + " / " + state.docs.length, "Документов подписано", "всеми сторонами", "good") +
+      '</div>' +
+      '<div class="grid g2">' +
+      '<div class="card">' + chartTracks() + '</div>' +
+      '<div class="card">' + chartAssignees() + '</div>' +
+      '<div class="card">' + chartOrgs() + '</div>' +
+      '<div class="card">' + chartSigning() + '</div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:14px"><h3>Что горит прямо сейчас</h3>' +
+      '<div class="sub">Собирается само из задач, писем и документов</div>' + burning() + '</div>';
+  }
+  function hbar(rows, opts){
+    var max = Math.max.apply(null, rows.map(function(r){ return r.total; })) || 1;
+    var W = 460, rowH = opts.rowH || 30, padL = opts.padL, padR = 44, H = rows.length * rowH + 8;
+    var barW = W - padL - padR;
+    var bars = rows.map(function(r, i){
+      var y = i * rowH + 4, x = padL, out = "";
+      r.parts.forEach(function(seg){
+        if(!seg.v) return;
+        var w = seg.v / max * barW;
+        out += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + Math.max(w - 2, 1.5).toFixed(1) + '" height="15" rx="4" fill="' + seg.color + '"' +
+          ' data-tip="' + esc(r.label + " · " + seg.name + ": " + seg.v) + '"></rect>';
+        x += w;
+      });
+      out += '<text x="' + (padL - 10) + '" y="' + (y + 11.5) + '" text-anchor="end" font-size="12" fill="var(--ink-2)">' + esc(r.label) + '</text>';
+      out += '<text x="' + (x + 7).toFixed(1) + '" y="' + (y + 11.5) + '" font-size="12" fill="var(--ink-3)">' + r.total + '</text>';
+      return out;
+    }).join("");
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" role="img" aria-label="' + esc(opts.alt) + '">' + bars + '</svg>';
+  }
+  function chartTracks(){
+    var keys = Object.keys(TSTATUS);
+    var colors = ["var(--seq1)","var(--seq2)","var(--seq3)","var(--seq4)","var(--c2)","var(--hair-2)"];
+    var rows = Object.keys(TRACKS).map(function(tr){
+      var items = state.tasks.filter(function(t){ return t.track === tr; });
+      return {label:TRACKS[tr], total:items.length, parts:keys.map(function(k, j){
+        return {v:items.filter(function(t){ return t.st === k; }).length, name:TSTATUS[k].label, color:colors[j]}; })};
+    });
+    return '<figure><h3>Где стоит работа</h3><div class="sub">Задачи по трекам, оттенок — стадия</div>' +
+      '<div class="legend">' + keys.map(function(k, j){
+        return '<span><i style="background:' + colors[j] + '"></i>' + TSTATUS[k].label + '</span>'; }).join("") + '</div>' +
+      hbar(rows, {padL:128, rowH:32, alt:"Задачи по трекам и статусам"}) +
+      '<figcaption>Светлая часть слева — то, к чему ещё не приступали.</figcaption></figure>';
+  }
+  function chartAssignees(){
+    var by = {};
+    state.tasks.filter(function(t){ return !taskDone(t); }).forEach(function(t){
+      by[t.who] = by[t.who] || {n:0, over:0};
+      by[t.who].n++;
+      if(t.due && days(t.due) < 0) by[t.who].over++;
+    });
+    var rows = Object.keys(by).sort(function(a,b){ return by[b].n - by[a].n; }).map(function(k){
+      return {label:k, total:by[k].n, parts:[
+        {v:by[k].over, name:"просрочено", color:"var(--bad)"},
+        {v:by[k].n - by[k].over, name:"в срок", color:"var(--seq3)"}
+      ]};
+    });
+    return '<figure><h3>Кто перегружен</h3><div class="sub">Открытые задачи на человека</div>' +
+      '<div class="legend"><span><i style="background:var(--seq3)"></i>В срок</span><span><i style="background:var(--bad)"></i>Просрочено</span></div>' +
+      hbar(rows, {padL:120, alt:"Нагрузка по исполнителям"}) +
+      '<figcaption>Для команды из трёх человек это первый вопрос на планёрке.</figcaption></figure>';
+  }
+  function chartOrgs(){
+    var by = {};
+    state.letters.forEach(function(l){
+      by[l.org] = by[l.org] || {all:0, open:0};
+      by[l.org].all++;
+      if(!letterDone(l)) by[l.org].open++;
+    });
+    var rows = Object.keys(by).sort(function(a,b){ return by[b].all - by[a].all; }).slice(0,6).map(function(k){
+      return {label:k.length > 22 ? k.slice(0,21) + "…" : k, total:by[k].all, parts:[
+        {v:by[k].open, name:"в работе", color:"var(--c1)"},
+        {v:by[k].all - by[k].open, name:"закрыто", color:"var(--seq2)"}
+      ]};
+    });
+    return '<figure><h3>С кем переписка не закрыта</h3><div class="sub">Письма по организациям</div>' +
+      '<div class="legend"><span><i style="background:var(--c1)"></i>В работе</span><span><i style="background:var(--seq2)"></i>Закрыто</span></div>' +
+      hbar(rows, {padL:172, alt:"Письма по организациям"}) +
+      '<figcaption>Шесть организаций с самой активной перепиской.</figcaption></figure>';
+  }
+  function chartSigning(){
+    var total = state.docs.length;
+    var rows = MILE_LABELS.map(function(l, i){
+      var n = state.docs.filter(function(d){ return d.mile[i]; }).length;
+      return {label:l.length > 22 ? l.slice(0,21) + "…" : l, total:n, parts:[{v:n, name:"дошло", color:"var(--c2)"}]};
+    });
+    return '<figure><h3>Где стоит подписание</h3><div class="sub">Сколько организаций дошло до каждой стадии</div>' +
+      hbar(rows, {padL:150, alt:"Воронка подписания"}) +
+      '<figcaption>Всего документов в работе: ' + total + '.</figcaption></figure>';
+  }
+  function burning(){
+    var rows = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; }).map(function(t){
+      return {kind:"Задача", title:t.title, who:t.who, k:-days(t.due), open:"task:" + t.id};
+    }).concat(state.letters.filter(function(l){ return !letterDone(l) && l.due && days(l.due) < 0; }).map(function(l){
+      return {kind:"Письмо", title:l.subject, who:l.org, k:-days(l.due), open:"letter:" + l.id};
+    })).concat(state.docs.filter(function(d){ return d.due && days(d.due) < 0 && !docClosed(d); }).map(function(d){
+      return {kind:"Документ", title:d.name, who:d.owner, k:-days(d.due), open:"doc:" + d.id};
+    })).sort(function(a,b){ return b.k - a.k; });
+    if(!rows.length) return '<p class="dim" style="margin:0">Просрочек нет.</p>';
+    return '<div class="list" style="margin:0 -18px -18px">' + rows.map(function(r){
+      return '<div class="li" data-open="' + r.open + '"><div class="main"><span class="t">' + esc(r.title) + '</span>' +
+        '<span class="m">' + r.kind + ' · ' + esc(r.who) + '</span></div>' +
+        '<div class="rt"><span class="due over">просрочка ' + r.k + ' дн.</span></div></div>';
+    }).join("") + '</div>';
+  }
+  var tipEl = null;
+  function wireTips(){
+    Array.prototype.forEach.call(document.querySelectorAll("[data-tip]"), function(el){
+      el.addEventListener("mouseenter", function(e){
+        if(tipEl) tipEl.remove();
+        tipEl = document.createElement("div");
+        tipEl.className = "tip";
+        tipEl.textContent = el.getAttribute("data-tip");
+        document.body.appendChild(tipEl);
+        move(e);
+      });
+      el.addEventListener("mousemove", move);
+      el.addEventListener("mouseleave", function(){ if(tipEl){ tipEl.remove(); tipEl = null; } });
+      function move(e){
+        if(!tipEl) return;
+        tipEl.style.left = Math.min(e.clientX + 12, window.innerWidth - tipEl.offsetWidth - 8) + "px";
+        tipEl.style.top = (e.clientY - 32) + "px";
+      }
+    });
+  }
+
+  /* ---------- отчёт ---------- */
+  var REPORT_BLOCKS = [
+    {k:"period",   label:"Период и проект",        auto:true,  hint:"подставляется из карточки проекта"},
+    {k:"release",  label:"Следующий релиз",        auto:false, hint:"пишет руководитель"},
+    {k:"done",     label:"Выполнено за период",    auto:true,  hint:"закрытые задачи по трекам"},
+    {k:"blockers", label:"Блокеры и просрочки",    auto:true,  hint:"просроченные задачи и отказы"},
+    {k:"letters",  label:"Движение по переписке",  auto:true,  hint:"входящие, исходящие, без ответа"},
+    {k:"numbers",  label:"Цифры для графиков",     auto:true,  hint:"те же, что на экране аналитики"},
+    {k:"decisions",label:"Предлагаемые решения",   auto:false, hint:"пишет руководитель"},
+    {k:"plan",     label:"План на следующий период", auto:false, hint:"пишет руководитель"}
+  ];
+  var reportCfg = {
+    from:"2026-09-08", to:"2026-09-21", vis:"TEAM",
+    blocks:{period:true, release:true, done:true, blockers:true, letters:true, numbers:false, decisions:true, plan:true},
+    texts:{
+      release:"Релиз 2.7 — 30.09.2026. Состав: анализ территории, обновлённые геослои, интеграция газового модуля в dev-среде.",
+      decisions:"По отказу АО «Водоканал» — согласовать формулировки о составе передаваемых данных и направить повторно до 30.09. По просроченным задачам — перенос сроков обсуждается на планёрке 23.09.",
+      plan:"Получить подписанные экземпляры регламентов от двух организаций.\nЗакрыть допсоглашение к NDA с АО «Газсеть».\nВыпустить релиз 2.7 и открыть тестовую среду."
+    }
+  };
+  function inPeriod(d){ return d && d >= reportCfg.from && d <= reportCfg.to; }
+  function reportSection(k){
+    var b = REPORT_BLOCKS.filter(function(x){ return x.k === k; })[0];
+    var body;
+    if(k === "period"){
+      var p = state.projects[0];
+      body = '<p>' + esc(p.name) + ' · ' + fmtFull(reportCfg.from) + ' — ' + fmtFull(reportCfg.to) + ' · руководитель проекта ' + esc(p.owner) + '</p>';
+    } else if(k === "done"){
+      var doneT = state.tasks.filter(taskDone);
+      body = '<ul>' + doneT.map(function(t){ return '<li><b>' + TRACKS[t.track] + ':</b> ' + esc(t.title) + '</li>'; }).join("") +
+        '<li><b>Юридический:</b> подписано всеми сторонами — ' + sigDone() + ' из ' + state.docs.length + '</li></ul>';
+    } else if(k === "blockers"){
+      var bl = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; });
+      body = '<ul>' + bl.map(function(t){ return '<li>' + esc(t.title) + ' — просрочка ' + (-days(t.due)) + ' дн., ' + esc(t.who) + '</li>'; }).join("") +
+        state.docs.filter(function(d){ return d.st === "DECLINED"; }).map(function(d){
+          return '<li>Отказ в подписании: ' + esc(d.name) + '</li>'; }).join("") + '</ul>';
+    } else if(k === "letters"){
+      var out = state.letters.filter(function(l){ return l.dir === "out"; }).length;
+      var inn = state.letters.length - out;
+      var wait = state.letters.filter(needsUs).length;
+      body = '<ul><li>Направлено исходящих — ' + out + ', получено входящих — ' + inn + '</li>' +
+        '<li>Ждут нашего ответа — ' + wait + '</li>' +
+        '<li>Просрочено по сроку исполнения — ' + state.letters.filter(function(l){ return !letterDone(l) && l.due && days(l.due) < 0; }).length + '</li></ul>';
+    } else if(k === "numbers"){
+      var open = state.tasks.filter(function(t){ return !taskDone(t); }).length;
+      body = '<ul><li>Задач в работе — ' + open + ' из ' + state.tasks.length + '</li>' +
+        '<li>Просрочено — ' + state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; }).length + '</li>' +
+        '<li>Задач без срока — ' + state.tasks.filter(function(t){ return !t.due; }).length + '</li></ul>';
+    } else {
+      body = '<textarea rows="' + (k === "plan" ? 4 : 3) + '" data-rtext="' + k + '" ' +
+        'aria-label="' + esc(b.label) + '">' + esc(reportCfg.texts[k]) + '</textarea>';
+    }
+    return '<div class="s"><h4>' + b.label + pill(b.auto ? "собрано системой" : "заполняется в форме", b.auto ? "p-good" : "p-warn") + '</h4>' + body + '</div>';
+  }
+  function screenReport(){
+    var shown = REPORT_BLOCKS.filter(function(b){ return reportCfg.blocks[b.k]; });
+    return '<div class="phead"><div><h1>Отчёт руководству</h1>' +
+      '<p>Отчёт собирается по настройке: слева черновик, справа — период, состав блоков и кто его увидит. Пункты с пометкой «собрано системой» считаются из данных, остальные заполняются прямо в форме.</p></div>' +
+      '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Выгружено в .docx и .xlsx">Выгрузить</button>' +
+      '<button class="btn primary" type="button" data-act="Отчёт отправлен руководителю, версия заморожена">Отправить</button></div></div>' +
+
+      '<div class="grid" style="grid-template-columns:minmax(0,760px) minmax(260px,1fr);align-items:start">' +
+      '<div class="doc">' + (shown.length ? shown.map(function(b){ return reportSection(b.k); }).join("")
+        : '<div class="s"><p class="dim">Ни один блок не выбран — отчёт пуст.</p></div>') + '</div>' +
+
+      '<div style="display:grid;gap:14px">' +
+      '<div class="card"><h3>Настройка отчёта</h3><div class="sub">Сохраняется как шаблон и применяется к каждому периоду</div>' +
+      '<div class="two"><div class="field"><label for="rf">Период с</label>' +
+      '<input id="rf" type="date" data-rdate="from" value="' + reportCfg.from + '"></div>' +
+      '<div class="field"><label for="rt">по</label><input id="rt" type="date" data-rdate="to" value="' + reportCfg.to + '"></div></div>' +
+      '<div class="quick" style="margin-bottom:14px">' +
+      [["week","Неделя"],["two","Две недели"],["month","Месяц"]].map(function(q){
+        return '<button type="button" data-rperiod="' + q[0] + '">' + q[1] + '</button>'; }).join("") + '</div>' +
+      '<div style="border-top:1px solid var(--hair);padding-top:10px">' +
+      REPORT_BLOCKS.map(function(b){
+        return '<label class="chk"><input type="checkbox" data-rblock="' + b.k + '"' + (reportCfg.blocks[b.k] ? " checked" : "") + '>' +
+          '<span><b>' + b.label + '</b><em>' + b.hint + '</em></span></label>'; }).join("") + '</div>' +
+      '<div class="field" style="margin-top:14px"><label for="rv">Кто видит отчёт</label>' +
+      '<select id="rv" data-rvis' + (MY_ROLE === "admin" ? "" : " disabled") + '>' +
+      Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + (reportCfg.vis === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
+      '</select></div>' +
+      '<p class="hint">Публичное отображение меняет администратор или автор в момент создания. Вы вошли как ' +
+      (MY_ROLE === "admin" ? "администратор" : "участник") + '.</p></div>' +
+
+      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Прошлые периоды</h3>' +
+      '<div class="sub">Отправленные версии заморожены</div></div>' +
+      '<div class="list">' + state.reports.map(function(r, i){
+        return '<div class="li"><div class="main"><span class="t mono">' + fmtFull(r.from) + " — " + fmtFull(r.to) + '</span>' +
+          '<span class="m">' + esc(r.author) + '</span></div>' +
+          '<div class="rt">' + pill(r.state, i ? "p-good" : "p-brand") + '</div></div>';
+      }).join("") + '</div></div></div></div>';
+  }
+
+  /* ---------- проекты и справочники ---------- */
+  function screenProjects(){
+    var p = state.projects[0];
+    return '<div class="phead"><div><h1>Проекты</h1>' +
+      '<p>Пилот идёт на одном проекте. Экран нужен с момента, когда их станет больше.</p></div>' +
+      '<button class="btn primary" type="button" data-act="Форма нового проекта">Новый проект</button></div>' +
+      '<div class="listbox"><div class="list"><div class="li" data-go="today">' +
+      '<div class="main"><span class="t">' + esc(p.name) + '</span>' +
+      '<span class="m">' + esc(p.code) + ' · ' + esc(p.owner) + ' · ' + fmtFull(p.start) + ' — ' + fmtFull(p.due) + '</span></div>' +
+      '<div class="rt">' + pill("В работе", "p-brand") +
+      '<span class="dim" style="font-size:13px">' + state.tasks.length + ' задач · ' + state.letters.length + ' писем · ' + state.docs.length + ' документов</span>' +
+      '</div></div></div></div>';
+  }
+  function screenRefs(){
+    return '<div class="phead"><div><h1>Справочники и доступ</h1>' +
+      '<p>Организации нужны как адресат письма и сторона подписания, пользователями системы они не будут. Отдельного раздела с их карточками нет: список пополняется сам из формы письма.</p></div>' +
+      '<button class="btn" type="button" data-act="Форма нового участника">Участник</button></div>' +
+      '<div class="grid g2">' +
+      '<div style="display:grid;gap:14px;align-content:start">' +
+      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Участники</h3>' +
+      '<div class="sub">Пилот на трёх людях, проект ведут все трое</div></div><div class="list">' +
+      state.members.map(function(m){
+        return '<div class="li"><div class="main"><span class="t">' + who(m.name) + '</span>' +
+          '<span class="m">' + esc(m.role) + '</span></div>' +
+          '<div class="rt">' + pill(m.acc === "admin" ? "Администратор" : "Участник", m.acc === "admin" ? "p-brand" : "p-neutral") +
+          '<span class="dim" style="font-size:13px">' +
+          state.tasks.filter(function(t){ return t.who === m.name && !taskDone(t); }).length + ' задач · ' +
+          state.letters.filter(function(l){ return l.owner === m.name; }).length + ' писем</span></div></div>';
+      }).join("") + '</div></div>' +
+      '<div class="card"><h3>Организации в переписке</h3>' +
+      '<div class="sub">Список из писем и документов, число — сколько записей на организацию</div>' +
+      '<div class="filters" style="margin:0">' + state.orgs.map(function(o){
+        var n = state.letters.filter(function(l){ return l.org === o.name; }).length +
+                state.docs.filter(function(d){ return d.org === o.name; }).length;
+        return '<span class="fchip" style="cursor:default">' + esc(o.name) +
+          (o.internal ? ' <span class="b">наша сторона</span>' : '<span class="b">' + n + '</span>') + '</span>';
+      }).join("") + '</div>' +
+      '<p class="hint" style="margin:14px 0 0">Разные написания одной организации сводятся при импорте: в файле их 14, организаций — 9.</p></div></div>' +
+
+      '<div class="card"><h3>Публичное отображение</h3>' +
+      '<div class="sub">Одно правило на задачи, письма и документы</div>' +
+      '<p style="margin:0 0 12px;font-size:14px;color:var(--ink-2)">Видимость выбирается в форме заведения артефакта — это делает сотрудник, который его заводит. После сохранения её меняет только администратор, у остальных поле заблокировано с подсказкой, к кому обратиться.</p>' +
+      Object.keys(VIS).map(function(k){
+        var n = state.tasks.filter(function(t){ return (t.vis || "PUBLIC") === k; }).length +
+                state.letters.filter(function(l){ return (l.vis || "PUBLIC") === k; }).length +
+                state.docs.filter(function(d){ return (d.vis || "PUBLIC") === k; }).length;
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--hair)">' +
+          pill(VIS[k].label, VIS[k].tone) + '<span class="dim mono" style="font-size:12.5px">' + n + '</span></div>';
+      }).join("") + '</div></div>';
+  }
+
+  /* ---------- импорт ---------- */
+  function screenImport(){
+    var sheets = [
+      ["Письма ЭДО","1006 строк, данных 50","Реестр писем","ok"],
+      ["Внутренние задачи","20","Задачи, трек «внутренний»","ok"],
+      ["Внешние задачи","2","Задачи, трек «внешний»","ok"],
+      ["Задачи Производственные","3","Задачи, трек «производство»","ok"],
+      ["Регламенты инф. взаимодействия","9","Документы на подписании","ok"],
+      ["ДС к NDA","9","Документы на подписании","ok"],
+      ["График интеграций","9","Вехи документов","ask"],
+      ["Отчёт руководству","13 строк-продолжений","Шаблон отчёта, не данные","ask"]
+    ];
+    var cols = [
+      ["№","1.0, 2.0 — дробные","Не импортировать","skip"],
+      ["Номер письма","64-03-193/26","Номер письма","ok"],
+      ["Дата письма","08.07.2026","Дата","ok"],
+      ["Тема","Согласование проекта ТЗ","Тема","ok"],
+      ["Ссылка на письмо","гиперссылка на ЭДО","Ссылка на ЭДО","ok"],
+      ["Тип","Входящее · Исходящее","Направление","ok"],
+      ["Контрагент","14 написаний, 9 организаций","Организация (справочник)","ask"],
+      ["Срок исполнения","заполнен у 17 из 50","Срок","ok"],
+      ["Просроченные","формула","Не импортировать, считаем сами","skip"],
+      ["Статус","Подписано · Дан ответ","Статус письма","ok"],
+      ["Задача в Jira","ссылка на трекер","Ключ Jira","ok"]
+    ];
+    function maprows(arr){
+      return '<div class="map">' + arr.map(function(m){
+        return '<div class="maprow"><div><b>' + esc(m[0]) + '</b><span class="ex">' + esc(m[1]) + '</span></div>' +
+          '<div style="text-align:center;color:var(--ink-3)">→</div>' +
+          '<div class="mapdst ' + m[3] + '">' + esc(m[2]) + '<small>' +
+          (m[3] === "ok" ? "угадано" : m[3] === "skip" ? "не нужно" : "решите") + '</small></div></div>';
+      }).join("") + '</div>';
+    }
+    var panels = {
+      1: '<div class="card"><h3>Файл и листы</h3><div class="sub">В книге 8 листов — не все из них задачи</div>' +
+         maprows(sheets) +
+         '<div class="note ok"><b>Внутри файла ссылки формата Google Таблиц</b>Похоже, оригинал ведётся там, а Excel — формат обмена. Если так, правильнее подключиться к Таблицам и синхронизироваться, а не импортировать файл один раз.</div></div>',
+      2: '<div class="card"><h3>Сопоставление колонок · лист «Письма ЭДО»</h3>' +
+         '<div class="sub">Зелёное угадано, янтарное требует решения, красное импортировать не нужно</div>' +
+         maprows(cols) +
+         '<div class="note bad"><b>1006 строк, данных — 50</b>В остальных заполнена только колонка «№»: нумерацию протянули вниз. Такие строки пропускаются.</div>' +
+         '<div class="note"><b>«Статус» в задачах — это хроника, а не справочник</b>Значения вида «05.05 драфт загружен в ЭДО / 06.05 на согласовании» разбираются на события истории, а текущий статус берётся по последнему.</div>' +
+         '<div class="note ok"><b>Цвет можно не разбирать</b>Зелёная заливка стоит там, где написано «Подписан», красная — где «Нет». Цвет дублирует текст.</div></div>',
+      3: '<div class="grid g3" style="margin-bottom:14px">' +
+         kpi(50, "Писем", "", "") + kpi(25, "Задач", "", "") + kpi(18, "Документов", "", "") +
+         kpi(21, "Строк без срока", "попадут в фильтр", "warn") + kpi(956, "Строк пропущено", "заполнен только номер", "bad") + '</div>' +
+         '<div class="card"><h3>Что требует внимания</h3><div class="sub">Каждый пункт ведёт в свою строку предпросмотра</div>' +
+         '<ul style="margin:0;padding-left:19px;color:var(--ink-2);font-size:14.5px;line-height:1.6">' +
+         '<li>956 строк — заполнен только номер, пропускаются.</li>' +
+         '<li>21 строка без срока: 13 задач и 8 писем.</li>' +
+         '<li>6 строк — в колонке даты текст: «Не подписан», «Проект в разработке».</li>' +
+         '<li>4 строки — несколько ответственных через запятую.</li></ul></div>',
+      4: '<div class="grid g3" style="margin-bottom:14px">' +
+         kpi(93, "Записи созданы", "", "good") + kpi(11, "Участников", "", "") +
+         kpi(9, "Организаций", "", "") + kpi(3, "Колонки в доп. поля", "", "warn") + '</div>' +
+         '<div class="card"><h3>Отчёт об импорте</h3>' +
+         '<ul style="margin:0;padding-left:19px;color:var(--ink-2);font-size:14.5px;line-height:1.6">' +
+         '<li>Задачи разложены по трекам: внутренние 20, производственные 3, внешние 2.</li>' +
+         '<li>Треки подписания собраны в 18 документов со сторонами и стадиями.</li>' +
+         '<li>Лист отчёта разобран как шаблон, а не как данные.</li></ul>' +
+         '<div class="note"><b>Письма умеют дозаливаться</b>Повторная загрузка обновляет письмо по паре «номер + дата». Для задач ключа нет — там создадутся заново.</div>' +
+         '<div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" type="button" data-go="today">Открыть проект</button>' +
+         '<button class="btn" type="button" data-act="Импорт отменён, записи удалены">Отменить импорт</button></div></div>'
+    };
+    return '<div class="phead"><div><h1>Импорт из Excel</h1>' +
+      '<p>Файл содержит пять разных реестров, поэтому импорт не один, а три: задачи, письма и документы на подписании.</p></div></div>' +
+      '<div class="stepper">' + [1,2,3,4].map(function(n){
+        return '<button type="button" data-step="' + n + '" aria-pressed="' + (step === n) + '"><em>' + n + '</em>' +
+          ["Файл и листы","Сопоставление","Проверка","Отчёт"][n-1] + '</button>'; }).join("") + '</div>' +
+      panels[step];
+  }
+
+  /* ---------- панель ---------- */
+  function openSheet(html, onMount){
+    closeSheet();
+    var scrim = document.createElement("div"); scrim.className = "scrim"; scrim.id = "scrim";
+    var sh = document.createElement("aside"); sh.className = "sheet"; sh.id = "sheet";
+    sh.setAttribute("role","dialog"); sh.setAttribute("aria-modal","true");
+    sh.innerHTML = html;
+    document.body.appendChild(scrim); document.body.appendChild(sh);
+    scrim.addEventListener("click", closeSheet);
+    document.addEventListener("keydown", escSheet);
+    var c = sh.querySelector("[data-close]");
+    if(c) c.addEventListener("click", closeSheet);
+    if(onMount) onMount(sh);
+    var f = sh.querySelector("input,select,textarea,button");
+    if(f) f.focus();
+  }
+  function escSheet(e){ if(e.key === "Escape") closeSheet(); }
+  function closeSheet(){
+    var a = document.getElementById("sheet"), b = document.getElementById("scrim");
+    if(a) a.remove(); if(b) b.remove();
+    document.removeEventListener("keydown", escSheet);
+  }
+  function prop(label, val){ return '<div class="prop"><span>' + label + '</span><div>' + val + '</div></div>'; }
+
+  function openTask(id){
+    var t = byId("tasks", id);
+    openSheet('<div class="sheet-top"><div><div class="dim" style="font-size:12.5px">' + TRACKS[t.track] + ' трек</div>' +
+      '<h2 style="margin-top:4px">' + esc(t.title) + '</h2></div>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<div class="props">' +
+      prop("Статус", pill(TSTATUS[t.st].label, TSTATUS[t.st].tone)) +
+      prop("Ответственный", who(t.who)) +
+      prop("Срок", dueTag(t.due, taskDone(t), true)) +
+      prop("Приоритет", '<span' + (t.prio === "HIGH" || t.prio === "CRITICAL" ? ' style="color:var(--bad);font-weight:600"' : "") + '>' + PRIO[t.prio] + '</span>') +
+      prop("Готовность", '<span class="mono">' + t.p + '%</span>') +
+      prop("Jira", t.jira ? '<span class="mono" style="color:var(--brand)">' + esc(t.jira) + '</span>' : '<span class="dim">не связана</span>') +
+      (t.ext ? prop("Внешний участник", esc(t.ext)) : "") +
+      prop("Видимость", pill(VIS[t.vis || "PUBLIC"].label, VIS[t.vis || "PUBLIC"].tone)) +
+      prop("Автор", esc(t.au || ME)) +
+      '</div>' +
+      (t.res ? '<div class="blk"><h4>Результат</h4><p>' + esc(t.res) + '</p></div>' : "") +
+      '<div class="blk"><h4>Связи</h4><p>Письмо-основание: исходящее от 09.09.2026<br>Документ: регламент информационного взаимодействия</p></div>' +
+      '<div class="blk"><h4>История</h4><div class="thread">' +
+      [["2026-09-18","Срок перенесён с 11.09 на " + (t.due ? fmtFull(t.due) : "—"),"Гончарова"],
+       ["2026-09-12","Статус изменён на «" + TSTATUS[t.st].label + "»","Проскуряков"],
+       ["2026-09-01","Создана импортом из Excel, лист «Внутренние задачи»","система"]].map(function(ev, i){
+        return '<div class="tev' + (i ? "" : " now") + '"><span class="line"><i></i><span></span></span>' +
+          '<span class="txt">' + esc(ev[1]) + '<em>' + fmtFull(ev[0]) + ' · ' + esc(ev[2]) + '</em></span></div>';
+      }).join("") + '</div></div>' +
+      '<div class="facts"><button class="btn danger" type="button" data-del="task:' + t.id + '">Удалить</button>' +
+      '<button class="btn primary" type="button" data-edit="' + t.id + '">Редактировать</button></div>',
+      function(sh){
+        sh.querySelector("[data-edit]").addEventListener("click", function(){ openTaskForm(t.id); });
+        sh.querySelector("[data-del]").addEventListener("click", function(){ removeItem("task", t.id); closeSheet(); });
+      });
+  }
+
+  function openTaskForm(id){
+    var t = id ? byId("tasks", id) : null;
+    var v = t || {track:"INTERNAL", st:"TODO", prio:"MEDIUM", who:ME, title:"", due:"", jira:"", res:"", p:0};
+    openSheet('<div class="sheet-top"><h2>' + (t ? "Правка задачи" : "Новая задача") + '</h2>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="tf">' +
+      '<div class="field"><label for="f1">Название</label><input id="f1" name="title" value="' + esc(v.title) + '" placeholder="Что нужно сделать"><span class="err" id="e1" hidden>Название обязательно</span></div>' +
+      '<div class="two"><div class="field"><label for="f2">Трек</label><select id="f2" name="track">' +
+      Object.keys(TRACKS).map(function(k){ return '<option value="' + k + '"' + (v.track === k ? " selected" : "") + '>' + TRACKS[k] + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="f3">Статус</label><select id="f3" name="st">' +
+      Object.keys(TSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + TSTATUS[k].label + '</option>'; }).join("") +
+      '</select></div></div>' +
+      '<div class="two"><div class="field"><label for="f4">Ответственный</label><select id="f4" name="who">' +
+      state.members.map(function(m){ return '<option' + (v.who === m.name ? " selected" : "") + '>' + m.name + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="f5">Срок</label><input id="f5" name="due" type="date" value="' + esc(v.due) + '">' +
+      '<span class="err" id="e2" hidden>Срок обязателен: без него задача теряется</span></div></div>' +
+      '<div class="two"><div class="field"><label for="f6">Приоритет</label><select id="f6" name="prio">' +
+      Object.keys(PRIO).map(function(k){ return '<option value="' + k + '"' + (v.prio === k ? " selected" : "") + '>' + PRIO[k] + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="f7">Задача в Jira</label><input id="f7" name="jira" value="' + esc(v.jira) + '" placeholder="AISRKII-0000"></div></div>' +
+      '<div class="field"><label for="f8">Результат и ссылки</label><textarea id="f8" name="res" rows="3" placeholder="Ссылка на ЭДО, комментарий о выполнении">' + esc(v.res) + '</textarea></div>' +
+      '<div class="field"><label for="f9">Кто видит задачу</label><select id="f9" name="vis"' + (canSetVis(t) ? "" : " disabled") + '>' +
+      Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + ((v.vis || "PUBLIC") === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
+      '</select></div>' +
+      '<p class="hint">' + visHint(t) + '</p>' +
+      '<div class="facts">' + (t ? '<button class="btn danger" type="button" data-del="task:' + t.id + '">Удалить</button>' : "") +
+      '<button class="btn" type="button" data-close>Отмена</button>' +
+      '<button class="btn primary" type="submit">' + (t ? "Сохранить" : "Создать") + '</button></div></form>',
+      function(sh){
+        sh.querySelector("#tf").addEventListener("submit", function(e){
+          e.preventDefault();
+          var f = e.target, title = f.title.value.trim(), due = f.due.value;
+          sh.querySelector("#e1").hidden = !!title;
+          sh.querySelector("#e2").hidden = !!due;
+          if(!title || !due) return;
+          var data = {title:title, track:f.track.value, st:f.st.value, who:f.who.value, prio:f.prio.value,
+                      due:due, jira:f.jira.value.trim(), res:f.res.value.trim()};
+          if(!f.vis.disabled) data.vis = f.vis.value;
+          if(t){ Object.keys(data).forEach(function(k){ t[k] = data[k]; }); toast("Задача сохранена"); }
+          else {
+            data.id = ++uid; data.created = "2026-09-22"; data.p = 0; data.au = ME; data.vis = data.vis || "PUBLIC";
+            state.tasks.push(data);
+            toast("Задача создана", function(){ state.tasks = state.tasks.filter(function(x){ return x.id !== data.id; }); });
+          }
+          closeSheet(); render();
+        });
+        var d = sh.querySelector("[data-del]");
+        if(d) d.addEventListener("click", function(){ removeItem("task", t.id); closeSheet(); });
+      });
+  }
+
+  function canSetVis(item){ return MY_ROLE === "admin" || !item || item.au === ME; }
+  function visHint(item){
+    if(!item) return "Публичное отображение настраивается сейчас, при заведении. Позже его меняет только администратор.";
+    if(canSetVis(item)) return "Вы автор записи, поэтому можете менять её видимость.";
+    return "Видимость менять может только администратор — Проскуряков.";
+  }
+  function addDays(iso, n){
+    var d = parse(iso); d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+
+  function openLetterForm(id, seed){
+    var l = id ? byId("letters", id) : null;
+    var v = l || seed || {dir:"in", num:"", date:"2026-09-22", subject:"", org:state.orgs[0].name,
+                          owner:ME, due:"", jira:"", st:"NEW", vis:"PUBLIC", snip:""};
+    openSheet('<div class="sheet-top"><div><h2>' + (l ? "Правка письма" : "Новое письмо в реестр") + '</h2>' +
+      (l ? "" : '<p class="muted" style="margin:4px 0 0;font-size:13px">Обязательны номер, дата, тема и срок. Остальное можно дозаполнить позже.</p>') +
+      '</div><button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="lf">' +
+      '<div class="two"><div class="field"><label for="l1">Направление</label><select id="l1" name="dir">' +
+      '<option value="in"' + (v.dir === "in" ? " selected" : "") + '>Входящее</option>' +
+      '<option value="out"' + (v.dir === "out" ? " selected" : "") + '>Исходящее</option></select></div>' +
+      '<div class="field"><label for="l2">Номер</label><input id="l2" name="num" class="mono" value="' + esc(v.num) + '" placeholder="64-03-000/26" autocomplete="off">' +
+      '<span class="err" id="le1" hidden>Номер обязателен</span>' +
+      '<span class="err" id="le4" style="color:var(--warn)" hidden>Такое письмо уже есть в реестре — проверьте, не дубль ли это</span></div></div>' +
+      '<div class="two"><div class="field"><label for="l3">Дата письма</label><input id="l3" name="date" type="date" value="' + esc(v.date) + '"></div>' +
+      '<div class="field"><label for="l4">Срок исполнения</label><input id="l4" name="due" type="date" value="' + esc(v.due) + '">' +
+      '<div class="quick"><button type="button" data-due="3">+3 дня</button><button type="button" data-due="7">+7 дней</button>' +
+      '<button type="button" data-due="14">+14 дней</button></div>' +
+      '<span class="err" id="le3" hidden>Срок обязателен, иначе письмо не попадёт в календарь</span></div></div>' +
+      '<label class="chk" style="margin:-4px 0 12px"><input type="checkbox" id="lnodue"' + (l && !l.due ? " checked" : "") + '>' +
+      '<span><b>Ответ не требуется</b><em>Письмо принимается к сведению, срок не нужен</em></span></label>' +
+      '<div class="field"><label for="l5">Тема</label><input id="l5" name="subject" value="' + esc(v.subject) + '" placeholder="О чём письмо">' +
+      '<span class="err" id="le2" hidden>Тема обязательна</span></div>' +
+      '<div class="two"><div class="field"><label for="l6">Организация</label><select id="l6" name="org">' +
+      state.orgs.map(function(u){ return '<option' + (v.org === u.name ? " selected" : "") + '>' + esc(u.name) + '</option>'; }).join("") +
+      '</select></div>' +
+      '<div class="field"><label for="l7">Ответственный</label><select id="l7" name="owner">' +
+      '<option value=""' + (v.owner ? "" : " selected") + '>Не назначен</option>' +
+      state.members.map(function(m){ return '<option' + (v.owner === m.name ? " selected" : "") + '>' + esc(m.name) + '</option>'; }).join("") +
+      '</select></div></div>' +
+      '<div class="two"><div class="field"><label for="l8">Статус</label><select id="l8" name="st">' +
+      Object.keys(LSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + LSTATUS[k].label + '</option>'; }).join("") +
+      '</select></div>' +
+      '<div class="field"><label for="l9">Задача в Jira</label><input id="l9" name="jira" class="mono" value="' + esc(v.jira) + '" placeholder="AISRKII-0000"></div></div>' +
+      '<div class="field"><label for="l10">Краткое содержание</label><textarea id="l10" name="snip" rows="2" placeholder="Одна строка, по которой письмо узнают в списке">' + esc(v.snip) + '</textarea></div>' +
+      '<div class="field"><label for="l11">Кто видит письмо</label><select id="l11" name="vis"' + (canSetVis(l) ? "" : " disabled") + '>' +
+      Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + ((v.vis || "PUBLIC") === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
+      '</select></div>' +
+      '<p class="hint">' + visHint(l) + '<br>Сохранить и сразу открыть пустую форму — <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span>.</p>' +
+      '<div class="facts">' + (l ? '<button class="btn danger" type="button" data-del="letter:' + l.id + '">Удалить</button>' : "") +
+      '<button class="btn" type="button" data-close>Отмена</button>' +
+      (l ? "" : '<button class="btn" type="submit" name="more" value="1">Сохранить и следующее</button>') +
+      '<button class="btn primary" type="submit">' + (l ? "Сохранить" : "Сохранить") + '</button></div></form>',
+      function(sh){
+        var form = sh.querySelector("#lf");
+        var more = false;
+        Array.prototype.forEach.call(sh.querySelectorAll("[data-due]"), function(b){
+          b.addEventListener("click", function(){
+            form.due.value = addDays(form.date.value || "2026-09-22", +b.dataset.due);
+            sh.querySelector("#lnodue").checked = false;
+          });
+        });
+        form.num.addEventListener("blur", function(){
+          var dup = state.letters.some(function(x){ return x.num === form.num.value.trim() && x.date === form.date.value && (!l || x.id !== l.id); });
+          sh.querySelector("#le4").hidden = !dup;
+        });
+        Array.prototype.forEach.call(form.querySelectorAll('button[type="submit"]'), function(b){
+          b.addEventListener("click", function(){ more = b.name === "more"; });
+        });
+        form.addEventListener("keydown", function(e){
+          if((e.metaKey || e.ctrlKey) && e.key === "Enter"){ more = true; form.requestSubmit ? form.requestSubmit() : form.querySelector('button[type="submit"]').click(); }
+        });
+        form.addEventListener("submit", function(e){
+          e.preventDefault();
+          var num = form.num.value.trim(), subject = form.subject.value.trim();
+          var noDue = sh.querySelector("#lnodue").checked, due = noDue ? "" : form.due.value;
+          sh.querySelector("#le1").hidden = !!num;
+          sh.querySelector("#le2").hidden = !!subject;
+          sh.querySelector("#le3").hidden = !!(due || noDue);
+          if(!num || !subject || (!due && !noDue)) return;
+          var data = {num:num, date:form.date.value, dir:form.dir.value, subject:subject, org:form.org.value,
+                      owner:form.owner.value, due:due, st:form.st.value, jira:form.jira.value.trim(),
+                      snip:form.snip.value.trim() || subject};
+          if(!form.vis.disabled) data.vis = form.vis.value;
+          if(l){
+            Object.keys(data).forEach(function(k){ l[k] = data[k]; });
+            l.thread = l.thread.concat([["2026-09-22","Карточка письма изменена", ME]]);
+            toast("Письмо сохранено"); closeSheet(); render(); return;
+          }
+          data.id = ++uid; data.au = ME; data.vis = data.vis || "PUBLIC";
+          data.thread = [[data.date, data.dir === "in" ? "Письмо внесено в реестр вручную" : "Письмо отправлено и внесено в реестр", ME]];
+          state.letters.unshift(data);
+          mailOpen = data.id;
+          toast("Письмо в реестре", function(){ state.letters = state.letters.filter(function(x){ return x.id !== data.id; }); });
+          closeSheet(); render();
+          if(more) openLetterForm(null, {dir:data.dir, num:"", date:data.date, subject:"", org:data.org,
+                                          owner:data.owner, due:"", jira:"", st:"NEW", vis:data.vis, snip:""});
+        });
+      });
+  }
+
+  function openDocForm(id){
+    var d = id ? byId("docs", id) : null;
+    var v = d || {kind:"REGULATION", name:"", org:state.orgs[0].name, owner:ME, st:"DRAFT",
+                  dit:"PENDING", rso:"PENDING", djkh:"PENDING", due:"", next:"", vis:"PUBLIC", mile:[1,0,0,0,0]};
+    openSheet('<div class="sheet-top"><h2>' + (d ? "Правка документа" : "Новый документ на подписание") + '</h2>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="df">' +
+      '<div class="field"><label for="d1">Название</label><input id="d1" name="name" value="' + esc(v.name) + '" placeholder="Регламент обмена с…">' +
+      '<span class="err" id="de1" hidden>Название обязательно</span></div>' +
+      '<div class="two"><div class="field"><label for="d2">Вид</label><select id="d2" name="kind">' +
+      Object.keys(DKIND).map(function(k){ return '<option value="' + k + '"' + (v.kind === k ? " selected" : "") + '>' + DKIND[k] + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="d3">Организация</label><select id="d3" name="org">' +
+      state.orgs.map(function(u){ return '<option' + (v.org === u.name ? " selected" : "") + '>' + esc(u.name) + '</option>'; }).join("") +
+      '</select></div></div>' +
+      '<div class="two"><div class="field"><label for="d4">Ответственный</label><select id="d4" name="owner">' +
+      state.members.map(function(m){ return '<option' + (v.owner === m.name ? " selected" : "") + '>' + esc(m.name) + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="d5">Срок</label><input id="d5" name="due" type="date" value="' + esc(v.due) + '">' +
+      '<span class="err" id="de2" hidden>Срок обязателен</span></div></div>' +
+      '<div class="blk"><h4>Стороны подписания</h4>' + PARTIES.map(function(p, i){
+        return '<div class="field"><label for="ds' + i + '">' + p[1] + '</label><select id="ds' + i + '" name="' + p[0] + '">' +
+          Object.keys(SIG).map(function(k){ return '<option value="' + k + '"' + (v[p[0]] === k ? " selected" : "") + '>' + SIG[k] + '</option>'; }).join("") +
+          '</select></div>';
+      }).join("") + '</div>' +
+      '<div class="field"><label for="d6">Следующий шаг</label><input id="d6" name="next" value="' + esc(v.next) + '" placeholder="Что делаем дальше"></div>' +
+      '<div class="field"><label for="d7">Кто видит документ</label><select id="d7" name="vis"' + (canSetVis(d) ? "" : " disabled") + '>' +
+      Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + ((v.vis || "PUBLIC") === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
+      '</select></div><p class="hint">' + visHint(d) + '</p>' +
+      '<div class="facts">' + (d ? '<button class="btn danger" type="button" data-del="doc:' + d.id + '">Удалить</button>' : "") +
+      '<button class="btn" type="button" data-close>Отмена</button>' +
+      '<button class="btn primary" type="submit">' + (d ? "Сохранить" : "Создать") + '</button></div></form>',
+      function(sh){
+        sh.querySelector("#df").addEventListener("submit", function(e){
+          e.preventDefault();
+          var f = e.target, name = f.name.value.trim(), due = f.due.value;
+          sh.querySelector("#de1").hidden = !!name;
+          sh.querySelector("#de2").hidden = !!due;
+          if(!name || !due) return;
+          var data = {name:name, kind:f.kind.value, org:f.org.value, owner:f.owner.value, due:due, next:f.next.value.trim()};
+          PARTIES.forEach(function(p){ data[p[0]] = f[p[0]].value; });
+          data.st = PARTIES.some(function(p){ return data[p[0]] === "DECLINED"; }) ? "DECLINED"
+                  : docClosed(data) ? "SIGNED" : "SIGNING";
+          if(!f.vis.disabled) data.vis = f.vis.value;
+          if(d){ Object.keys(data).forEach(function(k){ d[k] = data[k]; }); toast("Документ сохранён"); }
+          else {
+            data.id = ++uid; data.au = ME; data.vis = data.vis || "PUBLIC"; data.mile = [1,0,0,0,0]; data.st = "DRAFT";
+            state.docs.push(data);
+            toast("Документ создан", function(){ state.docs = state.docs.filter(function(x){ return x.id !== data.id; }); });
+          }
+          closeSheet(); render();
+        });
+        var del = sh.querySelector("[data-del]");
+        if(del) del.addEventListener("click", function(){ removeItem("doc", d.id); closeSheet(); });
+      });
+  }
+
+  function openLetter(id){
+    mailOpen = +id;
+    if(route !== "letters"){ route = "letters"; mailFilter = "all"; render(); }
+    else render();
+    var el = document.querySelector('.mail[data-mail="' + id + '"]');
+    if(el) el.scrollIntoView({block:"nearest"});
+  }
+
+  function openDoc(id){
+    var d = byId("docs", id), c = sigCount(d);
+    openSheet('<div class="sheet-top"><div><div class="dim" style="font-size:12.5px">' + esc(DKIND[d.kind]) + '</div>' +
+      '<h2 style="margin-top:4px">' + esc(d.name) + '</h2>' +
+      '<p class="muted" style="margin:4px 0 0;font-size:13.5px">' + esc(DTITLE[d.kind]) + ' · ' + esc(d.org) + '</p></div>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px">' +
+      ring(c.done, c.total) + '<div><b style="font-family:Manrope">' + c.done + ' из ' + c.total + ' подписей</b>' +
+      '<div class="dim" style="font-size:13px">' + (docWaiting(d) || "все стороны подписали") + '</div></div>' +
+      '<div style="margin-left:auto">' + pill(DSTATUS[d.st].label, DSTATUS[d.st].tone) + '</div></div>' +
+      '<div class="blk"><h4>Стороны</h4>' + PARTIES.map(function(p){
+        var v = d[p[0]];
+        var tone = v === "SIGNED" ? "p-good" : v === "DECLINED" ? "p-bad" : v === "NOT_REQUIRED" ? "p-neutral" : "p-warn";
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair)">' +
+          '<div><b style="font-size:14px">' + p[1] + '</b><div class="dim" style="font-size:12.5px">' +
+          (v === "SIGNED" ? "подписано, экземпляр получен"
+           : v === "DECLINED" ? "отказ: не согласован состав передаваемых данных"
+           : v === "NOT_REQUIRED" ? "подпись не требуется" : "направлено, ответа нет") + '</div></div>' +
+          pill(SIG[v], tone) + '</div>';
+      }).join("") + '</div>' +
+      '<div class="blk"><h4>Вехи интеграции</h4>' + d.mile.map(function(v, i){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13.5px;color:' +
+          (v ? "var(--ink-2)" : "var(--ink-3)") + '">' +
+          '<i style="width:9px;height:9px;border-radius:50%;background:' + (v ? "var(--good)" : "var(--hair-2)") + ';display:block;flex:none"></i>' +
+          esc(MILE_LABELS[i]) + '</div>';
+      }).join("") + '</div>' +
+      '<div class="props">' + prop("Ответственный", who(d.owner)) + prop("Срок", dueTag(d.due, docClosed(d), true)) +
+      prop("Организация", esc(d.org)) + prop("Видимость", pill(VIS[d.vis || "PUBLIC"].label, VIS[d.vis || "PUBLIC"].tone)) + '</div>' +
+      (d.next ? '<div class="blk"><h4>Следующий шаг</h4><p>' + esc(d.next) + '</p></div>' : "") +
+      '<div class="facts"><button class="btn danger" type="button" data-del="doc:' + d.id + '">Удалить</button>' +
+      '<button class="btn" type="button" data-new="task">Создать задачу</button>' +
+      '<button class="btn primary" type="button" data-edoc="' + d.id + '">Редактировать</button></div>',
+      function(sh){
+        sh.querySelector("[data-del]").addEventListener("click", function(){ removeItem("doc", d.id); closeSheet(); });
+        sh.querySelector("[data-edoc]").addEventListener("click", function(){ openDocForm(d.id); });
+      });
+  }
+
+  function removeItem(kind, id){
+    var coll = kind === "task" ? "tasks" : kind === "letter" ? "letters" : "docs";
+    var item = byId(coll, id), idx = state[coll].indexOf(item);
+    state[coll].splice(idx, 1);
+    toast((kind === "task" ? "Задача удалена" : kind === "letter" ? "Письмо удалено" : "Документ удалён"), function(){
+      state[coll].splice(idx, 0, item);
+    });
+    render();
+  }
+
+  /* ---------- командная строка ---------- */
+  function openPalette(){
+    if(document.getElementById("pal")) return;
+    var box = document.createElement("div");
+    box.className = "palette"; box.id = "pal";
+    box.innerHTML = '<div class="bg"></div><div class="pbox">' +
+      '<input id="pq" placeholder="Найти задачу, письмо, документ или экран" autocomplete="off" aria-label="Поиск">' +
+      '<div class="res" id="pres"></div></div>';
+    document.body.appendChild(box);
+    box.querySelector(".bg").addEventListener("click", closePalette);
+    var inp = box.querySelector("#pq");
+    inp.addEventListener("input", function(){ paletteResults(inp.value); });
+    document.addEventListener("keydown", escPal);
+    paletteResults("");
+    inp.focus();
+  }
+  function escPal(e){ if(e.key === "Escape") closePalette(); }
+  function closePalette(){
+    var p = document.getElementById("pal");
+    if(p) p.remove();
+    document.removeEventListener("keydown", escPal);
+  }
+  function paletteResults(q){
+    var out = [];
+    NAV_MAIN.concat(NAV_SEC).forEach(function(n){
+      if(!q || norm(n.label).indexOf(norm(q)) !== -1) out.push({k:"Экран", v:n.label, go:n.k});
+    });
+    state.tasks.forEach(function(t){
+      if(q && norm(t.title).indexOf(norm(q)) === -1) return;
+      out.push({k:"Задача", v:t.title, open:"task:" + t.id});
+    });
+    state.letters.forEach(function(l){
+      if(q && norm(l.subject + " " + l.num + " " + l.org).indexOf(norm(q)) === -1) return;
+      out.push({k:"Письмо", v:l.num + " · " + l.subject, open:"letter:" + l.id});
+    });
+    state.docs.forEach(function(d){
+      if(q && norm(d.name + " " + d.org + " " + DTITLE[d.kind]).indexOf(norm(q)) === -1) return;
+      out.push({k:"Документ", v:d.name, open:"doc:" + d.id});
+    });
+    var el = document.getElementById("pres");
+    if(!out.length){ el.innerHTML = '<div class="pempty">Ничего не нашлось.</div>'; return; }
+    el.innerHTML = out.slice(0,12).map(function(r, i){
+      return '<div class="pres" aria-selected="' + (i === 0) + '"' +
+        (r.go ? ' data-go="' + r.go + '"' : ' data-open="' + r.open + '"') + '>' +
+        '<span class="k">' + r.k + '</span><span class="v">' + esc(r.v) + '</span></div>';
+    }).join("");
+  }
+
+  /* ---------- сборка ---------- */
+  var SCREENS = {
+    today:screenToday, tasks:screenTasks, letters:screenLetters, docs:screenDocs,
+    calendar:screenCalendar, analytics:screenAnalytics, report:screenReport,
+    refs:screenRefs, import:screenImport, projects:screenProjects
+  };
+  function render(){
+    renderNav();
+    document.getElementById("main").innerHTML = SCREENS[route]();
+    if(route === "analytics") wireTips();
+    var mq = document.getElementById("mq");
+    if(mq && mailQuery){ mq.focus(); mq.setSelectionRange(mq.value.length, mq.value.length); }
+  }
+  function go(r){ route = r; closePalette(); render(); window.scrollTo(0,0); }
+
+  document.addEventListener("click", function(e){
+    var el = e.target.closest("[data-go],[data-open],[data-del],[data-new],[data-tview],[data-tfilter],[data-mfilter],[data-mail],[data-dfilter],[data-cal],[data-calk],[data-step],[data-act],[data-eletter],[data-mpanel],[data-mreset],[data-msaved],[data-rperiod]");
+    if(!el) return;
+    var d = el.dataset;
+    if(d.go){ go(d.go); return; }
+    if(d.open){
+      var p = d.open.split(":");
+      closePalette();
+      if(p[0] === "task") openTask(+p[1]);
+      else if(p[0] === "letter") openLetter(+p[1]);
+      else openDoc(+p[1]);
+      return;
+    }
+    if(d.del){ var q = d.del.split(":"); removeItem(q[0], +q[1]); return; }
+    if(d.new){
+      if(d.new === "task") openTaskForm(null);
+      else if(d.new === "letter") openLetterForm(null);
+      else openDocForm(null);
+      return;
+    }
+    if(d.eletter){ openLetterForm(+d.eletter); return; }
+    if(d.mpanel !== undefined){ mailPanel = !mailPanel; render(); return; }
+    if(d.mreset !== undefined){
+      Object.keys(mailFacets).forEach(function(k){ mailFacets[k] = ""; });
+      mailOpenOnly = false; mailQuery = ""; render(); return;
+    }
+    if(d.msaved){
+      var sv = SAVED.filter(function(x){ return x.k === d.msaved; })[0];
+      Object.keys(mailFacets).forEach(function(k){ mailFacets[k] = ""; });
+      Object.keys(sv.set).forEach(function(k){ mailFacets[k] = sv.set[k]; });
+      mailOpenOnly = sv.post === "open";
+      mailPanel = true; mailFilter = "all"; render(); return;
+    }
+    if(d.rperiod){
+      var to = "2026-09-21";
+      reportCfg.to = to;
+      reportCfg.from = d.rperiod === "week" ? addDays(to, -6) : d.rperiod === "two" ? addDays(to, -13) : addDays(to, -29);
+      render(); return;
+    }
+    if(d.tview){ taskView = d.tview; render(); return; }
+    if(d.tfilter){ taskFilter = d.tfilter; render(); return; }
+    if(d.mfilter){ mailFilter = d.mfilter; render(); return; }
+    if(d.mail){ mailOpen = +d.mail; render(); return; }
+    if(d.dfilter){ docFilter = d.dfilter; render(); return; }
+    if(d.cal !== undefined){
+      if(d.cal === "0"){ calM = TODAY.getMonth(); calY = TODAY.getFullYear(); }
+      else { calM += +d.cal; if(calM < 0){ calM = 11; calY--; } if(calM > 11){ calM = 0; calY++; } }
+      render(); return;
+    }
+    if(d.calk){ calShow[d.calk] = !calShow[d.calk]; render(); return; }
+    if(d.step){ step = +d.step; render(); return; }
+    if(d.act){ toast(d.act); return; }
+  });
+  document.addEventListener("input", function(e){
+    var t = e.target;
+    if(t.id === "mq"){ mailQuery = t.value; render(); return; }
+    if(t.dataset && t.dataset.rtext){ reportCfg.texts[t.dataset.rtext] = t.value; return; }
+  });
+  document.addEventListener("change", function(e){
+    var t = e.target;
+    if(t.dataset && t.dataset.facet !== undefined && t.dataset.facet){ mailFacets[t.dataset.facet] = t.value; render(); return; }
+    if(t.hasAttribute && t.hasAttribute("data-mopen")){ mailOpenOnly = t.checked; render(); return; }
+    if(t.dataset && t.dataset.rblock){ reportCfg.blocks[t.dataset.rblock] = t.checked; render(); return; }
+    if(t.dataset && t.dataset.rdate){ reportCfg[t.dataset.rdate] = t.value; render(); return; }
+    if(t.hasAttribute && t.hasAttribute("data-rvis")){ reportCfg.vis = t.value; toast("Видимость отчёта изменена: " + VIS[t.value].label); return; }
+  });
+  document.getElementById("omni").addEventListener("click", openPalette);
+  document.addEventListener("keydown", function(e){
+    if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); openPalette(); return; }
+    if(e.key === "Enter" || e.key === " "){
+      var el = e.target.closest('[role="button"]');
+      if(el){ e.preventDefault(); el.click(); }
+    }
+  });
+
+  render();
+})();
+</script>
