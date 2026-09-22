@@ -52,10 +52,12 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
       select: { id: true, number: true, subject: true },
       take: 200,
     }),
+    // Треки всех проектов: в форме можно сменить проект, и список треков
+    // должен смениться вместе с ним.
     prisma.track.findMany({
-      where: { projectId: selected, isArchived: false },
+      where: { isArchived: false },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, projectId: true },
     }),
   ]);
 
@@ -83,7 +85,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           assigneeId: null,
           externalAssignee: null,
           externalTaskKey: null,
-          trackId: tracks[0]?.id ?? "",
+          trackId: tracks.find((track) => track.projectId === selected)?.id ?? "",
           progressNote: null,
           resultLink: null,
           letterId: null,

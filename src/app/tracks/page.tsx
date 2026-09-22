@@ -7,6 +7,7 @@ import {
   updateTrack,
 } from "@/app/actions/tracks";
 import { SubmitButton } from "@/components/submit-button";
+import { ProjectSwitch } from "@/components/project-switch";
 import { TrackForm } from "@/components/track-form";
 import { TrackRowForm } from "@/components/track-row-form";
 import { requireUser } from "@/lib/auth";
@@ -61,21 +62,9 @@ export default async function TracksPage(props: PageProps<"/tracks">) {
       </div>
 
       {projects.length > 1 && (
-        <form className="card flex flex-wrap items-end gap-3 p-4">
-          <label className="field">
-            Проект
-            <select name="projectId" defaultValue={selected} className="input w-72">
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.code} — {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="btn-secondary">
-            Показать
-          </button>
-        </form>
+        <div className="card flex flex-wrap items-end gap-3 p-4">
+          <ProjectSwitch projects={projects} selected={selected} basePath="/tracks" />
+        </div>
       )}
 
       <TrackForm action={createTrack} projectId={selected} />

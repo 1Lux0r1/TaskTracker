@@ -6,6 +6,18 @@ import { prisma } from "@/lib/db";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
 import { type ActionResult, formatZodError, taskInputSchema } from "@/lib/validation";
 
+/**
+ * Трек принадлежит проекту: в форме проект можно сменить, и трек прошлого
+ * проекта не должен уехать в новый — в его справочнике такого трека нет.
+ */
+async function trackBelongsToProject(trackId: string, projectId: string): Promise<boolean> {
+  const track = await prisma.track.findUnique({
+    where: { id: trackId },
+    select: { projectId: true },
+  });
+  return track?.projectId === projectId;
+}
+
 export async function createTask(
   _state: ActionResult | null,
   formData: FormData,
@@ -15,6 +27,10 @@ export async function createTask(
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   const input = parsed.data;
+  if (!(await trackBelongsToProject(input.trackId, input.projectId))) {
+    return { ok: false, error: "Выбранный трек относится к другому проекту" };
+  }
+
   const last = await prisma.task.findFirst({
     where: { projectId: input.projectId },
     orderBy: { number: "desc" },
@@ -48,6 +64,9 @@ export async function updateTask(
   const input = parsed.data;
   if (input.parentId === taskId) {
     return { ok: false, error: "Задача не может быть подзадачей самой себя" };
+  }
+  if (!(await trackBelongsToProject(input.trackId, input.projectId))) {
+    return { ok: false, error: "Выбранный трек относится к другому проекту" };
   }
 
   const current = await prisma.task.findUnique({ where: { id: taskId } });

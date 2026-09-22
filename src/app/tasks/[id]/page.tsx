@@ -44,12 +44,13 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       select: { id: true, number: true, subject: true },
       take: 200,
     }),
-    // Архивный трек показываем, если задача в нём уже лежит: иначе при
-    // сохранении он молча сменился бы на первый из списка.
+    // Треки всех проектов: в форме можно сменить проект задачи. Архивный
+    // трек показываем, если задача в нём уже лежит, иначе при сохранении он
+    // молча сменился бы на первый из списка.
     prisma.track.findMany({
-      where: { projectId: task.projectId, OR: [{ isArchived: false }, { id: task.trackId }] },
+      where: { OR: [{ isArchived: false }, { id: task.trackId }] },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, projectId: true },
     }),
   ]);
 

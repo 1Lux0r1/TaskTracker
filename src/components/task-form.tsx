@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import {
   TASK_PRIORITIES,
@@ -36,8 +36,8 @@ type Props = {
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   projects: { id: string; code: string; name: string }[];
   members: { id: string; fullName: string }[];
-  /** Треки выбранного проекта: список свой у каждого проекта. */
-  tracks: { id: string; name: string }[];
+  /** Треки всех проектов: список свой у каждого, форма показывает нужные. */
+  tracks: { id: string; name: string; projectId: string }[];
   /** Задачи того же проекта — кандидаты в родительские. */
   parentCandidates?: { id: string; number: number; title: string }[];
   /** Письма проекта: задача часто заводится по конкретному письму. */
@@ -59,7 +59,10 @@ export function TaskForm({
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
-  const projectId = defaults?.projectId ?? projects[0]?.id ?? "";
+  // Проект в состоянии: при его смене список треков должен смениться тоже,
+  // иначе задача уедет в один проект с треком другого.
+  const [projectId, setProjectId] = useState(defaults?.projectId ?? projects[0]?.id ?? "");
+  const projectTracks = tracks.filter((track) => track.projectId === projectId);
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
@@ -75,7 +78,13 @@ export function TaskForm({
       ) : (
         <label className="field">
           Проект
-          <select name="projectId" defaultValue={projectId} required className="input">
+          <select
+            name="projectId"
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
+            required
+            className="input"
+          >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.code} — {project.name}
@@ -92,12 +101,21 @@ export function TaskForm({
         </label>
         <label className="field">
           Трек
+          {/* key по проекту: при смене проекта выбор сбрасывается на его
+              первый трек, а не остаётся на треке прошлого проекта. */}
           <select
+            key={projectId}
             name="trackId"
-            defaultValue={defaults?.trackId ?? tracks[0]?.id ?? ""}
+            defaultValue={
+              projectTracks.some((track) => track.id === defaults?.trackId)
+                ? defaults?.trackId
+                : projectTracks[0]?.id
+            }
+            required
             className="input"
           >
-            {tracks.map((track) => (
+            {projectTracks.length === 0 && <option value="">Треков нет</option>}
+            {projectTracks.map((track) => (
               <option key={track.id} value={track.id}>
                 {track.name}
               </option>
