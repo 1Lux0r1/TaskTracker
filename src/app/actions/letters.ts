@@ -7,19 +7,31 @@ import { CLOSED_LETTER_STATUSES, type LetterStatus } from "@/lib/domain";
 import { buildLetterSearchIndex } from "@/lib/search";
 import { type ActionResult, formatZodError, letterInputSchema } from "@/lib/validation";
 
+/**
+ * Форма быстрого внесения не уходит со страницы: реестр переписки заполняют
+ * пачками, поэтому действие возвращает список уже внесённых писем, а форма
+ * сохраняет повторяющиеся поля.
+ */
+export type QuickLetterState = {
+  ok: boolean;
+  error?: string;
+  saved: { id: string; number: string; subject: string }[];
+};
+
 export async function createLetter(
-  _state: ActionResult | null,
+  state: QuickLetterState | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<QuickLetterState> {
+  const saved = state?.saved ?? [];
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error), saved };
 
   const input = parsed.data;
   const duplicate = await prisma.letter.findFirst({
     where: { projectId: input.projectId, number: input.number, direction: input.direction },
   });
   if (duplicate) {
-    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте` };
+    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте`, saved };
   }
 
   const letter = await prisma.letter.create({
@@ -30,7 +42,10 @@ export async function createLetter(
     },
   });
   revalidatePath("/letters");
-  redirect(`/letters/${letter.id}`);
+  return {
+    ok: true,
+    saved: [{ id: letter.id, number: letter.number, subject: letter.subject }, ...saved].slice(0, 25),
+  };
 }
 
 export async function updateLetter(

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { prisma } from "@/lib/db";
 import {
-  CLOSED_LETTER_STATUSES,
   LETTER_DIRECTION_LABELS,
   LETTER_DIRECTIONS,
   LETTER_STATUS_LABELS,
@@ -10,88 +9,40 @@ import {
   formatDate,
   isLetterOpen,
   startOfToday,
-  type LetterDirection,
-  type LetterStatus,
 } from "@/lib/domain";
-import { normalizeQuery } from "@/lib/search";
-import type { Prisma } from "@/generated/prisma/client";
+import {
+  LETTER_PRESETS,
+  LETTER_SORTS,
+  buildLetterOrderBy,
+  buildLetterWhere,
+  countActiveFilters,
+  readLetterFilter,
+} from "@/lib/letter-filters";
 
 export const dynamic = "force-dynamic";
 
-const PRESETS = [
-  { value: "open", label: "В работе" },
-  { value: "overdue", label: "Просроченные" },
-  { value: "due7", label: "Срок в ближайшую неделю" },
-  { value: "waitingUs", label: "Ждут нашего ответа" },
-  { value: "waitingThem", label: "Ждём их ответа" },
-  { value: "noOwner", label: "Без ответственного" },
-  { value: "noDue", label: "Без срока" },
-  { value: "all", label: "Все" },
-] as const;
-
 export default async function LettersPage(props: PageProps<"/letters">) {
   const params = await props.searchParams;
-  const preset = single(params.preset) ?? "open";
-  const direction = single(params.direction) ?? "";
-  const status = single(params.status) ?? "";
-  const counterpartyId = single(params.counterpartyId) ?? "";
-  const query = single(params.q)?.trim() ?? "";
-
+  const filter = readLetterFilter(params);
   const today = startOfToday();
-  const where: Prisma.LetterWhereInput = {};
+  const activeFilters = countActiveFilters(filter);
 
-  if (preset === "open") where.status = { notIn: CLOSED_LETTER_STATUSES };
-  if (preset === "overdue") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.dueDate = { lt: today };
-  }
-  if (preset === "due7") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.dueDate = { gte: today, lte: new Date(today.getTime() + 7 * 86_400_000) };
-  }
-  // Главный вопрос на любом статусе: мяч на нашей стороне или на их.
-  // Незакрытое входящее ждёт ответа от нас, незакрытое исходящее — от них.
-  if (preset === "waitingUs") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.direction = "INCOMING";
-  }
-  if (preset === "waitingThem") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.direction = "OUTGOING";
-  }
-  if (preset === "noOwner") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.ownerId = null;
-  }
-  if (preset === "noDue") {
-    where.status = { notIn: CLOSED_LETTER_STATUSES };
-    where.dueDate = null;
-  }
-  if (direction && LETTER_DIRECTIONS.includes(direction as LetterDirection)) {
-    where.direction = direction;
-  }
-  if (status && LETTER_STATUSES.includes(status as LetterStatus)) where.status = status;
-  if (counterpartyId) where.counterpartyId = counterpartyId;
-  if (query) {
-    // Каждое слово должно встретиться: так «россети регламент» сужает выборку,
-    // а не выдаёт всё, где есть хотя бы одно из слов.
-    const terms = normalizeQuery(query).split(" ").filter(Boolean).slice(0, 6);
-    where.AND = terms.map((term) => ({
-      OR: [{ searchIndex: { contains: term } }, { number: { contains: term } }],
-    }));
-  }
-
-  const [letters, counterparties] = await Promise.all([
+  const [letters, counterparties, members] = await Promise.all([
     prisma.letter.findMany({
-      where,
+      where: buildLetterWhere(filter, today),
       include: { counterparty: true, owner: true, project: true },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      orderBy: buildLetterOrderBy(filter.sort),
       take: 300,
     }),
     prisma.counterparty.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.member.findMany({
+      where: { isActive: true },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true },
     }),
   ]);
 
@@ -109,70 +60,116 @@ export default async function LettersPage(props: PageProps<"/letters">) {
             Выгрузить в Excel
           </Link>
           <Link href="/letters/new" className="btn-primary">
-            Новое письмо
+            Внести письмо
           </Link>
         </div>
       </div>
 
-      <form className="card flex flex-wrap items-end gap-3 p-4">
-        <label className="field">
-          Выборка
-          <select name="preset" defaultValue={preset} className="input w-44">
-            {PRESETS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Направление
-          <select name="direction" defaultValue={direction} className="input w-40">
-            <option value="">Любое</option>
-            {LETTER_DIRECTIONS.map((value) => (
-              <option key={value} value={value}>
-                {LETTER_DIRECTION_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Статус
-          <select name="status" defaultValue={status} className="input w-48">
-            <option value="">Любой</option>
-            {LETTER_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {LETTER_STATUS_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Организация
-          <select name="counterpartyId" defaultValue={counterpartyId} className="input w-56">
-            <option value="">Все</option>
-            {counterparties.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Поиск
-          <input
-            name="q"
-            defaultValue={query}
-            placeholder="номер, тема, организация"
-            className="input w-64"
-          />
-        </label>
-        <button type="submit" className="btn-secondary">
-          Показать
-        </button>
+      <form className="card space-y-3 p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="field">
+            Выборка
+            <select name="preset" defaultValue={filter.preset} className="input w-52">
+              {LETTER_PRESETS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Поиск
+            <input
+              name="q"
+              defaultValue={filter.query}
+              placeholder="номер, тема, организация"
+              className="input w-72"
+            />
+          </label>
+          <label className="field">
+            Организация
+            <select
+              name="counterpartyId"
+              defaultValue={filter.counterpartyId}
+              className="input w-56"
+            >
+              <option value="">Все</option>
+              {counterparties.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Ответственный
+            <select name="ownerId" defaultValue={filter.ownerId} className="input w-52">
+              <option value="">Любой</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.fullName}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="field">
+            Направление
+            <select name="direction" defaultValue={filter.direction} className="input w-40">
+              <option value="">Любое</option>
+              {LETTER_DIRECTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {LETTER_DIRECTION_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Статус
+            <select name="status" defaultValue={filter.status} className="input w-48">
+              <option value="">Любой</option>
+              {LETTER_STATUSES.map((value) => (
+                <option key={value} value={value}>
+                  {LETTER_STATUS_LABELS[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Дата письма с
+            <input type="date" name="from" defaultValue={filter.from} className="input w-44" />
+          </label>
+          <label className="field">
+            по
+            <input type="date" name="to" defaultValue={filter.to} className="input w-44" />
+          </label>
+          <label className="field">
+            Порядок
+            <select name="sort" defaultValue={filter.sort} className="input w-48">
+              {LETTER_SORTS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="btn-secondary">
+            Показать
+          </button>
+          {activeFilters > 0 && (
+            <Link href="/letters" className="pb-2 text-sm text-gray-500 hover:underline">
+              Сбросить фильтры ({activeFilters})
+            </Link>
+          )}
+        </div>
       </form>
 
-      <p className="text-sm text-gray-500">Найдено писем: {letters.length}</p>
+      <p className="text-sm text-gray-500">
+        Найдено писем: {letters.length}
+        {letters.length === 300 && " (показаны первые 300, уточните фильтр)"}
+      </p>
 
       {letters.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
@@ -242,8 +239,4 @@ export default async function LettersPage(props: PageProps<"/letters">) {
       )}
     </div>
   );
-}
-
-function single(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }
