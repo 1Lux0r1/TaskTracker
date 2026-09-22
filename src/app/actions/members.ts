@@ -1,15 +1,16 @@
 "use server";
 
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { type ActionResult, formatZodError, memberInputSchema } from "@/lib/validation";
 
+/** Сотрудников ведёт администратор: карточка — это и будущая учётная запись. */
 export async function createMember(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  await requireAdmin();
   const parsed = memberInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -21,6 +22,39 @@ export async function createMember(
   await prisma.member.create({ data: parsed.data });
   revalidatePath("/members");
   return { ok: true, message: "Сотрудник добавлен" };
+}
+
+/**
+ * Правка карточки: у сотрудников из импорта почты обычно нет, а без неё
+ * человеку не выдать доступ — вход идёт по почте.
+ */
+export async function updateMember(
+  _state: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const memberId = String(formData.get("memberId") ?? "");
+  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  if (!member) return { ok: false, error: "Сотрудник не найден" };
+
+  const parsed = memberInputSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
+
+  if (parsed.data.email) {
+    const duplicate = await prisma.member.findFirst({
+      where: { email: parsed.data.email, id: { not: memberId } },
+    });
+    if (duplicate) return { ok: false, error: "Сотрудник с таким email уже есть" };
+  }
+  // Пароль привязан к почте: сменили почту — старые входы гасим.
+  const emailChanged = parsed.data.email !== member.email;
+
+  await prisma.member.update({ where: { id: memberId }, data: parsed.data });
+  if (emailChanged) {
+    await prisma.session.deleteMany({ where: { memberId } });
+  }
+  revalidatePath("/members");
+  return { ok: true, message: "Карточка изменена" };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { revokeMemberAccess, setMemberPassword, toggleMemberRole } from "@/app/actions/auth";
-import { createMember, toggleMemberActive } from "@/app/actions/members";
+import { createMember, toggleMemberActive, updateMember } from "@/app/actions/members";
 import { MemberAccess } from "@/components/member-access";
+import { MemberEditForm } from "@/components/member-edit-form";
 import { MemberForm } from "@/components/member-form";
 import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/lib/auth";
@@ -49,12 +50,12 @@ export default async function MembersPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Сотрудники</h1>
         <p className="text-sm text-gray-500">
           {isAdmin
-            ? "Пароль и роль сотрудника заводит администратор. Роли различаются только правом вести пользователей: работать с задачами, письмами и документами могут все."
-            : "Пароли и роли ведёт администратор."}
+            ? "Карточки, пароли и роли сотрудников ведёт администратор. Роли различаются только этим: работать с задачами, письмами и документами могут все."
+            : "Карточки, пароли и роли сотрудников ведёт администратор."}
         </p>
       </div>
 
-      <MemberForm action={createMember} />
+      {isAdmin && <MemberForm action={createMember} />}
 
       {members.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">
@@ -78,7 +79,21 @@ export default async function MembersPage() {
             <tbody className="divide-y divide-gray-100">
               {members.map((member) => (
                 <tr key={member.id} className={member.isActive ? "" : "text-gray-400"}>
-                  <td className="table-cell font-medium text-gray-900">{member.fullName}</td>
+                  <td className="table-cell font-medium text-gray-900">
+                    {isAdmin ? (
+                      <MemberEditForm
+                        member={{
+                          id: member.id,
+                          fullName: member.fullName,
+                          position: member.position,
+                          email: member.email,
+                        }}
+                        action={updateMember}
+                      />
+                    ) : (
+                      member.fullName
+                    )}
+                  </td>
                   <td className="table-cell">{member.position ?? "—"}</td>
                   <td className="table-cell">{member.email ?? "—"}</td>
                   <td className="table-cell tabular-nums">{openByMember.get(member.id) ?? 0}</td>

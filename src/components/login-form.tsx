@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import type { LoginState } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/submit-button";
-import type { ActionResult } from "@/lib/validation";
 
 type Props = {
-  action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
+  action: (state: LoginState | null, formData: FormData) => Promise<LoginState>;
   next?: string;
 };
 
@@ -28,6 +28,8 @@ export function LoginForm({ action, next }: Props) {
           autoComplete="username"
           className="input"
           placeholder="ivanov@example.com"
+          defaultValue={state?.email ?? ""}
+          key={state?.email ?? ""}
         />
       </label>
       <label className="field">

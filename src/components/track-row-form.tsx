@@ -14,6 +14,14 @@ type Props = {
 export function TrackRowForm({ track, action }: Props) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState(action, null);
+  // После удачного сохранения строка возвращается к обычному виду: иначе
+  // пользователь остаётся в полях ввода и не видит, что получилось. Сравнение
+  // с прошлым ответом — чтобы закрыть форму один раз, а не на каждый рендер.
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state?.ok && open) setOpen(false);
+  }
   const color = trackColor(track.color);
 
   if (!open) {
