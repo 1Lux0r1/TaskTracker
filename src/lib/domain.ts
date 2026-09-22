@@ -4,6 +4,7 @@
  */
 
 export const TASK_STATUSES = [
+  "NEW",
   "BACKLOG",
   "TODO",
   "IN_PROGRESS",
@@ -14,6 +15,7 @@ export const TASK_STATUSES = [
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  NEW: "Новая",
   BACKLOG: "Бэклог",
   TODO: "К выполнению",
   IN_PROGRESS: "В работе",
@@ -24,6 +26,7 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 
 /** Колонки канбан-доски: отменённые задачи на доске не показываем. */
 export const BOARD_COLUMNS: TaskStatus[] = [
+  "NEW",
   "BACKLOG",
   "TODO",
   "IN_PROGRESS",
@@ -32,6 +35,34 @@ export const BOARD_COLUMNS: TaskStatus[] = [
 ];
 
 export const CLOSED_TASK_STATUSES: TaskStatus[] = ["DONE", "CANCELLED"];
+
+/** Статус только что заведённой задачи: в форме создания его не выбирают. */
+export const NEW_TASK_STATUS: TaskStatus = "NEW";
+
+/* ─── Артефакты задачи ────────────────────────────────────────────────────── */
+
+/**
+ * Артефакт — подтверждение работы. Видов пять: карточка в ЭДО, задача во
+ * внешнем трекере, документ системы, произвольная ссылка и просто значение.
+ */
+export const ARTIFACT_KINDS = [
+  { value: "EDO_LINK", label: "Ссылка на ЭДО", placeholder: "https://mosedo.mos.ru/…" },
+  { value: "JIRA_LINK", label: "Ссылка на Jira", placeholder: "https://jira…/browse/KEY-1" },
+  { value: "SYSTEM_DOC", label: "Документ системы", placeholder: "" },
+  { value: "CUSTOM_LINK", label: "Своя ссылка", placeholder: "https://…" },
+  { value: "CUSTOM_VALUE", label: "Своё значение", placeholder: "Номер, решение, комментарий" },
+] as const;
+
+export type ArtifactKind = (typeof ARTIFACT_KINDS)[number]["value"];
+
+export function artifactKindLabel(value: string): string {
+  return ARTIFACT_KINDS.find((item) => item.value === value)?.label ?? value;
+}
+
+/** Ссылку показываем ссылкой, значение — текстом. */
+export function isLinkArtifact(kind: string): boolean {
+  return kind === "EDO_LINK" || kind === "JIRA_LINK" || kind === "CUSTOM_LINK";
+}
 
 export const TASK_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];

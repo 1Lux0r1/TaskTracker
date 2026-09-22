@@ -5,7 +5,7 @@ import { NoteFeed } from "@/components/note-feed";
 import { SubmitButton } from "@/components/submit-button";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
-import { formatDate, isOverdue } from "@/lib/domain";
+import { artifactKindLabel, formatDate, isLinkArtifact, isOverdue } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +19,14 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
     include: {
       project: true,
       children: { include: { assignee: true }, orderBy: { number: "asc" } },
+      artifacts: { orderBy: { sortOrder: "asc" } },
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
     },
   });
 
   if (!task) notFound();
 
-  const [projects, members, parentCandidates, letters, tracks] = await Promise.all([
+  const [projects, members, parentCandidates, letters, documents, tracks] = await Promise.all([
     prisma.project.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
     prisma.member.findMany({
       where: { isActive: true },
@@ -42,6 +43,12 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       where: { projectId: task.projectId },
       orderBy: { date: "desc" },
       select: { id: true, number: true, subject: true },
+      take: 200,
+    }),
+    prisma.document.findMany({
+      where: { projectId: task.projectId },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true },
       take: 200,
     }),
     // Треки всех проектов: в форме можно сменить проект задачи. Архивный
@@ -70,6 +77,37 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
             Во внешнем трекере: {task.externalTaskKey}
           </p>
         )}
+        {task.artifacts.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {task.artifacts.map((artifact) => (
+              <li
+                key={artifact.id}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm"
+              >
+                <span className="text-xs text-gray-400">{artifactKindLabel(artifact.kind)}</span>
+                {isLinkArtifact(artifact.kind) ? (
+                  <a
+                    href={artifact.value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-gray-900 hover:underline"
+                  >
+                    {artifact.label ?? artifact.value}
+                  </a>
+                ) : artifact.kind === "SYSTEM_DOC" ? (
+                  <Link href={`/documents/${artifact.value}`} className="text-gray-900 hover:underline">
+                    {artifact.label ?? "Документ системы"}
+                  </Link>
+                ) : (
+                  <span className="text-gray-900">
+                    {artifact.label ? `${artifact.label}: ${artifact.value}` : artifact.value}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {isOverdue(task.dueDate, task.status) && (
           <p className="mt-2 text-sm font-medium text-red-600">
             Просрочена: срок был {formatDate(task.dueDate)}
@@ -87,7 +125,15 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         tracks={tracks}
         parentCandidates={parentCandidates}
         letters={letters}
-        defaults={task}
+        documents={documents}
+        defaults={{
+          ...task,
+          artifacts: task.artifacts.map((artifact) => ({
+            kind: artifact.kind,
+            label: artifact.label ?? "",
+            value: artifact.value,
+          })),
+        }}
         submitLabel="Сохранить"
       />
 

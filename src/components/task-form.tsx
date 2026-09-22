@@ -1,10 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { ArtifactFields, type ArtifactValue } from "@/components/artifact-fields";
 import { SubmitButton } from "@/components/submit-button";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
+  NEW_TASK_STATUS,
   TASK_STATUS_LABELS,
   TASK_STATUSES,
   toDateInputValue,
@@ -22,7 +24,7 @@ export type TaskFormValues = {
   externalTaskKey: string | null;
   trackId: string;
   progressNote: string | null;
-  resultLink: string | null;
+  artifacts: ArtifactValue[];
   letterId: string | null;
   parentId: string | null;
   startDate: Date | null;
@@ -42,6 +44,10 @@ type Props = {
   parentCandidates?: { id: string; number: number; title: string }[];
   /** Письма проекта: задача часто заводится по конкретному письму. */
   letters?: { id: string; number: string; subject: string }[];
+  /** Документы проекта: на них ссылается артефакт «Документ системы». */
+  documents?: { id: string; title: string }[];
+  /** Форма создания статус не спрашивает: новая задача всегда «Новая». */
+  hideStatus?: boolean;
   defaults?: TaskFormValues;
   lockProject?: boolean;
   submitLabel: string;
@@ -54,6 +60,8 @@ export function TaskForm({
   tracks,
   parentCandidates = [],
   letters = [],
+  documents = [],
+  hideStatus = false,
   defaults,
   lockProject = false,
   submitLabel,
@@ -135,16 +143,22 @@ export function TaskForm({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <label className="field">
-          Статус
-          <select name="status" defaultValue={defaults?.status ?? "TODO"} className="input">
-            {TASK_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {TASK_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Новая задача заводится со статусом «Новая», поэтому при создании
+            статус не спрашиваем: его выставляют потом, по ходу работы. */}
+        {hideStatus ? (
+          <input type="hidden" name="status" value={NEW_TASK_STATUS} />
+        ) : (
+          <label className="field">
+            Статус
+            <select name="status" defaultValue={defaults?.status ?? NEW_TASK_STATUS} className="input">
+              {TASK_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TASK_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field">
           Приоритет
           <select name="priority" defaultValue={defaults?.priority ?? "MEDIUM"} className="input">
@@ -222,15 +236,7 @@ export function TaskForm({
         />
       </label>
 
-      <label className="field">
-        Ссылка на результат
-        <input
-          name="resultLink"
-          defaultValue={defaults?.resultLink ?? ""}
-          placeholder="https://…"
-          className="input"
-        />
-      </label>
+      <ArtifactFields defaults={defaults?.artifacts} documents={documents} />
 
       <div className="grid gap-4 sm:grid-cols-5">
         <label className="field">

@@ -3,6 +3,7 @@ import { createTask } from "@/app/actions/tasks";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { NEW_TASK_STATUS } from "@/lib/domain";
 import { ensureProjectTracks } from "@/lib/tracks";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
 
   const selected = projectId && projects.some((p) => p.id === projectId) ? projectId : projects[0].id;
   await ensureProjectTracks(selected);
-  const [parentCandidates, letters, tracks] = await Promise.all([
+  const [parentCandidates, letters, documents, tracks] = await Promise.all([
     prisma.task.findMany({
       where: { projectId: selected, parentId: null },
       orderBy: { number: "asc" },
@@ -54,6 +55,12 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
     }),
     // Треки всех проектов: в форме можно сменить проект, и список треков
     // должен смениться вместе с ним.
+    prisma.document.findMany({
+      where: { projectId: selected },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true },
+      take: 200,
+    }),
     prisma.track.findMany({
       where: { isArchived: false },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -76,18 +83,20 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
         tracks={tracks}
         parentCandidates={parentCandidates}
         letters={letters}
+        documents={documents}
+        hideStatus
         defaults={{
           projectId: selected,
           title: "",
           description: null,
-          status: "TODO",
+          status: NEW_TASK_STATUS,
           priority: "MEDIUM",
           assigneeId: null,
           externalAssignee: null,
           externalTaskKey: null,
           trackId: tracks.find((track) => track.projectId === selected)?.id ?? "",
           progressNote: null,
-          resultLink: null,
+          artifacts: [],
           letterId: null,
           parentId: null,
           startDate: null,

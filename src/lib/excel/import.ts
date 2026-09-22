@@ -377,7 +377,6 @@ async function importTasks(
         externalAssignee: cellText(row.cells.get("externalAssignee") ?? null),
         // Журнал остаётся целиком: лента ниже его разбирает, но текст не теряем.
         progressNote: rawStatus.length > 0 ? rawStatus : null,
-        resultLink: cellText(row.cells.get("resultLink") ?? null),
         startDate: cellDate(row.cells.get("startDate") ?? null),
         dueDate: cellDate(row.cells.get("dueDate") ?? null),
         estimateHours: cellNumber(row.cells.get("estimateHours") ?? null),
@@ -414,6 +413,7 @@ async function importTasks(
         report.created += 1;
       }
 
+      await syncResultArtifact(taskId, cellText(row.cells.get("resultLink") ?? null));
       report.notesCreated += await syncChronicle({ taskId }, chronicle);
     } catch (error) {
       report.skipped += 1;
@@ -817,6 +817,33 @@ async function nextTaskNumber(projectId: string): Promise<number> {
     select: { number: true },
   });
   return (last?.number ?? 0) + 1;
+}
+
+/**
+ * Колонка «Результат» из файла становится артефактом задачи. Повторный импорт
+ * той же строки не плодит дубли: артефакт с таким значением уже есть.
+ */
+async function syncResultArtifact(taskId: string, value: string | null): Promise<void> {
+  const text = value?.trim();
+  if (!text) return;
+
+  const existing = await prisma.taskArtifact.findFirst({ where: { taskId, value: text } });
+  if (existing) return;
+
+  const kind = text.includes("mosedo")
+    ? "EDO_LINK"
+    : text.startsWith("http")
+      ? "CUSTOM_LINK"
+      : "CUSTOM_VALUE";
+  const last = await prisma.taskArtifact.findFirst({
+    where: { taskId },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+
+  await prisma.taskArtifact.create({
+    data: { taskId, kind, label: "Результат", value: text, sortOrder: (last?.sortOrder ?? -1) + 1 },
+  });
 }
 
 /** Код базового трека по тексту ячейки. Незнакомое название кодом не считаем. */

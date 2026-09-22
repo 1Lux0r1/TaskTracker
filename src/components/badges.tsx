@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain";
 
 const TASK_STATUS_CLASS: Record<TaskStatus, string> = {
+  NEW: "bg-blue-50 text-blue-700",
   BACKLOG: "bg-gray-100 text-gray-600",
   TODO: "bg-blue-50 text-blue-700",
   IN_PROGRESS: "bg-amber-50 text-amber-700",

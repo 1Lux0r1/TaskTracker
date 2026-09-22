@@ -4,7 +4,12 @@ import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
-import { type ActionResult, formatZodError, taskInputSchema } from "@/lib/validation";
+import {
+  type ActionResult,
+  formatZodError,
+  readArtifacts,
+  taskInputSchema,
+} from "@/lib/validation";
 
 /**
  * Трек принадлежит проекту: в форме проект можно сменить, и трек прошлого
@@ -38,12 +43,14 @@ export async function createTask(
   });
   const number = (last?.number ?? 0) + 1;
 
+  const artifacts = readArtifacts(formData);
   await prisma.task.create({
     data: {
       ...input,
       number,
       sortOrder: number,
       completedAt: input.status === "DONE" ? new Date() : null,
+      artifacts: { create: artifacts },
     },
   });
 
@@ -72,13 +79,20 @@ export async function updateTask(
   const current = await prisma.task.findUnique({ where: { id: taskId } });
   if (!current) return { ok: false, error: "Задача не найдена" };
 
-  await prisma.task.update({
-    where: { id: taskId },
-    data: {
-      ...input,
-      completedAt: completedAtFor(input.status, current.status, current.completedAt),
-    },
-  });
+  // Артефакты приходят списком целиком, поэтому переписываем их заново:
+  // так удаление строки в форме доходит до базы без отдельного действия.
+  const artifacts = readArtifacts(formData);
+  await prisma.$transaction([
+    prisma.taskArtifact.deleteMany({ where: { taskId } }),
+    prisma.task.update({
+      where: { id: taskId },
+      data: {
+        ...input,
+        completedAt: completedAtFor(input.status, current.status, current.completedAt),
+        artifacts: { create: artifacts },
+      },
+    }),
+  ]);
 
   revalidatePath(`/projects/${input.projectId}`);
   revalidatePath(`/tasks/${taskId}`);

@@ -22,7 +22,12 @@ const HEADER_FILL: ExcelJS.Fill = {
 export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Workbook> {
   const tasks = await prisma.task.findMany({
     where: projectId ? { projectId } : undefined,
-    include: { assignee: true, project: true, track: true },
+    include: {
+      assignee: true,
+      project: true,
+      track: true,
+      artifacts: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: [{ project: { code: "asc" } }, { number: "asc" }],
   });
 
@@ -64,6 +69,11 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
       estimateHours: task.estimateHours ?? "",
       spentHours: task.spentHours ?? "",
       progress: task.progress,
+      // Артефактов у задачи бывает несколько, в Excel они идут одной ячейкой,
+      // как и раньше в колонке «Результат».
+      resultLink: task.artifacts
+        .map((artifact) => (artifact.label ? `${artifact.label}: ${artifact.value}` : artifact.value))
+        .join("\n"),
     });
   }
 

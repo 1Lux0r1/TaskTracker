@@ -132,8 +132,6 @@ model Task {
   externalTaskKey  String?
   /// Ход работы: в исходных таблицах статус ведётся свободным текстом с датами.
   progressNote     String?
-  /// Ссылки на результат: ЭДО, документы, дашборды.
-  resultLink       String?
   letterId         String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -143,8 +141,9 @@ model Task {
   letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
   assignee Member? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  children Task[]  @relation("Subtasks")
-  notes    Note[]
+  children  Task[]         @relation("Subtasks")
+  notes     Note[]
+  artifacts TaskArtifact[]
 
   @@unique([projectId, number])
   @@unique([projectId, externalKey])
@@ -152,6 +151,26 @@ model Task {
   @@index([dueDate])
   @@index([assigneeId])
   @@index([trackId])
+}
+
+/// Артефакт задачи — то, чем работа подтверждается: карточка в ЭДО, задача в
+/// Jira, документ системы, своя ссылка или просто значение. Пришёл на смену
+/// одному полю «Результат»: артефактов у задачи бывает несколько.
+model TaskArtifact {
+  id        String   @id @default(cuid())
+  taskId    String
+  /// Вид: EDO_LINK, JIRA_LINK, SYSTEM_DOC, CUSTOM_LINK, CUSTOM_VALUE.
+  kind      String   @default("CUSTOM_LINK")
+  /// Подпись артефакта: чем он является в работе.
+  label     String?
+  /// Ссылка, идентификатор документа или произвольный текст — по виду.
+  value     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, sortOrder])
 }
 
 /// Датированная запись хроники. В исходных таблицах колонка «Статус» содержит

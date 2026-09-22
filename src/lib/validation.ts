@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ARTIFACT_KINDS,
   DOCUMENT_KINDS,
   DOCUMENT_STATUSES,
   LETTER_DIRECTIONS,
@@ -52,6 +53,26 @@ export const projectInputSchema = z.object({
   ownerId: optionalText,
 });
 
+/**
+ * Артефакты приходят повторяющимися полями формы: собираем их в список,
+ * пустые строки отбрасываем — пользователь мог нажать «ещё артефакт» и
+ * передумать.
+ */
+export function readArtifacts(formData: FormData) {
+  const kinds = formData.getAll("artifactKind").map(String);
+  const labels = formData.getAll("artifactLabel").map(String);
+  const values = formData.getAll("artifactValue").map(String);
+
+  return kinds
+    .map((kind, index) => ({
+      kind: ARTIFACT_KINDS.some((item) => item.value === kind) ? kind : "CUSTOM_VALUE",
+      label: labels[index]?.trim() || null,
+      value: values[index]?.trim() ?? "",
+      sortOrder: index,
+    }))
+    .filter((artifact) => artifact.value.length > 0);
+}
+
 export const trackInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),
   name: z.string().trim().min(1, "Укажите название трека").max(80),
@@ -69,7 +90,6 @@ export const taskInputSchema = z.object({
   externalTaskKey: optionalText,
   trackId: z.string().trim().min(1, "Выберите трек"),
   progressNote: optionalText,
-  resultLink: optionalText,
   letterId: optionalText,
   parentId: optionalText,
   startDate: optionalDate,
