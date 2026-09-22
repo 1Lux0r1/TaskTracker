@@ -60,6 +60,7 @@ export const taskInputSchema = z.object({
   priority: z.enum(TASK_PRIORITIES),
   assigneeId: optionalText,
   externalAssignee: optionalText,
+  externalTaskKey: optionalText,
   track: z.enum(TASK_TRACKS),
   progressNote: optionalText,
   resultLink: optionalText,

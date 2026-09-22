@@ -12,6 +12,8 @@ export type TaskRow = {
   progress: number;
   assignee: { fullName: string } | null;
   project: { id: string; code: string } | null;
+  /** Ключ задачи во внешнем трекере: показываем под названием. */
+  externalTaskKey?: string | null;
 };
 
 type Props = {
@@ -69,6 +71,11 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
                   <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 hover:underline">
                     {task.title}
                   </Link>
+                  {task.externalTaskKey && (
+                    <span className="mt-0.5 block font-mono text-xs text-gray-400">
+                      {task.externalTaskKey}
+                    </span>
+                  )}
                 </td>
                 <td className="table-cell">
                   <StatusBadge status={task.status} />

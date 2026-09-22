@@ -55,6 +55,11 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         <h1 className="mt-1 text-2xl font-semibold text-gray-900">
           <span className="text-gray-400">{task.project.code}-{task.number}</span> {task.title}
         </h1>
+        {task.externalTaskKey && (
+          <p className="mt-1 font-mono text-sm text-gray-500">
+            Во внешнем трекере: {task.externalTaskKey}
+          </p>
+        )}
         {isOverdue(task.dueDate, task.status) && (
           <p className="mt-2 text-sm font-medium text-red-600">
             Просрочена: срок был {formatDate(task.dueDate)}

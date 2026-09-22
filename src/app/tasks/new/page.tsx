@@ -72,6 +72,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           priority: "MEDIUM",
           assigneeId: null,
           externalAssignee: null,
+          externalTaskKey: null,
           track: "PRODUCTION",
           progressNote: null,
           resultLink: null,

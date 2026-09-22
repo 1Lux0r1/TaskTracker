@@ -21,6 +21,7 @@ export type TaskFormValues = {
   priority: string;
   assigneeId: string | null;
   externalAssignee: string | null;
+  externalTaskKey: string | null;
   track: string;
   progressNote: string | null;
   resultLink: string | null;
@@ -155,7 +156,16 @@ export function TaskForm({
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <label className="field">
+          Ключ задачи во внешнем трекере
+          <input
+            name="externalTaskKey"
+            defaultValue={defaults?.externalTaskKey ?? ""}
+            placeholder="Например, AISRKII-9837"
+            className="input"
+          />
+        </label>
         <label className="field">
           Внешний ответственный
           <input
