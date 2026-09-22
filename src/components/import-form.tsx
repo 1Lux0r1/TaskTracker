@@ -72,7 +72,7 @@ export function ImportForm({ projects }: Props) {
             defaultChecked
             className="size-4"
           />
-          Заводить контрагентов, которых нет в справочнике
+          Заводить организации, которых нет в справочнике
         </label>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -156,7 +156,7 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
 
       {report.counterpartiesCreated.length > 0 && (
         <p className="text-sm text-gray-600">
-          Заведены контрагенты: {[...new Set(report.counterpartiesCreated)].join(", ")}
+          Заведены организации: {[...new Set(report.counterpartiesCreated)].join(", ")}
         </p>
       )}
 

@@ -12,7 +12,7 @@ import {
 } from "@/lib/validation";
 
 /** Стороны, которые заводятся у нового документа по умолчанию. */
-const DEFAULT_PARTIES = ["Наша сторона", "Контрагент"];
+const DEFAULT_PARTIES = ["Наша сторона", "Организация"];
 
 export async function createDocument(
   _state: ActionResult | null,

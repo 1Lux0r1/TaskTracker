@@ -101,7 +101,7 @@ const optionalUrl = z
   });
 
 export const counterpartyInputSchema = z.object({
-  name: z.string().trim().min(2, "Укажите название контрагента").max(300),
+  name: z.string().trim().min(2, "Укажите название организации").max(300),
   shortName: optionalText,
   isInternal: z.coerce.boolean().default(false),
 });

@@ -148,7 +148,7 @@ export default async function LettersPage(props: PageProps<"/letters">) {
           </select>
         </label>
         <label className="field">
-          Контрагент
+          Организация
           <select name="counterpartyId" defaultValue={counterpartyId} className="input w-56">
             <option value="">Все</option>
             {counterparties.map((item) => (
@@ -163,7 +163,7 @@ export default async function LettersPage(props: PageProps<"/letters">) {
           <input
             name="q"
             defaultValue={query}
-            placeholder="номер, тема, контрагент"
+            placeholder="номер, тема, организация"
             className="input w-64"
           />
         </label>
@@ -185,7 +185,7 @@ export default async function LettersPage(props: PageProps<"/letters">) {
                 <th className="table-head w-28">Дата</th>
                 <th className="table-head w-32">Направление</th>
                 <th className="table-head">Тема</th>
-                <th className="table-head w-48">Контрагент</th>
+                <th className="table-head w-48">Организация</th>
                 <th className="table-head w-28">Срок</th>
                 <th className="table-head w-40">Статус</th>
               </tr>

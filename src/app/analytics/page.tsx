@@ -164,13 +164,13 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
           />
         </Panel>
 
-        <Panel title="Переписка по контрагентам">
+        <Panel title="Переписка по организациям">
           <BarList
             rows={lettersByCounterparty
               .map((row) => ({
                 label: row.counterpartyId
                   ? (counterpartyName.get(row.counterpartyId) ?? "—")
-                  : "Без контрагента",
+                  : "Без организации",
                 value: row._count._all,
               }))
               .sort((a, b) => b.value - a.value)

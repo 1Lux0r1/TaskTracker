@@ -4,14 +4,14 @@ import {
   deleteCounterparty,
   restoreCounterparty,
   toggleInternalCounterparty,
-} from "@/app/actions/counterparties";
+} from "@/app/actions/organizations";
 import { CounterpartyForm } from "@/components/counterparty-form";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function CounterpartiesPage() {
+export default async function OrganizationsPage() {
   const counterparties = await prisma.counterparty.findMany({
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     include: {
@@ -23,11 +23,13 @@ export default async function CounterpartiesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Контрагенты</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Организации</h1>
         <p className="text-sm text-gray-500">
-          Ведомства и организации — адресаты писем и стороны документов. Варианты написания
-          заводятся при импорте, чтобы одна организация не двоилась в отчётах. Свою
-          организацию отметьте как нашу: по этой отметке видно, чьей подписи ждёт документ.
+          Служебный справочник: ведомства и организации, которым адресованы письма и которые
+          подписывают документы. Пользователями системы они не являются — учёт внутренний.
+          Варианты написания заводятся при импорте, чтобы одна организация не двоилась в
+          отчётах. Свою организацию отметьте как нашу: по этой отметке видно, чьей подписи
+          ждёт документ.
         </p>
       </div>
 

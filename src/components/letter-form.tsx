@@ -114,7 +114,7 @@ export function LetterForm({
 
       <div className="grid gap-4 sm:grid-cols-4">
         <label className="field">
-          Контрагент
+          Организация
           <select
             name="counterpartyId"
             defaultValue={defaults?.counterpartyId ?? ""}

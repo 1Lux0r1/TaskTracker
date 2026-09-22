@@ -91,8 +91,8 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Чтобы выборка «ждут нашей подписи» работала, отметьте свою организацию
           в{" "}
-          <Link href="/counterparties" className="underline">
-            справочнике контрагентов
+          <Link href="/organizations" className="underline">
+            справочнике организаций
           </Link>
           : остальные стороны подписания считаются внешними.
         </p>
@@ -138,7 +138,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
           </select>
         </label>
         <label className="field">
-          Контрагент
+          Организация
           <select name="counterpartyId" defaultValue={counterpartyId} className="input w-56">
             <option value="">Все</option>
             {counterparties.map((item) => (
@@ -162,7 +162,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
               <tr>
                 <th className="table-head w-32">Вид</th>
                 <th className="table-head">Документ</th>
-                <th className="table-head w-48">Контрагент</th>
+                <th className="table-head w-48">Организация</th>
                 <th className="table-head w-44">Статус</th>
                 <th className="table-head w-40">Подписано сторон</th>
                 <th className="table-head w-28">Срок</th>

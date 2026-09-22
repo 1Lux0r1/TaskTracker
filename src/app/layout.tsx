@@ -22,7 +22,6 @@ const NAV_LINKS = [
   { href: "/calendar", label: "Календарь" },
   { href: "/reports", label: "Отчёты" },
   { href: "/analytics", label: "Аналитика" },
-  { href: "/counterparties", label: "Контрагенты" },
   { href: "/members", label: "Сотрудники" },
   { href: "/import", label: "Импорт" },
 ];
@@ -50,6 +49,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+        {/* Справочник организаций служебный: им пользуются при импорте и при
+            настройке сторон подписания, поэтому он живёт не в меню, а здесь. */}
+        <footer className="border-t border-gray-200 bg-white">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 text-sm text-gray-500">
+            <span>Справочники:</span>
+            <Link href="/organizations" className="hover:text-gray-900 hover:underline">
+              Организации
+            </Link>
+          </div>
+        </footer>
       </body>
     </html>
   );
