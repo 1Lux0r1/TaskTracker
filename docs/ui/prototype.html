@@ -196,6 +196,13 @@
   .li .t{font-size:14.5px;line-height:1.35;display:block;overflow:hidden;text-overflow:ellipsis}
   .li .m{font-size:12.5px;color:var(--ink-3);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .li .rt{display:flex;align-items:center;gap:10px;flex:none}
+  .listbox.cols .li{position:relative}
+  .listbox.cols .li .rt{display:grid;grid-template-columns:170px 128px 80px;align-items:center;gap:10px;text-align:left}
+  .listbox.cols .li .rt > *{justify-self:start}
+  .listbox.cols .li .rt .due{justify-self:end}
+  .listbox.cols .li .rowact{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    background:var(--brand-soft);padding:4px 0 4px 12px;border-radius:9px}
+  @media (max-width:900px){ .listbox.cols .li .rt{display:flex} }
   .li.done .t{color:var(--ink-3);text-decoration:line-through}
   .listbox{border:1px solid var(--hair);border-radius:var(--r);overflow:hidden;background:var(--surface)}
   .rowact{display:flex;gap:5px;opacity:0}
@@ -290,8 +297,8 @@
   .kpi b{display:block;font-family:"Manrope";font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.03em}
   .kpi span{font-size:13px;color:var(--ink-2);display:block;margin-top:5px}
   .kpi em{font-style:normal;font-size:12px;color:var(--ink-3);display:block;margin-top:2px}
-  .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.good b{color:var(--good)}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2);margin-bottom:12px}
+  .kpi b{color:var(--brand)}
+  .legend{display:flex;gap:8px 12px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-bottom:12px}
   .legend span{display:flex;align-items:center;gap:6px}
   .legend i{width:10px;height:10px;border-radius:3px;display:block}
   figure{margin:0}
@@ -320,12 +327,24 @@
     padding:22px 24px calc(28px + env(safe-area-inset-bottom,0px));
   }
   .sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}
-  .props{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 16px;padding:16px 0;
-    border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-bottom:16px}
-  .prop span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
-  .prop div{font-size:14px}
+  .props{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+  .prop{background:var(--surface-2);border-radius:10px;padding:10px 12px;min-width:0}
+  .prop.wide{grid-column:1 / -1}
+  .bar{display:block;height:6px;border-radius:99px;background:var(--hair);overflow:hidden;margin-top:7px}
+  .bar i{display:block;height:100%;border-radius:99px;background:var(--brand)}
+  .prop > span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+  .prop > div{font-size:14px;color:var(--ink)}
+  .mrow{display:block;padding:13px 18px;border-top:1px solid var(--hair);cursor:pointer}
+  .mrow:first-of-type{border-top:0}
+  .mrow:hover{background:var(--brand-soft)}
+  .mrow .mt{font-size:14.5px;line-height:1.35;display:block}
+  .mrow .mm{font-size:12.5px;color:var(--ink-3);margin-top:4px;display:flex;gap:4px 10px;flex-wrap:wrap;align-items:center}
+  .mrow .mm .mono{color:var(--ink-2)}
+  .mrow .mp{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   .blk{margin-bottom:18px}
   .blk h4{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:0 0 9px;font-weight:600}
+  .blk h4::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;
+    background:var(--brand);margin-right:8px;vertical-align:1px}
   .blk p{margin:0;font-size:14px;color:var(--ink-2)}
   .field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
   .field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
@@ -336,19 +355,38 @@
   .field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible{outline:2px solid var(--brand);outline-offset:0}
   .field .err{font-size:12.5px;color:var(--bad)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .facts{display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--hair)}
+  .facts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--hair)}
 
   /* командная строка */
   /* акценты поярче */
   .logo i{background:linear-gradient(135deg,var(--brand) 0%,#7b5cf0 100%)!important}
   .btn.primary{background:linear-gradient(135deg,var(--brand) 0%,#4f7ef5 100%);border-color:transparent}
-  .kpi{position:relative;overflow:hidden}
-  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
-  .kpi.bad::before{background:var(--bad)}
-  .kpi.warn::before{background:var(--warn)}
-  .kpi.good::before{background:var(--good)}
-  .navgrp button[aria-current="true"] .ico{color:var(--brand)}
+  .kpi{position:relative;overflow:hidden;--acc:var(--brand);--acc-soft:var(--brand-soft);
+    border-radius:var(--r);transition:transform .16s ease,box-shadow .16s ease}
+  .kpi::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(135deg,var(--acc-soft) 0%,transparent 62%);opacity:.85}
+  .kpi::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--acc)}
+  .kpi > *{position:relative}
+  .kpi:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(16,32,64,.4)}
+  .kpi.bad{--acc:var(--bad);--acc-soft:var(--bad-soft)}
+  .kpi.warn{--acc:var(--copper);--acc-soft:var(--copper-soft)}
+  .kpi.good{--acc:var(--good);--acc-soft:var(--good-soft)}
+  .kpi b{color:var(--acc)}
   .card h3{color:var(--ink)}
+  .card{position:relative;overflow:hidden;--acc:var(--brand);--acc-soft:var(--brand-soft)}
+  .card.t-copper{--acc:var(--copper);--acc-soft:var(--copper-soft)}
+  .card.t-good{--acc:var(--good);--acc-soft:var(--good-soft)}
+  .card.t-bad{--acc:var(--bad);--acc-soft:var(--bad-soft)}
+  .card.t-violet{--acc:var(--c4);--acc-soft:var(--c4-soft)}
+  .card.acc::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--acc)}
+  .chead{display:flex;align-items:flex-start;gap:11px;margin-bottom:14px}
+  .chead .ic{width:30px;height:30px;border-radius:9px;background:var(--acc-soft);color:var(--acc);flex:none;
+    display:flex;align-items:center;justify-content:center}
+  .chead .ic svg{width:16px;height:16px}
+  .chead h3{margin:0 0 2px}
+  .chead .sub{margin:0;font-size:13px;color:var(--ink-3)}
+  .chead .act{margin-left:auto;flex:none}
+  .card.acc > .chead{padding-top:2px}
 
   /* строка поиска и фильтров */
   .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
@@ -429,6 +467,10 @@
   @media (max-width:1150px){ .reg.reps .regrow{grid-template-columns:1fr} }
   .g2f{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media (max-width:900px){ .g2f{grid-template-columns:1fr} }
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media (max-width:1240px){ .g4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:620px){ .g4{grid-template-columns:1fr} }
+  .grid.top{align-items:start}
   @media (max-width:1150px){ .reg.docs .regrow{grid-template-columns:1fr auto} }
 
   /* календарь */
@@ -884,6 +926,33 @@
     document.getElementById("nav2").innerHTML = grp(NAV_SEC, "Сводка");
   }
 
+  var ICONS = {
+    alert:'<path d="M12 9v4.5M12 17h.01"/><path d="M10.3 3.9 2.4 17.1A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+    mail:'<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
+    pen:'<path d="M12 19h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    calendar:'<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
+    chart:'<path d="M3 3v18h18"/><path d="M7.5 15v3M12 10v8M16.5 6.5V18"/>',
+    users:'<path d="M15.5 19v-1.5a4 4 0 0 0-4-4h-5a4 4 0 0 0-4 4V19"/><circle cx="9" cy="7.5" r="3.4"/><path d="M17 11.2a3.6 3.6 0 0 0 0-7.2"/><path d="M22 19v-1.5a4 4 0 0 0-3-3.8"/>',
+    flow:'<rect x="3" y="3.5" width="7.5" height="6" rx="2"/><rect x="13.5" y="14.5" width="7.5" height="6" rx="2"/><path d="M6.8 9.5v5a3 3 0 0 0 3 3h3.7"/>',
+    book:'<path d="M4 4.8A2.8 2.8 0 0 1 6.8 2H20v15.5H6.8A2.8 2.8 0 0 0 4 20.3Z"/><path d="M4 17.5h16V21H6.8"/>',
+    building:'<path d="M3 21h18"/><path d="M5.5 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/><path d="M14.5 9.5H17a2 2 0 0 1 2 2V21"/><path d="M9 7.5h1.5M9 11.5h1.5M9 15.5h1.5"/>',
+    contact:'<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><circle cx="8.6" cy="10.8" r="2.2"/><path d="M5.2 16.3c.6-1.5 1.9-2.3 3.4-2.3s2.8.8 3.4 2.3"/><path d="M15 10h4M15 14h4"/>',
+    layers:'<path d="m12 3 9 4.8-9 4.8-9-4.8Z"/><path d="m3 13.2 9 4.8 9-4.8"/>',
+    check:'<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9.6"/>',
+    file:'<path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5Z"/><path d="M13.6 2.5v5.2h5.2"/>',
+    task:'<path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10"/>'
+  };
+  function ico(name){
+    return '<span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + ICONS[name] + '</svg></span>';
+  }
+  function cardHead(icon, title, sub, act){
+    return '<div class="chead">' + ico(icon) + '<div><h3>' + title + '</h3>' +
+      (sub ? '<div class="sub">' + sub + '</div>' : "") + '</div>' +
+      (act ? '<div class="act">' + act + '</div>' : "") + '</div>';
+  }
+
   /* ---------- экран «Сегодня» ---------- */
   function screenToday(){
     var overdue = state.tasks.filter(function(t){ return !taskDone(t) && t.due && days(t.due) < 0; });
@@ -917,8 +986,8 @@
         '<div class="sbar" aria-hidden="true">' + bar + '</div>' +
         '<div class="sfoot">' + cfg.foot + '</div></div>';
     }
-    function block(title, sub, items, go){
-      return '<div class="card"><h3>' + title + '</h3><div class="sub">' + sub + '</div>' +
+    function block(tone, icon, title, sub, items, go){
+      return '<div class="card acc t-' + tone + '">' + cardHead(icon, title, sub) +
         (items.length ? '<div class="list" style="margin:0 -18px">' + items.slice(0,3).join("") + '</div>'
                       : '<p class="dim" style="margin:0;font-size:14px">Ничего не требует внимания.</p>') +
         (items.length > 3 ? '<button class="btn ghost sm" style="margin-top:12px" type="button" data-go="' + go + '">Ещё ' + (items.length - 3) + '</button>' : "") +
@@ -976,10 +1045,10 @@
       '</div>';
 
     var cards = [
-      block("Просрочено", "Требует решения в первую очередь", overdue.map(tline), "tasks"),
-      block("Письма без ответа", "Мяч на нашей стороне", needAnswer.map(lline), "letters"),
-      block("Документы на подписании", "Видно, чьей подписи не хватает", signOnUs.map(dline), "docs"),
-      block("Ближайшие встречи", "Повестка и участники в карточке", meets.map(mline), "meetings")
+      block("bad", "alert", "Просрочено", "Требует решения в первую очередь", overdue.map(tline), "tasks"),
+      block("copper", "mail", "Письма без ответа", "Мяч на нашей стороне", needAnswer.map(lline), "letters"),
+      block("good", "pen", "Документы на подписании", "Видно, чьей подписи не хватает", signOnUs.map(dline), "docs"),
+      block("violet", "calendar", "Ближайшие встречи", "Повестка и участники в карточке", meets.map(mline), "meetings")
     ];
 
     return head + stats + '<div class="grid g2f">' + cards.join("") + '</div>' +
@@ -1075,7 +1144,7 @@
   }
   function taskList(rows){
     if(!rows.length) return '<div class="listbox"><div class="empty">Под фильтр ничего не подошло.</div></div>';
-    return '<div class="listbox"><div class="list">' + rows.map(function(t){
+    return '<div class="listbox cols"><div class="list">' + rows.map(function(t){
       return '<div class="li' + (taskDone(t) ? " done" : "") + '" data-open="task:' + t.id + '">' +
         '<div class="main"><span class="t">' + esc(t.title) + '</span>' +
         '<span class="m">' + esc(TRACKS[t.track]) + (t.jira ? ' · ' + esc(t.jira) : "") +
@@ -1241,32 +1310,47 @@
   }
 
   /* ---------- документы ---------- */
+  var docQuery = "", docPanel = false;
+  function docFacetCount(){ return (docKind !== "all" ? 1 : 0) + (docStatus !== "all" ? 1 : 0); }
+  function docMatch(d){
+    var q = docQuery.trim().toLowerCase();
+    if(!q) return true;
+    return [d.name, d.org, d.owner, DKIND[d.kind], DSTATUS[d.st].label].join(" ").toLowerCase().indexOf(q) !== -1;
+  }
   function screenDocs(){
     var rows = state.docs.filter(function(d){
       if(docKind !== "all" && d.kind !== docKind) return false;
       if(docStatus !== "all" && d.st !== docStatus) return false;
-      return true;
+      return docMatch(d);
     });
     var head = '<div class="phead"><div><h1>Юридический трек</h1>' +
       '<p>Документы с несколькими подписывающими сторонами: список с фильтрами по виду и стадии. Подписи показаны точками, итог считается из матрицы сторон.</p></div>' +
       '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Список выгружен в .xlsx">Выгрузить</button>' +
       '<button class="btn primary" type="button" data-new="doc">Новый документ</button></div></div>';
 
-    var kindChips = '<div class="filters"><span class="dim" style="font-size:12.5px">Вид:</span>' +
+    var kindChips = '<div class="filters" style="margin:0"><span class="dim" style="font-size:12.5px">Вид:</span>' +
       [["all","Все"]].concat(Object.keys(DKIND).map(function(k){ return [k, DKIND[k]]; })).map(function(f){
         var n = f[0] === "all" ? state.docs.length : state.docs.filter(function(d){ return d.kind === f[0]; }).length;
         if(!n && f[0] !== "all") return "";
         return '<button class="fchip" type="button" data-dkind="' + f[0] + '" aria-pressed="' + (docKind === f[0]) + '">' +
           f[1] + '<span class="b">' + n + '</span></button>'; }).join("") + '</div>';
 
-    var stChips = '<div class="filters" style="margin-top:-8px"><span class="dim" style="font-size:12.5px">Стадия:</span>' +
+    var stChips = '<div class="filters" style="margin:6px 0 0"><span class="dim" style="font-size:12.5px">Стадия:</span>' +
       [["all","Любая"]].concat(Object.keys(DSTATUS).map(function(k){ return [k, DSTATUS[k].label]; })).map(function(f){
         var n = f[0] === "all" ? state.docs.length : state.docs.filter(function(d){ return d.st === f[0]; }).length;
         return '<button class="fchip" type="button" data-dstatus="' + f[0] + '" aria-pressed="' + (docStatus === f[0]) + '">' +
           f[1] + '<span class="b">' + n + '</span></button>'; }).join("") +
-      '<span style="flex:1"></span><span class="dim" style="font-size:12.5px">Найдено: ' + rows.length +
-      ' из ' + state.docs.length + '</span></div>';
+      '</div>';
 
+    var bar = '<div class="toolbar">' +
+      '<label class="search"><span aria-hidden="true">⌕</span>' +
+      '<input id="dq" type="search" placeholder="Поиск по названию, контрагенту, ответственному" value="' + esc(docQuery) + '" aria-label="Поиск по документам"></label>' +
+      '<button class="fbtn" type="button" data-dpanel aria-pressed="' + docPanel + '">Фильтры' +
+      (docFacetCount() ? '<span class="n">' + docFacetCount() + '</span>' : "") + '</button>' +
+      '<span class="found">Найдено: ' + rows.length + ' из ' + state.docs.length + '</span></div>' +
+      (docPanel ? '<div class="facetbar" style="display:block">' + kindChips + stChips + '</div>' : "");
+
+    if(!rows.length) return head + bar + '<div class="listbox"><div class="empty">Под фильтр ничего не подошло.</div></div>';
     if(!rows.length) return head + kindChips + stChips + '<div class="listbox"><div class="empty">Под фильтр ничего не подошло.</div></div>';
 
     var table = '<div class="reg docs"><div class="reghead">' +
@@ -1286,7 +1370,7 @@
           '<span>' + dueTag(d.due, docClosed(d)) + '</span>' +
           '<span>' + pill(DSTATUS[d.st].label, DSTATUS[d.st].tone) + '</span></div>';
       }).join("") + '</div>';
-    return head + kindChips + stChips + table;
+    return head + bar + table;
   }
   function ring(done, total){
     var r = 12, c = 2 * Math.PI * r, pct = total ? done / total : 0;
@@ -1504,13 +1588,14 @@
     var past = state.meetings.filter(function(m){ return m.date < "2026-09-22"; }).sort(meetSort).reverse();
     function row(m){
       var hasMat = (m.decisions ? 1 : 0) + (m.files || []).length;
-      return '<div class="li" data-open="meet:' + m.id + '"><div class="main">' +
-        '<span class="t">' + esc(m.title) + '</span>' +
-        '<span class="m"><span class="mono">' + fmtFull(m.date) + ' ' + esc(m.time) + '</span> · ' + esc(m.place) +
-        ' · ' + esc(m.people.join(", ")) + '</span></div>' +
-        '<div class="rt">' + pill(m.kind, "p-neutral") +
+      return '<div class="mrow" data-open="meet:' + m.id + '"><div class="mi">' +
+        '<span class="mt">' + esc(m.title) + '</span>' +
+        '<span class="mm"><span class="mono">' + fmtFull(m.date) + ' ' + esc(m.time) + '</span>' +
+        '<span>' + esc(m.place) + '</span><span>' + esc(m.people.join(", ")) + '</span>' +
+        ((m.files || []).length ? '<span>' + plural(m.files.length, ["файл","файла","файлов"]) + '</span>' : "") +
+        '</span></div>' +
+        '<div class="mp">' + pill(m.kind, "p-neutral") +
         (m.decisions ? pill("есть решения", "p-good") : pill("материалы не внесены", "p-warn")) +
-        ((m.files || []).length ? '<span class="dim" style="font-size:12.5px">' + m.files.length + ' файл</span>' : "") +
         '</div></div>';
     }
     return '<div class="phead"><div><h1>Встречи</h1>' +
@@ -1518,16 +1603,16 @@
       '<div style="display:flex;gap:8px">' +
       '<button class="btn" type="button" data-act="Нужен коннектор почты: подключим — встречи будут подтягиваться из приглашений">Загрузить из почты</button>' +
       '<button class="btn primary" type="button" data-new="meet">Новая встреча</button></div></div>' +
-      '<div class="grid g2" style="align-items:start">' +
-      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Ближайшие</h3>' +
-      '<div class="sub">' + plural(soon.length, ["встреча впереди","встречи впереди","встреч впереди"]) + '</div></div>' +
-      (soon.length ? '<div class="list">' + soon.map(row).join("") + '</div>'
+      '<div class="grid g2f top">' +
+      '<div class="card acc" style="padding:0"><div style="padding:18px 18px 0">' +
+      cardHead("calendar", "Ближайшие", plural(soon.length, ["встреча впереди","встречи впереди","встреч впереди"])) + '</div>' +
+      (soon.length ? soon.map(row).join("")
                    : '<p class="dim" style="padding:0 18px 18px;font-size:14px">Ничего не запланировано.</p>') + '</div>' +
-      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Прошедшие</h3>' +
-      '<div class="sub">Материалы и решения</div></div>' +
-      '<div class="list">' + past.map(row).join("") + '</div></div></div>' +
-      '<div class="card" style="margin-top:14px"><h3>Почта</h3>' +
-      '<div class="sub">Что появится после подключения почтового ящика проекта</div>' +
+      '<div class="card acc t-violet" style="padding:0"><div style="padding:18px 18px 0">' +
+      cardHead("clock", "Прошедшие", "Материалы и решения") + '</div>' +
+      past.map(row).join("") + '</div></div>' +
+      '<div class="card acc t-copper" style="margin-top:14px">' +
+      cardHead("mail", "Почта", "Что появится после подключения почтового ящика проекта") +
       '<ul style="margin:0;padding-left:19px;color:var(--ink-2);font-size:14.5px;line-height:1.6">' +
       '<li>Приглашения из календаря почты создают встречу с участниками и временем.</li>' +
       '<li>Протокол рассылается участникам одной кнопкой, отправка пишется в историю встречи.</li>' +
@@ -1633,21 +1718,23 @@
       '<p>Пять вопросов, которые задают на планёрке: где стоит работа, кто перегружен, с кем переписка не закрыта, где стоит подписание и что горит.</p></div>' +
       '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Период изменён">Период: 30 дней</button>' +
       '<button class="btn" type="button" data-act="Выгружено в .xlsx: данные всех графиков">Выгрузить</button></div></div>' +
-      '<div class="grid g3" style="margin-bottom:14px">' +
+      '<div class="grid g4" style="margin-bottom:14px">' +
       kpi(open.length, "Задач в работе", "из " + state.tasks.length + " всего", "") +
-      kpi(over.length, "Просрочено", over.length ? "самая старая: " + (-days(over[0].due)) + " дн." : "чисто", over.length ? "bad" : "good") +
+      kpi(over.length, "Задач просрочено",
+        (over.length ? "самая старая: " + (-days(over[0].due)) + " дн." : "чисто") +
+        (lOver.length ? " · писем: " + lOver.length : ""), over.length ? "bad" : "good") +
       kpi(noDue.length, "Без срока", "главный источник потерь", noDue.length ? "warn" : "good") +
-      kpi(lOver.length, "Писем просрочено", "из " + state.letters.length + " в реестре", lOver.length ? "warn" : "good") +
       kpi(sigDone() + " / " + state.docs.length, "Документов подписано", "всеми сторонами", "good") +
       '</div>' +
-      '<div class="grid g2">' +
-      '<div class="card">' + chartTracks() + '</div>' +
-      '<div class="card">' + chartAssignees() + '</div>' +
-      '<div class="card">' + chartOrgs() + '</div>' +
-      '<div class="card">' + chartSigning() + '</div>' +
+      '<div class="grid g2f">' +
+      '<div class="card acc">' + chartTracks() + '</div>' +
+      '<div class="card acc t-violet">' + chartAssignees() + '</div>' +
+      '<div class="card acc t-copper">' + chartOrgs() + '</div>' +
+      '<div class="card acc t-good">' + chartSigning() + '</div>' +
       '</div>' +
-      '<div class="card" style="margin-top:14px"><h3>Что горит прямо сейчас</h3>' +
-      '<div class="sub">Собирается само из задач, писем и документов</div>' + burning() + '</div>';
+      '<div class="card acc t-bad" style="margin-top:14px">' +
+      cardHead("alert", "Что горит прямо сейчас", "Собирается само из задач, писем и документов") +
+      burning() + '</div>';
   }
   function hbar(rows, opts){
     var max = Math.max.apply(null, rows.map(function(r){ return r.total; })) || 1;
@@ -1676,9 +1763,11 @@
       return {label:TRACKS[tr], total:items.length, parts:keys.map(function(k, j){
         return {v:items.filter(function(t){ return t.st === k; }).length, name:TSTATUS[k].label, color:colors[j]}; })};
     });
-    return '<figure><h3>Где стоит работа</h3><div class="sub">Задачи по трекам, оттенок — стадия</div>' +
-      '<div class="legend">' + keys.map(function(k, j){
-        return '<span><i style="background:' + colors[j] + '"></i>' + TSTATUS[k].label + '</span>'; }).join("") + '</div>' +
+    return '<figure>' + cardHead("chart", "Где стоит работа", "Задачи по трекам, оттенок — стадия") +
+      '<div class="legend">' + keys.filter(function(k){
+        return state.tasks.some(function(t){ return t.st === k; });
+      }).map(function(k){
+        return '<span><i style="background:' + colors[keys.indexOf(k)] + '"></i>' + TSTATUS[k].label + '</span>'; }).join("") + '</div>' +
       hbar(rows, {padL:128, rowH:32, alt:"Задачи по трекам и статусам"}) +
       '<figcaption>Светлая часть слева — то, к чему ещё не приступали.</figcaption></figure>';
   }
@@ -1695,7 +1784,7 @@
         {v:by[k].n - by[k].over, name:"в срок", color:"var(--seq3)"}
       ]};
     });
-    return '<figure><h3>Кто перегружен</h3><div class="sub">Открытые задачи на человека</div>' +
+    return '<figure>' + cardHead("users", "Кто перегружен", "Открытые задачи на человека") +
       '<div class="legend"><span><i style="background:var(--seq3)"></i>В срок</span><span><i style="background:var(--bad)"></i>Просрочено</span></div>' +
       hbar(rows, {padL:120, alt:"Нагрузка по исполнителям"}) +
       '<figcaption>Для команды из трёх человек это первый вопрос на планёрке.</figcaption></figure>';
@@ -1713,7 +1802,7 @@
         {v:by[k].all - by[k].open, name:"закрыто", color:"var(--seq2)"}
       ]};
     });
-    return '<figure><h3>С кем переписка не закрыта</h3><div class="sub">Письма по контрагентам</div>' +
+    return '<figure>' + cardHead("mail", "С кем переписка не закрыта", "Письма по контрагентам") +
       '<div class="legend"><span><i style="background:var(--c1)"></i>В работе</span><span><i style="background:var(--seq2)"></i>Закрыто</span></div>' +
       hbar(rows, {padL:172, alt:"Письма по контрагентам"}) +
       '<figcaption>Шесть контрагентов с самой активной перепиской.</figcaption></figure>';
@@ -1724,7 +1813,7 @@
       var n = state.docs.filter(function(d){ return d.mile[i]; }).length;
       return {label:l.length > 22 ? l.slice(0,21) + "…" : l, total:n, parts:[{v:n, name:"дошло", color:"var(--c2)"}]};
     });
-    return '<figure><h3>Где стоит подписание</h3><div class="sub">Сколько контрагентов дошло до каждой стадии</div>' +
+    return '<figure>' + cardHead("flow", "Где стоит подписание", "Сколько контрагентов дошло до каждой стадии") +
       hbar(rows, {padL:150, alt:"Воронка подписания"}) +
       '<figcaption>Всего документов в работе: ' + total + '.</figcaption></figure>';
   }
@@ -1831,7 +1920,7 @@
         : '<div class="s"><p class="dim">Ни один блок не выбран — отчёт пуст.</p></div>') + '</div>' +
 
       '<div style="display:grid;gap:14px">' +
-      '<div class="card"><h3>Настройка отчёта</h3><div class="sub">Сохраняется как шаблон и применяется к каждому периоду</div>' +
+      '<div class="card acc">' + cardHead("file", "Настройка отчёта", "Сохраняется как шаблон и применяется к каждому периоду") +
       '<div class="two"><div class="field"><label for="rf">Период с</label>' +
       '<input id="rf" type="date" data-rdate="from" value="' + reportCfg.from + '"></div>' +
       '<div class="field"><label for="rt">по</label><input id="rt" type="date" data-rdate="to" value="' + reportCfg.to + '"></div></div>' +
@@ -1849,10 +1938,11 @@
       '<p class="hint">Публичное отображение меняет администратор или автор в момент создания. Вы вошли как ' +
       (MY_ROLE === "admin" ? "администратор" : "участник") + '.</p></div>' +
 
-      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Прошлые периоды</h3>' +
-      '<div class="sub">Отправленные версии заморожены</div></div>' +
+      '<div class="card acc t-violet" style="padding:0"><div style="padding:18px 18px 0">' +
+      cardHead("clock", "Прошлые периоды", "Отправленные версии заморожены") + '</div>' +
       '<div class="list">' + state.reports.map(function(r, i){
-        return '<div class="li"><div class="main"><span class="t mono">' + fmtFull(r.from) + " — " + fmtFull(r.to) + '</span>' +
+        return '<div class="li"><div class="main"><span class="t mono" style="font-size:13px;white-space:nowrap">' +
+          fmtFull(r.from) + " — " + fmtFull(r.to) + '</span>' +
           '<span class="m">' + esc(r.author) + '</span></div>' +
           '<div class="rt">' + pill(r.state, i ? "p-good" : "p-brand") + '</div></div>';
       }).join("") + '</div></div></div></div>';
@@ -1872,32 +1962,34 @@
       '</div></div></div></div>';
   }
   function screenRefs(){
-    var card = function(title, sub, body, act){
-      return '<div class="card" style="padding:0"><div style="padding:18px 18px 10px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
-        '<div><h3>' + title + '</h3><div class="sub" style="margin:0">' + sub + '</div></div>' + (act || "") + '</div>' + body + '</div>';
+    var card = function(tone, icon, title, sub, body, act){
+      return '<div class="card acc t-' + tone + '" style="padding:0"><div style="padding:18px 18px 4px">' +
+        cardHead(icon, title, sub, act) + '</div>' + body + '</div>';
     };
-    var members = card("Участники проекта", "Роли и нагрузка",
+    var members = card("good", "users", "Участники проекта", "Роли и нагрузка",
       '<div class="list">' + state.members.map(function(m){
         return '<div class="li"><div class="main"><span class="t">' + who(m.name) + '</span>' +
           '<span class="m">' + esc(m.role) + '</span></div>' +
           '<div class="rt">' + pill(m.acc === "admin" ? "Администратор" : "Участник", m.acc === "admin" ? "p-brand" : "p-neutral") +
           '<span class="dim" style="font-size:13px">' +
-          state.tasks.filter(function(t){ return t.who === m.name && !taskDone(t); }).length + ' задач</span></div></div>';
+          plural(state.tasks.filter(function(t){ return t.who === m.name && !taskDone(t); }).length,
+            ["открытая задача","открытые задачи","открытых задач"]) + '</span></div></div>';
       }).join("") + '</div>',
       '<button class="btn sm" type="button" data-act="Форма нового участника">Добавить</button>');
 
-    var tracks = card("Треки работ", "Свои треки можно заводить: они появятся в задачах и фильтрах",
+    var tracks = card("brand", "layers", "Треки работ", "Свои треки можно заводить: они появятся в задачах и фильтрах",
       '<div class="list">' + state.tracks.map(function(t){
         return '<div class="li"><div class="main"><span class="t">' + esc(t.label) + '</span>' +
           '<span class="m">код ' + esc(t.k) + (t.own ? ' · заведён вручную' : ' · из Excel') + '</span></div>' +
           '<div class="rt"><span class="dim" style="font-size:13px">' +
-          state.tasks.filter(function(x){ return x.track === t.k; }).length + ' задач</span>' +
+          plural(state.tasks.filter(function(x){ return x.track === t.k; }).length,
+            ["задача","задачи","задач"]) + '</span>' +
           (t.own ? '<span class="rowact"><button class="btn sm danger" type="button" data-track-del="' + esc(t.k) + '">Удалить</button></span>' : "") +
           '</div></div>';
       }).join("") + '</div>',
       '<button class="btn sm primary" type="button" data-new="track">Новый трек</button>');
 
-    var orgs = card("Контрагенты", "Адресаты писем и стороны подписания; список пополняется из формы письма",
+    var orgs = card("copper", "building", "Контрагенты", "Адресаты писем и стороны подписания; список пополняется из формы письма",
       '<div style="padding:0 18px 18px"><div class="filters" style="margin:0">' + state.orgs.map(function(o){
         var n = state.letters.filter(function(l){ return l.org === o.name; }).length +
                 state.docs.filter(function(d){ return d.org === o.name; }).length;
@@ -1906,7 +1998,7 @@
           (o.internal ? ' <span class="b">наша сторона</span>' : '<span class="b">' + n + (rr ? " · " + rr + " предст." : "") + '</span>') + '</span>';
       }).join("") + '</div></div>');
 
-    var info = card("Справочная информация по проекту", "Всё, что нужно новому человеку на проекте",
+    var info = card("violet", "book", "Справочная информация по проекту", "Всё, что нужно новому человеку на проекте",
       '<div class="list">' + state.refdocs.map(function(d){
         return '<div class="li" data-act="Открыт документ: ' + esc(d.title) + '"><div class="main">' +
           '<span class="t">' + esc(d.title) + '</span><span class="m">' + esc(d.note) + ' · ведёт ' + esc(d.who) + '</span></div>' +
@@ -1914,11 +2006,10 @@
       }).join("") + '</div>',
       '<button class="btn sm" type="button" data-act="Форма нового справочного документа">Добавить</button>');
 
-    var reps = '<div class="card" style="padding:0;margin-bottom:14px">' +
-      '<div style="padding:18px 18px 12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
-      '<div><h3>Ответственные представители контрагентов</h3>' +
-      '<div class="sub" style="margin:0">' + state.reps.length + ' контактов, к которым обращаются по письмам и подписанию</div></div>' +
-      '<button class="btn sm primary" type="button" data-new="rep">Добавить представителя</button></div>' +
+    var reps = '<div class="card acc" style="padding:0;margin-bottom:14px"><div style="padding:18px 18px 6px">' +
+      cardHead("contact", "Ответственные представители контрагентов",
+        plural(state.reps.length, ["контакт","контакта","контактов"]) + ", к которым обращаются по письмам и подписанию",
+        '<button class="btn sm primary" type="button" data-new="rep">Добавить представителя</button>') + '</div>' +
       '<div class="reg reps" style="border:0;border-radius:0"><div class="reghead">' +
       '<span>ФИО</span><span>Контрагент</span><span>Должность</span><span>Телефон</span><span>Почта</span><span>Закреплено</span></div>' +
       state.reps.map(function(r){
@@ -1934,8 +2025,8 @@
     return '<div class="phead"><div><h1>Справочники</h1>' +
       '<p>Вся справочная информация по проекту и контрагентам: представители, документы проекта, участники, треки и список контрагентов.</p></div></div>' +
       reps +
-      '<div class="grid g2f" style="align-items:start;margin-bottom:14px">' + info + orgs + '</div>' +
-      '<div class="grid g2f" style="align-items:start">' + members + tracks + '</div>';
+      '<div class="grid g2f" style="margin-bottom:14px">' + info + orgs + '</div>' +
+      '<div class="grid g2f">' + members + tracks + '</div>';
   }
   function openRepForm(id){
     var r = id ? byId("reps", +id) : null;
@@ -2105,7 +2196,7 @@
       prop("Ответственный", who(t.who)) +
       prop("Срок", dueTag(t.due, taskDone(t), true)) +
       prop("Приоритет", '<span' + (t.prio === "HIGH" || t.prio === "CRITICAL" ? ' style="color:var(--bad);font-weight:600"' : "") + '>' + PRIO[t.prio] + '</span>') +
-      prop("Готовность", '<span class="mono">' + t.p + '%</span>') +
+      prop("Готовность", '<span class="mono">' + t.p + '%</span><span class="bar"><i style="width:' + t.p + '%"></i></span>') +
       prop("Jira", t.jira ? '<span class="mono" style="color:var(--brand)">' + esc(t.jira) + '</span>' : '<span class="dim">не связана</span>') +
       (t.ext ? prop("Внешний участник", esc(t.ext)) : "") +
       prop("Видимость", pill(VIS[t.vis || "PUBLIC"].label, VIS[t.vis || "PUBLIC"].tone)) +
@@ -2156,7 +2247,7 @@
       return arts.map(function(a, i){
         return '<div class="artrow" data-ai="' + i + '"><select data-art-t="' + i + '">' +
           Object.keys(ARTS).map(function(k){ return '<option value="' + k + '"' + (a.t === k ? " selected" : "") + '>' + ARTS[k] + '</option>'; }).join("") +
-          '</select><input data-art-v="' + i + '" value="' + esc(a.v) + '" placeholder="Ссылка, номер или описание">' +
+          '</select><input data-art-v="' + i + '" value="' + esc(a.v) + '" placeholder="Ссылка или значение">' +
           '<button class="iconbtn" type="button" data-art-del="' + i + '" aria-label="Убрать артефакт">✕</button></div>';
       }).join("");
     }
@@ -2170,8 +2261,8 @@
       (t ? '<div class="field"><label for="f3">Статус</label><select id="f3" name="st">' +
         Object.keys(TSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + TSTATUS[k].label + '</option>'; }).join("") +
         '</select></div>'
-        : '<div class="field"><label>Статус</label><div style="padding:9px 0">' + pill("Новая", "p-copper") +
-          '<span class="dim" style="font-size:12.5px;margin-left:8px">двигается в самой задаче</span></div></div>') +
+        : '<div class="field"><label>Статус</label><div style="padding:8px 0 0">' + pill("Новая", "p-copper") + '</div>' +
+          '<span class="dim" style="font-size:12.5px">двигается в самой задаче</span></div>') +
       '</div>' +
       '<div class="two"><div class="field"><label for="f4">Ответственный</label><select id="f4" name="who">' +
       state.members.map(function(m){ return '<option' + (v.who === m.name ? " selected" : "") + '>' + m.name + '</option>'; }).join("") +
@@ -2585,11 +2676,13 @@
     if(mq && mailQuery){ mq.focus(); mq.setSelectionRange(mq.value.length, mq.value.length); }
     var tq = document.getElementById("tq");
     if(tq && taskQuery){ tq.focus(); tq.setSelectionRange(tq.value.length, tq.value.length); }
+    var dq = document.getElementById("dq");
+    if(dq && docQuery){ dq.focus(); dq.setSelectionRange(dq.value.length, dq.value.length); }
   }
   function go(r){ route = r; closePalette(); render(); window.scrollTo(0,0); }
 
   document.addEventListener("click", function(e){
-    var el = e.target.closest("[data-go],[data-open],[data-del],[data-new],[data-tview],[data-mfilter],[data-mail],[data-dfilter],[data-cal],[data-calk],[data-calview],[data-calday],[data-calspan],[data-step],[data-act],[data-eletter],[data-mpanel],[data-mreset],[data-msaved],[data-rperiod],[data-tpanel],[data-treset],[data-dkind],[data-dstatus],[data-emeet],[data-erep],[data-track-del]");
+    var el = e.target.closest("[data-go],[data-open],[data-del],[data-new],[data-tview],[data-mfilter],[data-mail],[data-dfilter],[data-cal],[data-calk],[data-calview],[data-calday],[data-calspan],[data-dpanel],[data-step],[data-act],[data-eletter],[data-mpanel],[data-mreset],[data-msaved],[data-rperiod],[data-tpanel],[data-treset],[data-dkind],[data-dstatus],[data-emeet],[data-erep],[data-track-del]");
     if(!el) return;
     var d = el.dataset;
     if(d.go){ go(d.go); return; }
@@ -2673,6 +2766,7 @@
     }
     if(d.calday){ calSel = d.calday; render(); return; }
     if(d.calspan !== undefined){ calSpan = !calSpan; render(); return; }
+    if(d.dpanel !== undefined){ docPanel = !docPanel; render(); return; }
     if(d.step){ step = +d.step; render(); return; }
     if(d.act){ toast(d.act); return; }
   });
@@ -2680,6 +2774,7 @@
     var t = e.target;
     if(t.id === "mq"){ mailQuery = t.value; render(); return; }
     if(t.id === "tq"){ taskQuery = t.value; render(); return; }
+    if(t.id === "dq"){ docQuery = t.value; render(); return; }
     if(t.dataset && t.dataset.rtext){ reportCfg.texts[t.dataset.rtext] = t.value; return; }
   });
   document.addEventListener("change", function(e){
