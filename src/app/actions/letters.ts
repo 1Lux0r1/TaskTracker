@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CLOSED_LETTER_STATUSES, type LetterStatus } from "@/lib/domain";
 import { normalizeLetterByDirection } from "@/lib/letters";
-import { buildLetterSearchIndex } from "@/lib/search";
+import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
   formatZodError,
@@ -154,7 +154,7 @@ async function searchIndexFor(input: {
       })
     : null;
 
-  return buildLetterSearchIndex([
+  return buildSearchIndex([
     input.number,
     input.subject,
     counterparty?.name,

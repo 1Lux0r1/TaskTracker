@@ -134,6 +134,10 @@ model Task {
   /// Ход работы: в исходных таблицах статус ведётся свободным текстом с датами.
   progressNote     String?
   letterId         String?
+  /// Строчными буквами: название, описание, ход работы и ключи одной строкой.
+  /// SQLite не умеет регистронезависимый поиск по кириллице, поэтому
+  /// поисковая строка готовится при записи — как у письма.
+  searchIndex      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -153,6 +157,7 @@ model Task {
   @@index([dueDate])
   @@index([assigneeId])
   @@index([trackId])
+  @@index([searchIndex])
 }
 
 /// Артефакт задачи — то, чем работа подтверждается: карточка в ЭДО, задача в
@@ -362,6 +367,9 @@ model Document {
   signedAt         DateTime?
   outgoingLetterId String?
   incomingLetterId String?
+  /// Строчными буквами: название, организация и формулировка статуса одной
+  /// строкой — SQLite не ищет по кириллице без учёта регистра.
+  searchIndex      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -377,6 +385,7 @@ model Document {
   @@index([status])
   @@index([dueDate])
   @@index([kind])
+  @@index([searchIndex])
 }
 
 /// Подпись одной стороны под документом. Документ согласуют несколько сторон,

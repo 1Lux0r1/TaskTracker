@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { deriveDocumentStatus } from "@/lib/domain";
+import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
   documentInputSchema,
@@ -26,6 +27,7 @@ export async function createDocument(
   const document = await prisma.document.create({
     data: {
       ...parsed.data,
+      searchIndex: await documentSearchIndex(parsed.data),
       signatures: {
         create: DEFAULT_PARTIES.map((party, index) => ({ party, sortOrder: index })),
       },
@@ -49,6 +51,7 @@ export async function updateDocument(
     where: { id: documentId },
     data: {
       ...parsed.data,
+      searchIndex: await documentSearchIndex(parsed.data),
       signedAt: parsed.data.status === "SIGNED" ? (await signedAt(documentId)) : null,
     },
   });
@@ -151,6 +154,29 @@ async function syncDocumentStatus(documentId: string): Promise<void> {
     where: { id: documentId },
     data: { status, signedAt: status === "SIGNED" ? (document.signedAt ?? new Date()) : null },
   });
+}
+
+/** Поисковая строка документа: название, организация и формулировка статуса. */
+async function documentSearchIndex(input: {
+  title: string;
+  counterpartyId: string | null;
+  statusNote: string | null;
+  nextAction: string | null;
+}): Promise<string> {
+  const counterparty = input.counterpartyId
+    ? await prisma.counterparty.findUnique({
+        where: { id: input.counterpartyId },
+        select: { name: true, shortName: true },
+      })
+    : null;
+
+  return buildSearchIndex([
+    input.title,
+    counterparty?.name,
+    counterparty?.shortName,
+    input.statusNote,
+    input.nextAction,
+  ]);
 }
 
 async function signedAt(documentId: string): Promise<Date> {

@@ -4,8 +4,10 @@ import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
+import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
+  type TaskInput,
   formatZodError,
   readArtifacts,
   taskInputSchema,
@@ -50,6 +52,7 @@ export async function createTask(
       number,
       sortOrder: number,
       completedAt: input.status === "DONE" ? new Date() : null,
+      searchIndex: taskSearchIndex(input),
       artifacts: { create: artifacts },
     },
   });
@@ -89,6 +92,7 @@ export async function updateTask(
       data: {
         ...input,
         completedAt: completedAtFor(input.status, current.status, current.completedAt),
+        searchIndex: taskSearchIndex(input),
         artifacts: { create: artifacts },
       },
     }),
@@ -181,6 +185,17 @@ export async function deleteNote(formData: FormData): Promise<void> {
   if (note.taskId) revalidatePath(`/tasks/${note.taskId}`);
   if (note.letterId) revalidatePath(`/letters/${note.letterId}`);
   if (note.documentId) revalidatePath(`/documents/${note.documentId}`);
+}
+
+/** Поисковая строка задачи: всё, по чему её реально ищут, кроме номера. */
+function taskSearchIndex(input: TaskInput): string {
+  return buildSearchIndex([
+    input.title,
+    input.description,
+    input.progressNote,
+    input.externalTaskKey,
+    input.externalAssignee,
+  ]);
 }
 
 /** Дата закрытия ставится при переходе в «Готово» и снимается при возврате в работу. */

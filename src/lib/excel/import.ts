@@ -21,7 +21,7 @@ import {
   parseChronicle,
 } from "@/lib/excel/chronicle";
 import { deriveDocumentStatus, documentKindLabel } from "@/lib/domain";
-import { buildLetterSearchIndex } from "@/lib/search";
+import { buildSearchIndex } from "@/lib/search";
 import { ensureProjectTracks } from "@/lib/tracks";
 import { cellDate, cellNumber, cellText } from "@/lib/excel/parse-cell";
 
@@ -481,7 +481,7 @@ async function importLetters(
 
       const withSearch = {
         ...data,
-        searchIndex: buildLetterSearchIndex([
+        searchIndex: buildSearchIndex([
           data.number,
           data.subject,
           counterpartyName,

@@ -1,57 +1,32 @@
 import Link from "next/link";
+import { FilterBar } from "@/components/filter-bar";
 import { TaskTable } from "@/components/task-table";
 import { prisma } from "@/lib/db";
+import { TASK_STATUS_LABELS, TASK_STATUSES, startOfToday } from "@/lib/domain";
 import {
-  CLOSED_TASK_STATUSES,
-  TASK_STATUS_LABELS,
-  TASK_STATUSES,
-  startOfToday,
-  type TaskStatus,
-} from "@/lib/domain";
-import type { Prisma } from "@/generated/prisma/client";
+  TASK_PRESETS,
+  TASK_SORTS,
+  buildTaskOrderBy,
+  buildTaskWhere,
+  countActiveTaskFilters,
+  readTaskFilter,
+} from "@/lib/task-filters";
 import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-/** Пресеты вместо длинной формы фильтров: закрывают 90 % повседневных выборок. */
-const PRESETS = [
-  { value: "open", label: "Открытые" },
-  { value: "overdue", label: "Просроченные" },
-  { value: "unassigned", label: "Без ответственного" },
-  { value: "all", label: "Все" },
-] as const;
-
 export default async function TasksPage(props: PageProps<"/tasks">) {
   await requireUser();
   const params = await props.searchParams;
-  const preset = single(params.preset) ?? "open";
-  const projectId = single(params.projectId) ?? "";
-  const assigneeId = single(params.assigneeId) ?? "";
-  const status = single(params.status) ?? "";
-  const trackName = single(params.track) ?? "";
-
-  const where: Prisma.TaskWhereInput = {};
-  if (preset === "open") where.status = { notIn: CLOSED_TASK_STATUSES };
-  if (preset === "overdue") {
-    where.status = { notIn: CLOSED_TASK_STATUSES };
-    where.dueDate = { lt: startOfToday() };
-  }
-  if (preset === "unassigned") {
-    where.status = { notIn: CLOSED_TASK_STATUSES };
-    where.assigneeId = null;
-  }
-  if (projectId) where.projectId = projectId;
-  if (assigneeId) where.assigneeId = assigneeId;
-  if (status && TASK_STATUSES.includes(status as TaskStatus)) where.status = status;
-  // Треки свои у каждого проекта, поэтому в сквозном списке фильтруем по
-  // названию: «Юридический» в двух проектах — для пользователя один трек.
-  if (trackName) where.track = { name: trackName };
+  const filter = readTaskFilter(params);
+  const today = startOfToday();
+  const activeFilters = countActiveTaskFilters(filter);
 
   const [tasks, projects, members, trackRows] = await Promise.all([
     prisma.task.findMany({
-      where,
+      where: buildTaskWhere(filter, today),
       include: { assignee: true, project: true, track: true },
-      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      orderBy: buildTaskOrderBy(filter.sort),
       take: 300,
     }),
     prisma.project.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
@@ -61,12 +36,14 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
       select: { id: true, fullName: true },
     }),
     prisma.track.findMany({
-      where: { isArchived: false, ...(projectId ? { projectId } : {}) },
+      where: { isArchived: false, ...(filter.projectId ? { projectId: filter.projectId } : {}) },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { name: true },
     }),
   ]);
 
+  // Треки свои у каждого проекта: «Юридический» в двух проектах —
+  // для пользователя один трек, поэтому названия схлопываем.
   const trackNames = [...new Set(trackRows.map((row) => row.name))];
 
   return (
@@ -83,11 +60,16 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </div>
       </div>
 
-      <form className="card flex flex-wrap items-end gap-3 p-4">
+      <FilterBar
+        resetHref="/tasks"
+        activeCount={activeFilters}
+        query={filter.query}
+        placeholder="номер, название, ход работы"
+      >
         <label className="field">
           Выборка
-          <select name="preset" defaultValue={preset} className="input w-48">
-            {PRESETS.map((item) => (
+          <select name="preset" defaultValue={filter.preset} className="input">
+            {TASK_PRESETS.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
@@ -96,7 +78,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </label>
         <label className="field">
           Проект
-          <select name="projectId" defaultValue={projectId} className="input w-56">
+          <select name="projectId" defaultValue={filter.projectId} className="input">
             <option value="">Все проекты</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
@@ -107,7 +89,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </label>
         <label className="field">
           Ответственный
-          <select name="assigneeId" defaultValue={assigneeId} className="input w-56">
+          <select name="assigneeId" defaultValue={filter.assigneeId} className="input">
             <option value="">Все</option>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
@@ -118,7 +100,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </label>
         <label className="field">
           Трек
-          <select name="track" defaultValue={trackName} className="input w-48">
+          <select name="track" defaultValue={filter.track} className="input">
             <option value="">Все треки</option>
             {trackNames.map((name) => (
               <option key={name} value={name}>
@@ -129,7 +111,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </label>
         <label className="field">
           Статус
-          <select name="status" defaultValue={status} className="input w-48">
+          <select name="status" defaultValue={filter.status} className="input">
             <option value="">Любой</option>
             {TASK_STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -138,17 +120,23 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
             ))}
           </select>
         </label>
-        <button type="submit" className="btn-secondary">
-          Показать
-        </button>
-      </form>
+        <label className="field">
+          Порядок
+          <select name="sort" defaultValue={filter.sort} className="input">
+            {TASK_SORTS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </FilterBar>
 
-      <p className="text-sm text-gray-500">Найдено задач: {tasks.length}</p>
+      <p className="text-sm text-gray-500">
+        Найдено задач: {tasks.length}
+        {tasks.length === 300 && " (показаны первые 300, уточните фильтр)"}
+      </p>
       <TaskTable tasks={tasks} showProject emptyMessage="Под фильтр ничего не подошло." />
     </div>
   );
-}
-
-function single(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }

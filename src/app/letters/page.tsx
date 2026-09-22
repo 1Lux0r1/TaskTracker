@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FilterBar } from "@/components/filter-bar";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { prisma } from "@/lib/db";
 import {
@@ -67,106 +68,85 @@ export default async function LettersPage(props: PageProps<"/letters">) {
         </div>
       </div>
 
-      <form className="card space-y-3 p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="field">
-            Выборка
-            <select name="preset" defaultValue={filter.preset} className="input w-52">
-              {LETTER_PRESETS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Поиск
-            <input
-              name="q"
-              defaultValue={filter.query}
-              placeholder="номер, тема, организация"
-              className="input w-72"
-            />
-          </label>
-          <label className="field">
-            Организация
-            <select
-              name="counterpartyId"
-              defaultValue={filter.counterpartyId}
-              className="input w-56"
-            >
-              <option value="">Все</option>
-              {counterparties.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Ответственный
-            <select name="ownerId" defaultValue={filter.ownerId} className="input w-52">
-              <option value="">Любой</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.fullName}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="field">
-            Направление
-            <select name="direction" defaultValue={filter.direction} className="input w-40">
-              <option value="">Любое</option>
-              {LETTER_DIRECTIONS.map((value) => (
-                <option key={value} value={value}>
-                  {LETTER_DIRECTION_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Статус
-            <select name="status" defaultValue={filter.status} className="input w-48">
-              <option value="">Любой</option>
-              {LETTER_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {LETTER_STATUS_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Дата письма с
-            <input type="date" name="from" defaultValue={filter.from} className="input w-44" />
-          </label>
-          <label className="field">
-            по
-            <input type="date" name="to" defaultValue={filter.to} className="input w-44" />
-          </label>
-          <label className="field">
-            Порядок
-            <select name="sort" defaultValue={filter.sort} className="input w-48">
-              {LETTER_SORTS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="btn-secondary">
-            Показать
-          </button>
-          {activeFilters > 0 && (
-            <Link href="/letters" className="pb-2 text-sm text-gray-500 hover:underline">
-              Сбросить фильтры ({activeFilters})
-            </Link>
-          )}
-        </div>
-      </form>
+      <FilterBar
+        resetHref="/letters"
+        activeCount={activeFilters}
+        query={filter.query}
+        placeholder="номер, тема, организация"
+      >
+        <label className="field">
+          Выборка
+          <select name="preset" defaultValue={filter.preset} className="input">
+            {LETTER_PRESETS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Организация
+          <select name="counterpartyId" defaultValue={filter.counterpartyId} className="input">
+            <option value="">Все</option>
+            {counterparties.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Ответственный
+          <select name="ownerId" defaultValue={filter.ownerId} className="input">
+            <option value="">Любой</option>
+            {members.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.fullName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Направление
+          <select name="direction" defaultValue={filter.direction} className="input">
+            <option value="">Любое</option>
+            {LETTER_DIRECTIONS.map((value) => (
+              <option key={value} value={value}>
+                {LETTER_DIRECTION_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Статус
+          <select name="status" defaultValue={filter.status} className="input">
+            <option value="">Любой</option>
+            {LETTER_STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {LETTER_STATUS_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Дата письма с
+          <input type="date" name="from" defaultValue={filter.from} className="input" />
+        </label>
+        <label className="field">
+          по
+          <input type="date" name="to" defaultValue={filter.to} className="input" />
+        </label>
+        <label className="field">
+          Порядок
+          <select name="sort" defaultValue={filter.sort} className="input">
+            {LETTER_SORTS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </FilterBar>
 
       <p className="text-sm text-gray-500">
         Найдено писем: {letters.length}

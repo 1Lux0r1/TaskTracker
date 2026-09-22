@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DocumentKindBadge, DocumentStatusBadge } from "@/components/letter-badges";
+import { FilterBar } from "@/components/filter-bar";
 import { ProgressBar } from "@/components/badges";
 import { prisma } from "@/lib/db";
 import {
@@ -9,56 +10,34 @@ import {
   DOCUMENT_STATUSES,
   formatDate,
   signatureProgress,
-  type DocumentKind,
-  type DocumentStatus,
 } from "@/lib/domain";
-import type { Prisma } from "@/generated/prisma/client";
+import {
+  DOCUMENT_SORTS,
+  DOCUMENT_WAITING,
+  buildDocumentOrderBy,
+  buildDocumentWhere,
+  countActiveDocumentFilters,
+  readDocumentFilter,
+} from "@/lib/document-filters";
 import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const WAITING = [
-  { value: "", label: "Все" },
-  { value: "us", label: "Ждут нашей подписи" },
-  { value: "them", label: "Ждём другую сторону" },
-] as const;
-
 export default async function DocumentsPage(props: PageProps<"/documents">) {
   await requireUser();
   const params = await props.searchParams;
-  const kind = single(params.kind) ?? "";
-  const status = single(params.status) ?? "";
-  const counterpartyId = single(params.counterpartyId) ?? "";
-  const waiting = single(params.waiting) ?? "";
-
-  const where: Prisma.DocumentWhereInput = {};
-  if (kind && DOCUMENT_KINDS.includes(kind as DocumentKind)) where.kind = kind;
-  if (status && DOCUMENT_STATUSES.includes(status as DocumentStatus)) where.status = status;
-  if (counterpartyId) where.counterpartyId = counterpartyId;
-  // Чьей подписи ждём. Наша сторона — организация с флагом «наша» в
-  // справочнике: соседний департамент в матрице подписания такая же внешняя
-  // сторона, как контрагент, и записывать его в «нас» нельзя.
-  if (waiting === "us") {
-    where.signatures = { some: { status: "PENDING", counterparty: { isInternal: true } } };
-  }
-  if (waiting === "them") {
-    where.signatures = {
-      some: {
-        status: "PENDING",
-        OR: [{ counterpartyId: null }, { counterparty: { isInternal: false } }],
-      },
-    };
-  }
+  const filter = readDocumentFilter(params);
+  const activeFilters = countActiveDocumentFilters(filter);
 
   const [documents, counterparties, internalCount] = await Promise.all([
     prisma.document.findMany({
-      where,
+      where: buildDocumentWhere(filter),
       include: {
         counterparty: true,
         owner: true,
         signatures: { include: { counterparty: { select: { isInternal: true } } } },
       },
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      orderBy: buildDocumentOrderBy(filter.sort),
     }),
     prisma.counterparty.findMany({
       where: { isActive: true },
@@ -106,10 +85,15 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </p>
       )}
 
-      <form className="card flex flex-wrap items-end gap-3 p-4">
+      <FilterBar
+        resetHref="/documents"
+        activeCount={activeFilters}
+        query={filter.query}
+        placeholder="название, организация, стадия"
+      >
         <label className="field">
           Вид
-          <select name="kind" defaultValue={kind} className="input w-48">
+          <select name="kind" defaultValue={filter.kind} className="input">
             <option value="">Любой</option>
             {DOCUMENT_KINDS.map((value) => (
               <option key={value} value={value}>
@@ -119,9 +103,9 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
           </select>
         </label>
         <label className="field">
-          Статус
-          <select name="status" defaultValue={status} className="input w-52">
-            <option value="">Любой</option>
+          Стадия
+          <select name="status" defaultValue={filter.status} className="input">
+            <option value="">Любая</option>
             {DOCUMENT_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {DOCUMENT_STATUS_LABELS[value]}
@@ -131,8 +115,8 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </label>
         <label className="field">
           Ждём
-          <select name="waiting" defaultValue={waiting} className="input w-56">
-            {WAITING.map((item) => (
+          <select name="waiting" defaultValue={filter.waiting} className="input">
+            {DOCUMENT_WAITING.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
@@ -141,7 +125,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </label>
         <label className="field">
           Организация
-          <select name="counterpartyId" defaultValue={counterpartyId} className="input w-56">
+          <select name="counterpartyId" defaultValue={filter.counterpartyId} className="input">
             <option value="">Все</option>
             {counterparties.map((item) => (
               <option key={item.id} value={item.id}>
@@ -150,10 +134,17 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
             ))}
           </select>
         </label>
-        <button type="submit" className="btn-secondary">
-          Показать
-        </button>
-      </form>
+        <label className="field">
+          Порядок
+          <select name="sort" defaultValue={filter.sort} className="input">
+            {DOCUMENT_SORTS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </FilterBar>
 
       {documents.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Документов пока нет.</p>
@@ -223,8 +214,4 @@ function pendingParties(
   return signatures
     .filter((item) => item.status === "PENDING")
     .map((item) => (item.counterparty?.isInternal ? `${item.party} (мы)` : item.party));
-}
-
-function single(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }

@@ -10,7 +10,7 @@ import {
   partyFromHeader,
 } from "@/lib/excel/columns";
 import { deriveDocumentStatus, signatureProgress } from "@/lib/domain";
-import { buildLetterSearchIndex, normalizeQuery } from "@/lib/search";
+import { buildSearchIndex, normalizeQuery } from "@/lib/search";
 
 describe("реестр переписки", () => {
   it("распознаёт шапку реального реестра ЭДО", () => {
@@ -134,7 +134,7 @@ describe("статус документа по сторонам", () => {
 
 describe("поиск по переписке", () => {
   it("складывает поисковую строку в нижнем регистре без ё", () => {
-    const index = buildLetterSearchIndex(["64-01-16906/26", "Согласование ТЗ", "ДЖКХ", null]);
+    const index = buildSearchIndex(["64-01-16906/26", "Согласование ТЗ", "ДЖКХ", null]);
     expect(index).toBe("64-01-16906/26 согласование тз джкх");
   });
 
