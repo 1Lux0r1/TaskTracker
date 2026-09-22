@@ -106,18 +106,35 @@ export function toDateInputValue(value: Date | null | undefined): string {
 
 /* ─── Треки работ ─────────────────────────────────────────────────────────── */
 
-export const TASK_TRACKS = ["PRODUCTION", "INTERNAL", "EXTERNAL", "LEGAL"] as const;
-export type TaskTrack = (typeof TASK_TRACKS)[number];
+/**
+ * Треки — справочник проекта: команда заводит свои. Эти четыре приходят из
+ * Excel и создаются вместе с проектом как обычные записи, их можно
+ * переименовать, перекрасить или убрать в архив.
+ */
+export const BASE_TRACKS = [
+  { key: "PRODUCTION", name: "Производственный", color: "blue", sortOrder: 0 },
+  { key: "INTERNAL", name: "Внутренний", color: "gray", sortOrder: 1 },
+  { key: "EXTERNAL", name: "Внешний", color: "orange", sortOrder: 2 },
+  { key: "LEGAL", name: "Юридический", color: "purple", sortOrder: 3 },
+] as const;
 
-export const TASK_TRACK_LABELS: Record<TaskTrack, string> = {
-  PRODUCTION: "Производственный",
-  INTERNAL: "Внутренний",
-  EXTERNAL: "Внешний",
-  LEGAL: "Юридический",
-};
+export type BaseTrackKey = (typeof BASE_TRACKS)[number]["key"];
 
-export function taskTrackLabel(value: string): string {
-  return TASK_TRACK_LABELS[value as TaskTrack] ?? value;
+/** Цвет несёт смысл: синий — обычное, оранжевый — внимание, красный —
+ *  просрочено, зелёный — закрыто, фиолетовый — встречи и история. */
+export const TRACK_COLORS = [
+  { value: "blue", label: "Синий", dot: "bg-blue-500", chip: "bg-blue-50 text-blue-700" },
+  { value: "orange", label: "Оранжевый", dot: "bg-orange-500", chip: "bg-orange-50 text-orange-700" },
+  { value: "red", label: "Красный", dot: "bg-red-500", chip: "bg-red-50 text-red-700" },
+  { value: "green", label: "Зелёный", dot: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-700" },
+  { value: "purple", label: "Фиолетовый", dot: "bg-violet-500", chip: "bg-violet-50 text-violet-700" },
+  { value: "gray", label: "Серый", dot: "bg-gray-400", chip: "bg-gray-100 text-gray-700" },
+] as const;
+
+export type TrackColor = (typeof TRACK_COLORS)[number]["value"];
+
+export function trackColor(value: string) {
+  return TRACK_COLORS.find((item) => item.value === value) ?? TRACK_COLORS[0];
 }
 
 /* ─── Письма ЭДО ──────────────────────────────────────────────────────────── */

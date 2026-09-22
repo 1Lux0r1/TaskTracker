@@ -28,6 +28,7 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const projectId = single(params.projectId) ?? "";
   const assigneeId = single(params.assigneeId) ?? "";
   const status = single(params.status) ?? "";
+  const trackName = single(params.track) ?? "";
 
   const where: Prisma.TaskWhereInput = {};
   if (preset === "open") where.status = { notIn: CLOSED_TASK_STATUSES };
@@ -42,11 +43,14 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   if (projectId) where.projectId = projectId;
   if (assigneeId) where.assigneeId = assigneeId;
   if (status && TASK_STATUSES.includes(status as TaskStatus)) where.status = status;
+  // Треки свои у каждого проекта, поэтому в сквозном списке фильтруем по
+  // названию: «Юридический» в двух проектах — для пользователя один трек.
+  if (trackName) where.track = { name: trackName };
 
-  const [tasks, projects, members] = await Promise.all([
+  const [tasks, projects, members, trackRows] = await Promise.all([
     prisma.task.findMany({
       where,
-      include: { assignee: true, project: true },
+      include: { assignee: true, project: true, track: true },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       take: 300,
     }),
@@ -56,7 +60,14 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
     }),
+    prisma.track.findMany({
+      where: { isArchived: false, ...(projectId ? { projectId } : {}) },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { name: true },
+    }),
   ]);
+
+  const trackNames = [...new Set(trackRows.map((row) => row.name))];
 
   return (
     <div className="space-y-4">
@@ -101,6 +112,17 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.fullName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          Трек
+          <select name="track" defaultValue={trackName} className="input w-48">
+            <option value="">Все треки</option>
+            {trackNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </select>

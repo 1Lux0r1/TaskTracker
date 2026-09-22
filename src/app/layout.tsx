@@ -83,6 +83,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/organizations" className="hover:text-gray-900 hover:underline">
                 Организации
               </Link>
+              <Link href="/tracks" className="hover:text-gray-900 hover:underline">
+                Треки работ
+              </Link>
             </div>
           </footer>
         )}

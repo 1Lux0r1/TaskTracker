@@ -14,7 +14,7 @@ export default async function ProjectBoardPage(props: PageProps<"/projects/[id]/
     where: { id },
     include: {
       tasks: {
-        include: { assignee: true },
+        include: { assignee: true, track: true },
         orderBy: [{ priority: "asc" }, { dueDate: "asc" }],
       },
     },

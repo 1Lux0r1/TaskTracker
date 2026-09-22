@@ -17,7 +17,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[id]">) {
     include: {
       owner: true,
       tasks: {
-        include: { assignee: true },
+        include: { assignee: true, track: true },
         orderBy: [{ sortOrder: "asc" }, { number: "asc" }],
       },
     },

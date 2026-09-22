@@ -7,7 +7,6 @@ import {
   isLetterOpen,
   letterDirectionLabel,
   startOfToday,
-  taskTrackLabel,
 } from "@/lib/domain";
 
 export type ReportDraft = {
@@ -46,8 +45,8 @@ export async function buildReportDraft(
         status: { in: CLOSED_TASK_STATUSES },
         completedAt: { gte: periodStart, lte: periodEnd },
       },
-      include: { assignee: true },
-      orderBy: [{ track: "asc" }, { completedAt: "asc" }],
+      include: { assignee: true, track: true },
+      orderBy: [{ track: { sortOrder: "asc" } }, { completedAt: "asc" }],
     }),
     prisma.task.findMany({
       where: {
@@ -89,7 +88,7 @@ export async function buildReportDraft(
       "Производственный и внутренний трек",
       closedTasks.map(
         (task) =>
-          `${task.title} (${taskTrackLabel(task.track)}${
+          `${task.title} (${task.track.name}${
             task.assignee ? `, ${task.assignee.fullName}` : ""
           })`,
       ),

@@ -25,7 +25,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
 
   if (!task) notFound();
 
-  const [projects, members, parentCandidates, letters] = await Promise.all([
+  const [projects, members, parentCandidates, letters, tracks] = await Promise.all([
     prisma.project.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
     prisma.member.findMany({
       where: { isActive: true },
@@ -43,6 +43,13 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       orderBy: { date: "desc" },
       select: { id: true, number: true, subject: true },
       take: 200,
+    }),
+    // Архивный трек показываем, если задача в нём уже лежит: иначе при
+    // сохранении он молча сменился бы на первый из списка.
+    prisma.track.findMany({
+      where: { projectId: task.projectId, OR: [{ isArchived: false }, { id: task.trackId }] },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -76,6 +83,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         action={saveTask}
         projects={projects}
         members={members}
+        tracks={tracks}
         parentCandidates={parentCandidates}
         letters={letters}
         defaults={task}

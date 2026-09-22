@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     prisma.task.count({ where: { status: openStatuses, assigneeId: null } }),
     prisma.task.findMany({
       where: { status: openStatuses, dueDate: { not: null, lte: weekAhead } },
-      include: { assignee: true, project: true },
+      include: { assignee: true, project: true, track: true },
       orderBy: { dueDate: "asc" },
       take: 15,
     }),

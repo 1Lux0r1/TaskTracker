@@ -66,6 +66,25 @@ async function main() {
     },
   });
 
+  // Треки — справочник проекта, поэтому демо-проекты получают базовый набор.
+  const BASE_TRACKS = [
+    { key: "PRODUCTION", name: "Производственный", color: "blue", sortOrder: 0 },
+    { key: "INTERNAL", name: "Внутренний", color: "gray", sortOrder: 1 },
+    { key: "EXTERNAL", name: "Внешний", color: "orange", sortOrder: 2 },
+    { key: "LEGAL", name: "Юридический", color: "purple", sortOrder: 3 },
+  ];
+
+  const trackByProject = new Map<string, string>();
+  for (const project of [erp, site]) {
+    for (const track of BASE_TRACKS) {
+      const existing = await prisma.track.findFirst({
+        where: { projectId: project.id, name: track.name },
+      });
+      const row = existing ?? (await prisma.track.create({ data: { projectId: project.id, ...track } }));
+      if (track.key === "PRODUCTION") trackByProject.set(project.id, row.id);
+    }
+  }
+
   const tasks = [
     {
       projectId: erp.id,
@@ -152,6 +171,7 @@ async function main() {
     await prisma.task.create({
       data: {
         ...task,
+        trackId: trackByProject.get(task.projectId)!,
         number: await nextNumber(task.projectId),
         sortOrder: number,
         completedAt: task.status === "DONE" ? shift(-25) : null,

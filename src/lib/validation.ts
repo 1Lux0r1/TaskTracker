@@ -8,7 +8,7 @@ import {
   SIGNATURE_STATUSES,
   TASK_PRIORITIES,
   TASK_STATUSES,
-  TASK_TRACKS,
+  TRACK_COLORS,
 } from "@/lib/domain";
 
 /** Пустая строка из формы означает «значение не задано», а не пустой текст. */
@@ -52,6 +52,12 @@ export const projectInputSchema = z.object({
   ownerId: optionalText,
 });
 
+export const trackInputSchema = z.object({
+  projectId: z.string().trim().min(1, "Выберите проект"),
+  name: z.string().trim().min(1, "Укажите название трека").max(80),
+  color: z.enum(TRACK_COLORS.map((item) => item.value) as [string, ...string[]]),
+});
+
 export const taskInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),
   title: z.string().trim().min(1, "Укажите название задачи").max(300),
@@ -61,7 +67,7 @@ export const taskInputSchema = z.object({
   assigneeId: optionalText,
   externalAssignee: optionalText,
   externalTaskKey: optionalText,
-  track: z.enum(TASK_TRACKS),
+  trackId: z.string().trim().min(1, "Выберите трек"),
   progressNote: optionalText,
   resultLink: optionalText,
   letterId: optionalText,

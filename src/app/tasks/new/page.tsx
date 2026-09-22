@@ -3,6 +3,7 @@ import { createTask } from "@/app/actions/tasks";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { ensureProjectTracks } from "@/lib/tracks";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,8 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   }
 
   const selected = projectId && projects.some((p) => p.id === projectId) ? projectId : projects[0].id;
-  const [parentCandidates, letters] = await Promise.all([
+  await ensureProjectTracks(selected);
+  const [parentCandidates, letters, tracks] = await Promise.all([
     prisma.task.findMany({
       where: { projectId: selected, parentId: null },
       orderBy: { number: "asc" },
@@ -49,6 +51,11 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
       orderBy: { date: "desc" },
       select: { id: true, number: true, subject: true },
       take: 200,
+    }),
+    prisma.track.findMany({
+      where: { projectId: selected, isArchived: false },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -64,6 +71,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
         action={createTask}
         projects={projects}
         members={members}
+        tracks={tracks}
         parentCandidates={parentCandidates}
         letters={letters}
         defaults={{
@@ -75,7 +83,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           assigneeId: null,
           externalAssignee: null,
           externalTaskKey: null,
-          track: "PRODUCTION",
+          trackId: tracks[0]?.id ?? "",
           progressNote: null,
           resultLink: null,
           letterId: null,

@@ -71,6 +71,7 @@ model Project {
 
   owner      Member?                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   tasks      Task[]
+  tracks     Track[]
   letters    Letter[]
   documents  Document[]
   reports    WeeklyReport[]
@@ -78,6 +79,30 @@ model Project {
 
   @@index([status])
   @@index([dueDate])
+}
+
+/// Трек работ — справочник проекта. Пользователь заводит свои треки:
+/// четыре из Excel (производственный, внутренний, внешний, юридический)
+/// создаются вместе с проектом как обычные записи и так же правятся.
+model Track {
+  id         String   @id @default(cuid())
+  projectId  String
+  /// Код базового трека из Excel: по нему раскладывается импорт.
+  /// У треков, заведённых руками, пусто.
+  key        String?
+  name       String
+  /// Цвет в интерфейсе: blue, orange, red, green, purple, gray.
+  color      String   @default("blue")
+  sortOrder  Int      @default(0)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([projectId, name])
+  @@index([projectId, sortOrder])
 }
 
 /// Задача — строка таблицы. Поддерживает вложенность (подзадачи).
@@ -99,8 +124,8 @@ model Task {
   progress         Int       @default(0)
   sortOrder        Int       @default(0)
   externalKey      String?
-  /// Трек работ: производственный, внутренний, внешний или юридический.
-  track            String    @default("PRODUCTION")
+  /// Трек работ — запись справочника проекта.
+  trackId          String
   /// Ответственный вне компании — в исходных таблицах это отдельная колонка.
   externalAssignee String?
   /// Ключ задачи во внешнем трекере (Jira и подобные): проставляется руками.
@@ -114,6 +139,7 @@ model Task {
   updatedAt        DateTime  @updatedAt
 
   project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  track    Track   @relation(fields: [trackId], references: [id])
   letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
   assignee Member? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
@@ -125,7 +151,7 @@ model Task {
   @@index([status])
   @@index([dueDate])
   @@index([assigneeId])
-  @@index([track])
+  @@index([trackId])
 }
 
 /// Датированная запись хроники. В исходных таблицах колонка «Статус» содержит

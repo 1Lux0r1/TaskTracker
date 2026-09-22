@@ -22,6 +22,7 @@ import {
 } from "@/lib/excel/chronicle";
 import { deriveDocumentStatus, documentKindLabel } from "@/lib/domain";
 import { buildLetterSearchIndex } from "@/lib/search";
+import { ensureProjectTracks } from "@/lib/tracks";
 import { cellDate, cellNumber, cellText } from "@/lib/excel/parse-cell";
 
 export type ImportRowError = { row: number; message: string };
@@ -335,6 +336,7 @@ async function importTasks(
   report: ImportReport,
 ): Promise<void> {
   const members = await loadMemberIndex();
+  const tracks = await loadTrackIndex(options.projectId);
   const existing = await prisma.task.findMany({
     where: { projectId: options.projectId },
     select: { id: true, externalKey: true, title: true },
@@ -370,7 +372,7 @@ async function importTasks(
             .join("\n\n") || null,
         status,
         priority: parsePriority(cellText(row.cells.get("priority") ?? null)) ?? "MEDIUM",
-        track: parseTrack(cellText(row.cells.get("track") ?? null)),
+        trackId: await resolveTrack(cellText(row.cells.get("track") ?? null), tracks, options),
         assigneeId: await resolveMember(assigneeName, members, options, report),
         externalAssignee: cellText(row.cells.get("externalAssignee") ?? null),
         // Журнал остаётся целиком: лента ниже его разбирает, но текст не теряем.
@@ -817,13 +819,65 @@ async function nextTaskNumber(projectId: string): Promise<number> {
   return (last?.number ?? 0) + 1;
 }
 
-function parseTrack(value: string | null): string {
+/** Код базового трека по тексту ячейки. Незнакомое название кодом не считаем. */
+function parseTrackKey(value: string | null): string | null {
   const normalized = normalizeHeader(value);
+  if (!normalized) return null;
   if (normalized.includes("производ")) return "PRODUCTION";
   if (normalized.includes("внутрен")) return "INTERNAL";
   if (normalized.includes("внеш")) return "EXTERNAL";
   if (normalized.includes("юрид") || normalized.includes("официал")) return "LEGAL";
-  return "PRODUCTION";
+  return null;
+}
+
+type TrackIndex = {
+  byKey: Map<string, string>;
+  byName: Map<string, string>;
+  count: number;
+};
+
+/** Справочник треков проекта: по коду и по названию. */
+async function loadTrackIndex(projectId: string): Promise<TrackIndex> {
+  await ensureProjectTracks(projectId);
+  const tracks = await prisma.track.findMany({ where: { projectId } });
+  return {
+    byKey: new Map(tracks.filter((item) => item.key).map((item) => [item.key!, item.id])),
+    byName: new Map(tracks.map((item) => [item.name.trim().toLowerCase(), item.id])),
+    count: tracks.length,
+  };
+}
+
+/**
+ * Трек строки импорта. Свой трек из файла заводится в справочник: перечень
+ * треков ведёт команда, и файл — такой же источник, как форма.
+ */
+async function resolveTrack(
+  value: string | null,
+  tracks: TrackIndex,
+  options: ImportOptions,
+): Promise<string> {
+  const name = value?.trim();
+  if (name) {
+    const byName = tracks.byName.get(name.toLowerCase());
+    if (byName) return byName;
+
+    const key = parseTrackKey(name);
+    const byKey = key ? tracks.byKey.get(key) : undefined;
+    if (byKey) return byKey;
+
+    if (!options.dryRun) {
+      const created = await prisma.track.create({
+        data: { projectId: options.projectId, name, color: "gray", sortOrder: tracks.count },
+      });
+      tracks.byName.set(name.toLowerCase(), created.id);
+      tracks.count += 1;
+      return created.id;
+    }
+  }
+
+  const production = tracks.byKey.get("PRODUCTION");
+  if (production) return production;
+  return [...tracks.byName.values()][0];
 }
 
 /** В Excel проценты хранятся долей единицы, поэтому 0.35 — это 35 %. */

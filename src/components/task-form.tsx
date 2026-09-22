@@ -7,8 +7,6 @@ import {
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
   TASK_STATUSES,
-  TASK_TRACK_LABELS,
-  TASK_TRACKS,
   toDateInputValue,
 } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
@@ -22,7 +20,7 @@ export type TaskFormValues = {
   assigneeId: string | null;
   externalAssignee: string | null;
   externalTaskKey: string | null;
-  track: string;
+  trackId: string;
   progressNote: string | null;
   resultLink: string | null;
   letterId: string | null;
@@ -38,6 +36,8 @@ type Props = {
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   projects: { id: string; code: string; name: string }[];
   members: { id: string; fullName: string }[];
+  /** Треки выбранного проекта: список свой у каждого проекта. */
+  tracks: { id: string; name: string }[];
   /** Задачи того же проекта — кандидаты в родительские. */
   parentCandidates?: { id: string; number: number; title: string }[];
   /** Письма проекта: задача часто заводится по конкретному письму. */
@@ -51,6 +51,7 @@ export function TaskForm({
   action,
   projects,
   members,
+  tracks,
   parentCandidates = [],
   letters = [],
   defaults,
@@ -91,10 +92,14 @@ export function TaskForm({
         </label>
         <label className="field">
           Трек
-          <select name="track" defaultValue={defaults?.track ?? "PRODUCTION"} className="input">
-            {TASK_TRACKS.map((track) => (
-              <option key={track} value={track}>
-                {TASK_TRACK_LABELS[track]}
+          <select
+            name="trackId"
+            defaultValue={defaults?.trackId ?? tracks[0]?.id ?? ""}
+            className="input"
+          >
+            {tracks.map((track) => (
+              <option key={track.id} value={track.id}>
+                {track.name}
               </option>
             ))}
           </select>

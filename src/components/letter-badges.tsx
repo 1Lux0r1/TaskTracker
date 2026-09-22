@@ -4,11 +4,10 @@ import {
   letterDirectionLabel,
   letterStatusLabel,
   signatureStatusLabel,
-  taskTrackLabel,
+  trackColor,
   type DocumentStatus,
   type LetterStatus,
   type SignatureStatus,
-  type TaskTrack,
 } from "@/lib/domain";
 
 const LETTER_STATUS_CLASS: Record<LetterStatus, string> = {
@@ -37,13 +36,6 @@ const SIGNATURE_STATUS_CLASS: Record<SignatureStatus, string> = {
   NOT_REQUIRED: "bg-gray-100 text-gray-500",
 };
 
-const TRACK_CLASS: Record<TaskTrack, string> = {
-  PRODUCTION: "bg-sky-50 text-sky-700",
-  INTERNAL: "bg-gray-100 text-gray-600",
-  EXTERNAL: "bg-teal-50 text-teal-700",
-  LEGAL: "bg-violet-50 text-violet-700",
-};
-
 export function LetterStatusBadge({ status }: { status: string }) {
   const className = LETTER_STATUS_CLASS[status as LetterStatus] ?? "bg-gray-100 text-gray-600";
   return <span className={`badge ${className}`}>{letterStatusLabel(status)}</span>;
@@ -69,7 +61,7 @@ export function SignatureStatusBadge({ status }: { status: string }) {
   return <span className={`badge ${className}`}>{signatureStatusLabel(status)}</span>;
 }
 
-export function TrackBadge({ track }: { track: string }) {
-  const className = TRACK_CLASS[track as TaskTrack] ?? "bg-gray-100 text-gray-600";
-  return <span className={`badge ${className}`}>{taskTrackLabel(track)}</span>;
+/** Трек — запись справочника: подпись и цвет приходят из него. */
+export function TrackBadge({ track }: { track: { name: string; color: string } }) {
+  return <span className={`badge ${trackColor(track.color).chip}`}>{track.name}</span>;
 }

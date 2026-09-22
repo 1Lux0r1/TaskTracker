@@ -10,7 +10,6 @@ import {
   signatureStatusLabel,
   taskPriorityLabel,
   taskStatusLabel,
-  taskTrackLabel,
 } from "@/lib/domain";
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -23,7 +22,7 @@ const HEADER_FILL: ExcelJS.Fill = {
 export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Workbook> {
   const tasks = await prisma.task.findMany({
     where: projectId ? { projectId } : undefined,
-    include: { assignee: true, project: true },
+    include: { assignee: true, project: true, track: true },
     orderBy: [{ project: { code: "asc" } }, { number: "asc" }],
   });
 
@@ -53,7 +52,7 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
   for (const task of tasks) {
     sheet.addRow({
       project: task.project.code,
-      track: taskTrackLabel(task.track),
+      track: task.track.name,
       externalKey: task.externalKey ?? `${task.project.code}-${task.number}`,
       title: task.title,
       description: task.description ?? "",

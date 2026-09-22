@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PriorityBadge, ProgressBar, StatusBadge } from "@/components/badges";
+import { TrackBadge } from "@/components/letter-badges";
 import { formatDate, isOverdue } from "@/lib/domain";
 
 export type TaskRow = {
@@ -14,6 +15,8 @@ export type TaskRow = {
   project: { id: string; code: string } | null;
   /** Ключ задачи во внешнем трекере: показываем под названием. */
   externalTaskKey?: string | null;
+  /** Трек работ: запись справочника проекта, цвет её собственный. */
+  track?: { name: string; color: string } | null;
 };
 
 type Props = {
@@ -71,11 +74,12 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
                   <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 hover:underline">
                     {task.title}
                   </Link>
-                  {task.externalTaskKey && (
-                    <span className="mt-0.5 block font-mono text-xs text-gray-400">
-                      {task.externalTaskKey}
-                    </span>
-                  )}
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    {task.track && <TrackBadge track={task.track} />}
+                    {task.externalTaskKey && (
+                      <span className="font-mono text-xs text-gray-400">{task.externalTaskKey}</span>
+                    )}
+                  </span>
                 </td>
                 <td className="table-cell">
                   <StatusBadge status={task.status} />

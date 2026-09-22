@@ -9,7 +9,6 @@ import {
   formatDate,
   letterDirectionLabel,
   startOfToday,
-  taskTrackLabel,
   type TaskStatus,
 } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -46,7 +45,7 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
     members,
   ] = await Promise.all([
     prisma.task.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
-    prisma.task.groupBy({ by: ["track"], where: scope, _count: { _all: true } }),
+    prisma.task.groupBy({ by: ["trackId"], where: scope, _count: { _all: true } }),
     prisma.task.groupBy({
       by: ["assigneeId"],
       where: { ...scope, status: openTasks },
@@ -75,6 +74,11 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
     select: { id: true, name: true },
   });
   const counterpartyName = new Map(counterparties.map((item) => [item.id, item.name]));
+
+  // Треки у проектов свои, поэтому в общем срезе одинаковые названия
+  // складываем в одну строку.
+  const tracks = await prisma.track.findMany({ select: { id: true, name: true } });
+  const trackNames = new Map(tracks.map((item) => [item.id, item.name]));
   const memberName = new Map(members.map((item) => [item.id, item.fullName]));
 
   const totalTasks = byStatus.reduce((sum, row) => sum + row._count._all, 0);
@@ -139,7 +143,10 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
         <Panel title="Задачи по трекам">
           <BarList
             rows={byTrack
-              .map((row) => ({ label: taskTrackLabel(row.track), value: row._count._all }))
+              .map((row) => ({
+                label: trackNames.get(row.trackId) ?? "Без трека",
+                value: row._count._all,
+              }))
               .sort((a, b) => b.value - a.value)}
           />
         </Panel>
