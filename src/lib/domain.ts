@@ -178,6 +178,29 @@ export const LETTER_DIRECTION_LABELS: Record<LetterDirection, string> = {
   OUTGOING: "Исходящее",
 };
 
+/**
+ * Подписи полей письма зависят от направления: «от кого» у входящего и
+ * «кому» у исходящего. Форма заведения и форма правки берут их отсюда,
+ * чтобы называть одно и то же одинаково.
+ */
+export const LETTER_DIRECTION_TEXT: Record<
+  LetterDirection,
+  { number: string; date: string; counterparty: string; due: string }
+> = {
+  INCOMING: {
+    number: "Входящий номер",
+    date: "Дата поступления",
+    counterparty: "От кого",
+    due: "Срок ответа",
+  },
+  OUTGOING: {
+    number: "Исходящий номер",
+    date: "Дата отправки",
+    counterparty: "Кому",
+    due: "Контроль ответа до",
+  },
+};
+
 export const LETTER_STATUSES = [
   "NEW",
   "IN_PROGRESS",

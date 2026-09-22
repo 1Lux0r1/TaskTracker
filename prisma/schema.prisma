@@ -307,6 +307,10 @@ model Letter {
   statusNote      String?
   /// Реквизиты ответа: номер и дата письма, которым закрыли это.
   responseRef     String?
+  /// Резолюция по входящему письму: кому расписано и что поручено.
+  resolution      String?
+  /// Подписант исходящего письма.
+  signatory       String?
   /// Ключ связанной задачи во внешнем трекере (Jira и подобные).
   externalTaskKey String?
   comment         String?
@@ -331,7 +335,9 @@ model Letter {
   receivedDocuments Document[]    @relation("DocumentIncomingLetter")
   notes             Note[]
 
-  @@unique([projectId, number, direction])
+  /// Номер письма повторяется в разные годы, поэтому дубль определяется
+  /// парой «номер + дата», а не одним номером.
+  @@unique([projectId, number, direction, date])
   @@index([status])
   @@index([dueDate])
   @@index([direction])

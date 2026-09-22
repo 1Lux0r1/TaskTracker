@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewLetterPage() {
   await requireUser();
-  const [projects, counterparties, members, last] = await Promise.all([
+  const [projects, counterparties, members, last, incomingLetters] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
       orderBy: { code: "asc" },
@@ -29,6 +29,14 @@ export default async function NewLetterPage() {
     prisma.letter.findFirst({
       orderBy: { createdAt: "desc" },
       select: { projectId: true, direction: true, counterpartyId: true, ownerId: true },
+    }),
+    // Кандидаты для поля «В ответ на входящее»: форма сама сузит их
+    // до выбранного проекта.
+    prisma.letter.findMany({
+      where: { direction: "INCOMING" },
+      orderBy: { date: "desc" },
+      select: { id: true, number: true, subject: true, projectId: true },
+      take: 300,
     }),
   ]);
 
@@ -75,6 +83,7 @@ export default async function NewLetterPage() {
         projects={projects}
         counterparties={counterparties}
         members={members}
+        incomingLetters={incomingLetters}
         sticky={sticky}
       />
     </div>

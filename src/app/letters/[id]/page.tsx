@@ -31,7 +31,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
 
   if (!letter) notFound();
 
-  const [projects, counterparties, members] = await Promise.all([
+  const [projects, counterparties, members, incomingLetters] = await Promise.all([
     prisma.project.findMany({
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true },
@@ -45,6 +45,13 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
       where: { isActive: true },
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
+    }),
+    // Кандидаты для поля «В ответ на входящее».
+    prisma.letter.findMany({
+      where: { direction: "INCOMING" },
+      orderBy: { date: "desc" },
+      select: { id: true, number: true, subject: true, projectId: true },
+      take: 300,
     }),
   ]);
 
@@ -84,6 +91,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
         projects={projects}
         counterparties={counterparties}
         members={members}
+        incomingLetters={incomingLetters}
         defaults={letter}
         submitLabel="Сохранить"
       />

@@ -19,6 +19,12 @@ const optionalText = z
   .transform((value) => (value.length === 0 ? null : value))
   .nullable();
 
+/**
+ * Поле, которого в форме может не быть вовсе: состав полей зависит от
+ * направления письма, поэтому отсутствующий ключ — это «не задано».
+ */
+const conditionalText = optionalText.optional().transform((value) => value ?? null);
+
 const optionalDate = z
   .string()
   .trim()
@@ -27,6 +33,12 @@ const optionalDate = z
   .refine((value) => value === null || !Number.isNaN(value.getTime()), {
     message: "Некорректная дата",
   });
+
+/**
+ * Срок письма: при отметке «ответ не требуется» поле выключено и браузер
+ * его не отправляет, поэтому отсутствующий ключ — это «срока нет».
+ */
+const conditionalDate = optionalDate.optional().transform((value) => value ?? null);
 
 const optionalNumber = z
   .string()
@@ -142,10 +154,15 @@ export const letterInputSchema = z.object({
   url: optionalUrl,
   counterpartyId: optionalText,
   ownerId: optionalText,
-  dueDate: optionalDate,
+  dueDate: conditionalDate,
   status: z.enum(LETTER_STATUSES),
   statusNote: optionalText,
   responseRef: optionalText,
+  /// Резолюция — только у входящего, подписант и письмо-основание — только
+  /// у исходящего, поэтому в форме есть лишь часть этих полей.
+  resolution: conditionalText,
+  signatory: conditionalText,
+  responseToId: conditionalText,
   externalTaskKey: optionalText,
   comment: optionalText,
 });

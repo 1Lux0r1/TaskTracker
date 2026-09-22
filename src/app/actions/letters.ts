@@ -5,8 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CLOSED_LETTER_STATUSES, type LetterStatus } from "@/lib/domain";
+import { normalizeLetterByDirection } from "@/lib/letters";
 import { buildLetterSearchIndex } from "@/lib/search";
-import { type ActionResult, formatZodError, letterInputSchema } from "@/lib/validation";
+import {
+  type ActionResult,
+  formatZodError,
+  letterInputSchema,
+} from "@/lib/validation";
 
 /**
  * Форма быстрого внесения не уходит со страницы: реестр переписки заполняют
@@ -28,12 +33,23 @@ export async function createLetter(
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error), saved };
 
-  const input = parsed.data;
+  const input = normalizeLetterByDirection(parsed.data, {
+    answerNotRequired: formData.get("answerNotRequired") === "on",
+  });
+  if (!(await answerBelongsToProject(input.responseToId, input.projectId))) {
+    return { ok: false, error: "Письмо-основание относится к другому проекту", saved };
+  }
+  // Номер письма повторяется в разные годы, поэтому дубль ищем по номеру и дате.
   const duplicate = await prisma.letter.findFirst({
-    where: { projectId: input.projectId, number: input.number, direction: input.direction },
+    where: {
+      projectId: input.projectId,
+      number: input.number,
+      direction: input.direction,
+      date: input.date,
+    },
   });
   if (duplicate) {
-    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте`, saved };
+    return { ok: false, error: `Письмо № ${input.number} от этой даты уже заведено`, saved };
   }
 
   const letter = await prisma.letter.create({
@@ -62,17 +78,24 @@ export async function updateLetter(
   const current = await prisma.letter.findUnique({ where: { id: letterId } });
   if (!current) return { ok: false, error: "Письмо не найдено" };
 
-  const input = parsed.data;
+  const input = normalizeLetterByDirection(parsed.data, {
+    answerNotRequired: formData.get("answerNotRequired") === "on",
+    selfId: letterId,
+  });
+  if (!(await answerBelongsToProject(input.responseToId, input.projectId))) {
+    return { ok: false, error: "Письмо-основание относится к другому проекту" };
+  }
   const duplicate = await prisma.letter.findFirst({
     where: {
       projectId: input.projectId,
       number: input.number,
       direction: input.direction,
+      date: input.date,
       id: { not: letterId },
     },
   });
   if (duplicate) {
-    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте` };
+    return { ok: false, error: `Письмо № ${input.number} от этой даты уже заведено` };
   }
 
   await prisma.letter.update({
@@ -96,6 +119,22 @@ export async function deleteLetter(formData: FormData): Promise<void> {
   await prisma.letter.delete({ where: { id: letterId } });
   revalidatePath("/letters");
   redirect("/letters");
+}
+
+/**
+ * Цепочка переписки живёт внутри проекта: ссылка «в ответ на» на письмо
+ * другого проекта смешала бы реестры, поэтому её не сохраняем.
+ */
+async function answerBelongsToProject(
+  responseToId: string | null,
+  projectId: string,
+): Promise<boolean> {
+  if (!responseToId) return true;
+  const found = await prisma.letter.findFirst({
+    where: { id: responseToId, projectId },
+    select: { id: true },
+  });
+  return found !== null;
 }
 
 /** Поисковая строка собирается из всего, по чему реально ищут письмо. */

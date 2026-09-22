@@ -1,17 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/submit-button";
 import {
   LETTER_DIRECTION_LABELS,
   LETTER_DIRECTIONS,
   LETTER_STATUS_LABELS,
   LETTER_STATUSES,
+  LETTER_DIRECTION_TEXT,
   toDateInputValue,
 } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
 
 export type LetterFormValues = {
+  id?: string;
   projectId: string;
   number: string;
   direction: string;
@@ -24,6 +26,9 @@ export type LetterFormValues = {
   status: string;
   statusNote: string | null;
   responseRef: string | null;
+  resolution: string | null;
+  signatory: string | null;
+  responseToId: string | null;
   externalTaskKey: string | null;
   comment: string | null;
 };
@@ -33,6 +38,8 @@ type Props = {
   projects: { id: string; code: string; name: string }[];
   counterparties: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
+  /** Входящие письма: исходящее часто идёт ответом на одно из них. */
+  incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
   defaults?: LetterFormValues;
   submitLabel: string;
 };
@@ -42,10 +49,21 @@ export function LetterForm({
   projects,
   counterparties,
   members,
+  incomingLetters = [],
   defaults,
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
+  // Направление и проект в состоянии: от них зависят подписи полей, состав
+  // формы и список писем, на которые можно ответить.
+  const [direction, setDirection] = useState(defaults?.direction ?? "INCOMING");
+  const [projectId, setProjectId] = useState(defaults?.projectId ?? projects[0]?.id ?? "");
+
+  const incoming = direction === "INCOMING";
+  const text = incoming ? LETTER_DIRECTION_TEXT.INCOMING : LETTER_DIRECTION_TEXT.OUTGOING;
+  const answerCandidates = incomingLetters.filter(
+    (letter) => letter.projectId === projectId && letter.id !== defaults?.id,
+  );
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
@@ -61,7 +79,8 @@ export function LetterForm({
           Проект
           <select
             name="projectId"
-            defaultValue={defaults?.projectId ?? projects[0]?.id}
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
             required
             className="input"
           >
@@ -73,21 +92,26 @@ export function LetterForm({
           </select>
         </label>
         <label className="field">
-          Номер письма
-          <input name="number" required defaultValue={defaults?.number} className="input" />
-        </label>
-        <label className="field">
           Направление
-          <select name="direction" defaultValue={defaults?.direction ?? "INCOMING"} className="input">
-            {LETTER_DIRECTIONS.map((direction) => (
-              <option key={direction} value={direction}>
-                {LETTER_DIRECTION_LABELS[direction]}
+          <select
+            name="direction"
+            value={direction}
+            onChange={(event) => setDirection(event.target.value)}
+            className="input"
+          >
+            {LETTER_DIRECTIONS.map((item) => (
+              <option key={item} value={item}>
+                {LETTER_DIRECTION_LABELS[item]}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          Дата письма
+          {text.number}
+          <input name="number" required defaultValue={defaults?.number} className="input" />
+        </label>
+        <label className="field">
+          {text.date}
           <input
             type="date"
             name="date"
@@ -112,15 +136,64 @@ export function LetterForm({
         />
       </label>
 
+      {/* Состав полей меняется по направлению: у входящего резолюция,
+          у исходящего подписант и письмо-основание. */}
+      {incoming ? (
+        <label className="field">
+          Резолюция
+          <textarea
+            name="resolution"
+            rows={2}
+            defaultValue={defaults?.resolution ?? ""}
+            placeholder="Кому расписано и что поручено"
+            className="input"
+          />
+        </label>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="field">
+            Подписант
+            <input
+              name="signatory"
+              defaultValue={defaults?.signatory ?? ""}
+              placeholder="Кто подписал письмо"
+              className="input"
+            />
+          </label>
+          <label className="field">
+            В ответ на входящее
+            {/* key по проекту: при смене проекта выбор не должен остаться
+                на письме другого проекта. */}
+            <select
+              key={projectId}
+              name="responseToId"
+              defaultValue={
+                answerCandidates.some((letter) => letter.id === defaults?.responseToId)
+                  ? (defaults?.responseToId ?? "")
+                  : ""
+              }
+              className="input"
+            >
+              <option value="">— не выбрано —</option>
+              {answerCandidates.map((letter) => (
+                <option key={letter.id} value={letter.id}>
+                  № {letter.number} — {letter.subject.slice(0, 60)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-4">
         <label className="field">
-          Организация
+          {text.counterparty}
           <select
             name="counterpartyId"
             defaultValue={defaults?.counterpartyId ?? ""}
             className="input"
           >
-            <option value="">— не указан —</option>
+            <option value="">— не указана —</option>
             {counterparties.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -140,7 +213,7 @@ export function LetterForm({
           </select>
         </label>
         <label className="field">
-          Срок исполнения
+          {text.due}
           <input
             type="date"
             name="dueDate"

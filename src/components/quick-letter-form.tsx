@@ -9,6 +9,7 @@ import {
   LETTER_DIRECTIONS,
   LETTER_STATUS_LABELS,
   LETTER_STATUSES,
+  LETTER_DIRECTION_TEXT,
   toDateInputValue,
 } from "@/lib/domain";
 
@@ -30,23 +31,37 @@ const BLANK_LETTER = {
   url: "",
   statusNote: "",
   responseRef: "",
+  resolution: "",
+  signatory: "",
+  responseToId: "",
   externalTaskKey: "",
   comment: "",
 };
 
-const DUE_SHORTCUTS = [7, 14, 30];
+const DUE_SHORTCUTS = [3, 7, 14];
+
 
 type Props = {
   action: (state: QuickLetterState | null, formData: FormData) => Promise<QuickLetterState>;
   projects: { id: string; code: string; name: string }[];
   counterparties: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
+  /** Входящие письма: исходящее часто идёт ответом на одно из них. */
+  incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
   sticky: StickyLetterValues;
 };
 
-export function QuickLetterForm({ action, projects, counterparties, members, sticky }: Props) {
+export function QuickLetterForm({
+  action,
+  projects,
+  counterparties,
+  members,
+  incomingLetters = [],
+  sticky,
+}: Props) {
   const [state, formAction] = useActionState(action, null);
   const [values, setValues] = useState({ ...sticky, ...BLANK_LETTER });
+  const [answerNotRequired, setAnswerNotRequired] = useState(false);
   const numberInput = useRef<HTMLInputElement>(null);
 
   // Письма вносят пачкой, поэтому после сохранения очищаем только само письмо,
@@ -56,6 +71,7 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
   if (savedCount !== handledCount) {
     setHandledCount(savedCount);
     setValues((current) => ({ ...current, ...BLANK_LETTER }));
+    setAnswerNotRequired(false);
   }
 
   useEffect(() => {
@@ -65,6 +81,12 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
   const set = <K extends keyof typeof values>(key: K) => (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => setValues((current) => ({ ...current, [key]: event.target.value }));
+
+  const incoming = values.direction === "INCOMING";
+  const text = incoming ? LETTER_DIRECTION_TEXT.INCOMING : LETTER_DIRECTION_TEXT.OUTGOING;
+  // Ответ всегда на письмо того же проекта, поэтому список сужается вместе
+  // с выбором проекта в форме.
+  const answerCandidates = incomingLetters.filter((letter) => letter.projectId === values.projectId);
 
   const shiftDue = (days: number) => {
     const base = values.date ? new Date(`${values.date}T00:00:00`) : new Date();
@@ -88,7 +110,7 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
           <label className="field">
-            Номер письма
+            {text.number}
             <input
               ref={numberInput}
               name="number"
@@ -113,14 +135,15 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="field">
-            Срок исполнения
+            {text.due}
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="date"
                 name="dueDate"
-                value={values.dueDate}
+                value={answerNotRequired ? "" : values.dueDate}
                 onChange={set("dueDate")}
-                className="input w-44"
+                disabled={answerNotRequired}
+                className="input w-44 disabled:bg-gray-100 disabled:text-gray-400"
               />
               {DUE_SHORTCUTS.map((days) => (
                 <button
@@ -132,7 +155,7 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
                   +{days} дн.
                 </button>
               ))}
-              {values.dueDate && (
+              {values.dueDate && !answerNotRequired && (
                 <button
                   type="button"
                   onClick={() => setValues((current) => ({ ...current, dueDate: "" }))}
@@ -142,6 +165,18 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
                 </button>
               )}
             </div>
+            {/* Часть писем ответа не требует: тогда срок не нужен, а письмо
+                сразу принимается к сведению. */}
+            <label className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                name="answerNotRequired"
+                checked={answerNotRequired}
+                onChange={(event) => setAnswerNotRequired(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Ответ не требуется
+            </label>
           </div>
           <label className="field">
             Ссылка на карточку в ЭДО
@@ -154,6 +189,49 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
             />
           </label>
         </div>
+
+        {incoming ? (
+          <label className="field">
+            Резолюция
+            <textarea
+              name="resolution"
+              rows={2}
+              value={values.resolution}
+              onChange={set("resolution")}
+              placeholder="Кому расписано и что поручено"
+              className="input"
+            />
+          </label>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="field">
+              Подписант
+              <input
+                name="signatory"
+                value={values.signatory}
+                onChange={set("signatory")}
+                placeholder="Кто подписал письмо"
+                className="input"
+              />
+            </label>
+            <label className="field">
+              В ответ на входящее
+              <select
+                name="responseToId"
+                value={values.responseToId}
+                onChange={set("responseToId")}
+                className="input"
+              >
+                <option value="">— не выбрано —</option>
+                {answerCandidates.map((letter) => (
+                  <option key={letter.id} value={letter.id}>
+                    № {letter.number} — {letter.subject.slice(0, 60)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
 
         <details className="rounded-lg border border-gray-200 p-3">
           <summary className="cursor-pointer text-sm text-gray-600">Дополнительные поля</summary>
@@ -248,7 +326,7 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
             </select>
           </label>
           <label className="field">
-            Дата письма
+            {text.date}
             <input
               type="date"
               name="date"
@@ -258,7 +336,7 @@ export function QuickLetterForm({ action, projects, counterparties, members, sti
             />
           </label>
           <label className="field">
-            Организация
+            {text.counterparty}
             <select
               name="counterpartyId"
               value={values.counterpartyId}

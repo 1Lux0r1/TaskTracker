@@ -220,12 +220,14 @@ async function seedLegalTrack(
     ids[name] = record.id;
   }
 
+  const outgoingDate = shift(-30);
   const outgoing = await prisma.letter.upsert({
     where: {
-      projectId_number_direction: {
+      projectId_number_direction_date: {
         projectId,
         number: "64-03-1001/26",
         direction: "OUTGOING",
+        date: outgoingDate,
       },
     },
     update: {},
@@ -233,7 +235,7 @@ async function seedLegalTrack(
       projectId,
       number: "64-03-1001/26",
       direction: "OUTGOING",
-      date: shift(-30),
+      date: outgoingDate,
       subject: "Направление регламента информационного взаимодействия на подписание",
       counterpartyId: ids["АО ОЭК"],
       ownerId,
@@ -244,12 +246,14 @@ async function seedLegalTrack(
     },
   });
 
+  const incomingDate = shift(-6);
   await prisma.letter.upsert({
     where: {
-      projectId_number_direction: {
+      projectId_number_direction_date: {
         projectId,
         number: "64-01-2050/26",
         direction: "INCOMING",
+        date: incomingDate,
       },
     },
     update: {},
@@ -257,7 +261,7 @@ async function seedLegalTrack(
       projectId,
       number: "64-01-2050/26",
       direction: "INCOMING",
-      date: shift(-6),
+      date: incomingDate,
       subject: "О согласовании технического задания на распределительные сети",
       counterpartyId: ids["ДЖКХ"],
       ownerId: analystId,
