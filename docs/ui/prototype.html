@@ -2,24 +2,24 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --ground:#f5f6f9;
+    --ground:#eff4fd;
     --surface:#ffffff;
-    --surface-2:#f0f2f6;
+    --surface-2:#eaf1fc;
     --ink:#0e141b;
     --ink-2:#556472;
     --ink-3:#8b98a5;
-    --hair:#e4e8ee;
-    --hair-2:#d2d9e2;
-    --brand:#24508f;
-    --brand-soft:#e7eefa;
-    --copper:#b4622a;
-    --copper-soft:#fbeee3;
-    --good:#0f7a5f;
-    --good-soft:#e2f2ec;
-    --warn:#a3671a;
-    --warn-soft:#fbf0dd;
-    --bad:#b23a2f;
-    --bad-soft:#fce9e6;
+    --hair:#dfe7f3;
+    --hair-2:#c6d3e6;
+    --brand:#2b5fe8;
+    --brand-soft:#e4ecff;
+    --copper:#e8730f;
+    --copper-soft:#ffeeda;
+    --good:#0b8f66;
+    --good-soft:#dcf6ec;
+    --warn:#b8740c;
+    --warn-soft:#fdf0d8;
+    --bad:#cf3f36;
+    --bad-soft:#ffe6e3;
     --c1:#3b6fd6; --c2:#12916b; --c3:#cf7a08; --c4:#a8449f;
     --seq1:#dce7f8; --seq2:#a8c2ee; --seq3:#5e8bdb; --seq4:#2a4f9e;
     --r:14px; --r-sm:9px;
@@ -31,8 +31,8 @@
       --ground:#0f1318; --surface:#181d24; --surface-2:#1f262e;
       --ink:#e9eef3; --ink-2:#a3b0bd; --ink-3:#77838f;
       --hair:#28303a; --hair-2:#38424e;
-      --brand:#84aae4; --brand-soft:#1c2b41;
-      --copper:#dd9158; --copper-soft:#33241a;
+      --brand:#7fa9ff; --brand-soft:#1b2a49;
+      --copper:#ff9d4d; --copper-soft:#3a2617;
       --good:#4fc09c; --good-soft:#12302a;
       --warn:#d7a04a; --warn-soft:#31271a;
       --bad:#e08272; --bad-soft:#35201d;
@@ -46,8 +46,8 @@
     --ground:#0f1318; --surface:#181d24; --surface-2:#1f262e;
     --ink:#e9eef3; --ink-2:#a3b0bd; --ink-3:#77838f;
     --hair:#28303a; --hair-2:#38424e;
-    --brand:#84aae4; --brand-soft:#1c2b41;
-    --copper:#dd9158; --copper-soft:#33241a;
+    --brand:#7fa9ff; --brand-soft:#1b2a49;
+    --copper:#ff9d4d; --copper-soft:#3a2617;
     --good:#4fc09c; --good-soft:#12302a;
     --warn:#d7a04a; --warn-soft:#31271a;
     --bad:#e08272; --bad-soft:#35201d;
@@ -339,6 +339,81 @@
   .facts{display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--hair)}
 
   /* командная строка */
+  /* акценты поярче */
+  .logo i{background:linear-gradient(135deg,var(--brand) 0%,#7b5cf0 100%)!important}
+  .btn.primary{background:linear-gradient(135deg,var(--brand) 0%,#4f7ef5 100%);border-color:transparent}
+  .kpi{position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
+  .kpi.bad::before{background:var(--bad)}
+  .kpi.warn::before{background:var(--warn)}
+  .kpi.good::before{background:var(--good)}
+  .navgrp button[aria-current="true"] .ico{color:var(--brand)}
+  .card h3{color:var(--ink)}
+
+  /* реестр */
+  .reg{border:1px solid var(--hair);border-radius:var(--r);background:var(--surface);overflow:hidden}
+  .reghead,.regrow{display:grid;grid-template-columns:116px 54px minmax(0,1fr) 168px 124px 96px 116px;
+    gap:12px;align-items:center;padding:11px 16px}
+  .reghead{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+    background:var(--surface-2);font-weight:600}
+  .regrow{border-top:1px solid var(--hair);cursor:pointer;font-size:13.5px}
+  .regrow:hover{background:var(--brand-soft)}
+  .regrow .subj{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .regrow.act .subj{font-weight:600}
+  .regrow .cut{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+  .dirmark{display:inline-flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:7px;
+    font-size:12px;font-weight:600}
+  .dirmark.in{background:var(--brand-soft);color:var(--brand)}
+  .dirmark.out{background:var(--copper-soft);color:var(--copper)}
+  @media (max-width:1150px){
+    .reghead{display:none}
+    .regrow{grid-template-columns:1fr auto;gap:5px 10px;padding:12px 14px}
+  }
+
+  .reg.docs .reghead,.reg.docs .regrow{grid-template-columns:minmax(0,1fr) 116px 158px 104px 118px 88px 152px}
+  .reg.reps .reghead,.reg.reps .regrow{grid-template-columns:186px 176px minmax(0,1fr) 154px 190px minmax(0,1fr)}
+  @media (max-width:1150px){ .reg.reps .regrow{grid-template-columns:1fr} }
+  .g2f{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:900px){ .g2f{grid-template-columns:1fr} }
+  @media (max-width:1150px){ .reg.docs .regrow{grid-template-columns:1fr auto} }
+
+  /* календарь с длительностью */
+  .calweeks{display:flex;flex-direction:column}
+  .cweek{border-bottom:1px solid var(--hair)}
+  .cweek:last-child{border-bottom:0}
+  .cdays{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cdays > div{padding:8px 10px 2px;border-right:1px solid var(--hair);font-size:12.5px;color:var(--ink-3);
+    font-family:"IBM Plex Mono",monospace}
+  .cdays > div:last-child{border-right:0}
+  .cdays > div.out{background:var(--surface-2)}
+  .cdays > div.today span{background:var(--brand);color:#fff;border-radius:6px;padding:1px 6px;font-weight:600}
+  .cbars{display:grid;grid-template-columns:repeat(7,1fr);gap:4px 0;padding:2px 0 10px;min-height:20px}
+  .cbar{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#fff;padding:3px 9px;border-radius:8px;
+    cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:0 3px}
+  .cbar.k-task{background:var(--c1)}
+  .cbar.k-letter{background:var(--c3)}
+  .cbar.k-doc{background:var(--c2)}
+  .cbar.k-meet{background:var(--c4)}
+  .cbar.over{background:var(--bad)}
+  .cbar i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.9);flex:none}
+
+  /* артефакты и вложения */
+  .artrow{display:grid;grid-template-columns:168px minmax(0,1fr) 34px;gap:8px;margin-bottom:8px;align-items:center}
+  .artrow select,.artrow input{font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--hair-2);
+    border-radius:9px;background:var(--surface);color:var(--ink);width:100%}
+  .iconbtn{all:unset;cursor:pointer;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
+    justify-content:center;color:var(--ink-3);background:var(--surface-2)}
+  .iconbtn:hover{color:var(--bad)}
+  .files{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .fileit{display:flex;align-items:center;gap:9px;font-size:13px;background:var(--surface-2);border-radius:9px;
+    padding:7px 11px}
+  .fileit .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fileit .sz{margin-left:auto;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+  .drop{border:1px dashed var(--hair-2);border-radius:11px;padding:14px;text-align:center;color:var(--ink-3);
+    font-size:13px;background:var(--surface-2);cursor:pointer}
+  .drop:hover{border-color:var(--brand);color:var(--brand)}
+  .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+
   /* фасеты, чекбоксы, формы ввода */
   .facetbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px 14px;background:var(--surface);
     border:1px solid var(--hair);border-radius:var(--r);padding:14px 16px;margin:-6px 0 16px}
@@ -448,12 +523,14 @@
   var uid = 100;
 
   var TSTATUS = {
+    NEW:{label:"Новая", tone:"p-copper"},
     BACKLOG:{label:"Бэклог", tone:"p-neutral"}, TODO:{label:"К выполнению", tone:"p-neutral"},
     IN_PROGRESS:{label:"В работе", tone:"p-brand"}, REVIEW:{label:"На проверке", tone:"p-warn"},
     DONE:{label:"Готово", tone:"p-good"}, CANCELLED:{label:"Отменена", tone:"p-neutral"}
   };
   var CLOSED_TASK = ["DONE","CANCELLED"];
-  var TRACKS = {PRODUCTION:"Производственный", INTERNAL:"Внутренний", EXTERNAL:"Внешний", LEGAL:"Юридический"};
+  var TRACKS = {};
+  function syncTracks(){ TRACKS = {}; state.tracks.forEach(function(t){ TRACKS[t.k] = t.label; }); }
   var PRIO = {LOW:"Низкий", MEDIUM:"Средний", HIGH:"Высокий", CRITICAL:"Критичный"};
   var LSTATUS = {
     NEW:{label:"Новое", tone:"p-copper"}, IN_PROGRESS:{label:"В работе", tone:"p-brand"},
@@ -471,10 +548,12 @@
   var DSTATUS = {
     DRAFT:{label:"Черновик", tone:"p-neutral"}, REVIEW:{label:"На согласовании", tone:"p-warn"},
     SENT:{label:"Направлен стороне", tone:"p-brand"}, SIGNING:{label:"На подписании", tone:"p-brand"},
-    SIGNED:{label:"Подписан", tone:"p-good"}, DECLINED:{label:"Отказ", tone:"p-bad"}
+    SIGNED:{label:"Подписан", tone:"p-good"}, RETURNED:{label:"Возвращён на доработку", tone:"p-copper"},
+    FILED:{label:"Передан в дело", tone:"p-neutral"}, DECLINED:{label:"Отказ", tone:"p-bad"}
   };
+  var ARTS = {EDO:"Ссылка на ЭДО", JIRA:"Ссылка на Jira", DOC:"Документ системы", LINK:"Своя ссылка", NOTE:"Своё значение"};
   var SIG = {PENDING:"Ожидает", SIGNED:"Подписано", DECLINED:"Отказ", NOT_REQUIRED:"Не требуется"};
-  var PARTIES = [["dit","Наша сторона"],["rso","Организация"],["djkh","Согласующий орган"]];
+  var PARTIES = [["dit","Наша сторона"],["rso","Контрагент"],["djkh","Согласующий орган"]];
   var VIS = {
     PUBLIC:{label:"Видят все участники проекта", short:"всем", tone:"p-good"},
     TEAM:{label:"Только свой трек", short:"трек", tone:"p-brand"},
@@ -486,7 +565,7 @@
   var state = {
     members:[
       {id:1, name:"Проскуряков", role:"Руководитель проекта", acc:"admin"},
-      {id:2, name:"Гончарова",   role:"Юридический трек",     acc:"member"},
+      {id:2, name:"Шаганова",   role:"Юридический трек",     acc:"member"},
       {id:3, name:"Даренских",   role:"Аналитик",             acc:"member"}
     ],
     orgs:[
@@ -501,52 +580,98 @@
       {id:9, name:"НПО «Импульс»",    internal:false}
     ],
     projects:[{id:1, code:"АИС-1", name:"АИС «Развитие сетей»", owner:"Даренских", start:"2026-01-15", due:"2026-12-25"}],
+    tracks:[
+      {k:"PRODUCTION", label:"Производственный", own:false},
+      {k:"INTERNAL",   label:"Внутренний",       own:false},
+      {k:"EXTERNAL",   label:"Внешний",          own:false},
+      {k:"LEGAL",      label:"Юридический",      own:false}
+    ],
+    reps:[
+      {id:1, name:"Авдеев И. С.",    org:"ПАО «Энергосеть»", role:"Заместитель технического директора", phone:"+7 495 000-00-11", mail:"avdeev@example.ru", note:"Подписант регламента"},
+      {id:2, name:"Белова М. А.",    org:"ПАО «Энергосеть»", role:"Руководитель отдела ИТ", phone:"+7 495 000-00-12", mail:"belova@example.ru", note:"Техническая интеграция"},
+      {id:3, name:"Горшков П. Н.",   org:"АО «Теплосеть»",   role:"Начальник управления", phone:"+7 495 000-00-21", mail:"gorshkov@example.ru", note:"Отвечает медленно, дублировать письма"},
+      {id:4, name:"Дмитриева Е. В.", org:"АО «Электросети»", role:"Юрисконсульт", phone:"+7 495 000-00-31", mail:"dmitrieva@example.ru", note:""},
+      {id:5, name:"Ерохин С. С.",    org:"АО «Газсеть»",     role:"Директор по безопасности", phone:"+7 495 000-00-41", mail:"erohin@example.ru", note:"Позиция по составу данных"},
+      {id:6, name:"Жукова Н. П.",    org:"Профильный департамент", role:"Советник", phone:"+7 495 000-00-51", mail:"zhukova@example.ru", note:"Согласование ТЗ"}
+    ],
+    meetings:[
+      {id:1, title:"Статус по интеграции с ПАО «Энергосеть»", date:"2026-09-24", time:"11:00", place:"ВКС",
+       kind:"Рабочая встреча", people:["Проскуряков","Даренских","Авдеев И. С."],
+       agenda:"1. Готовность тестовой среды.\n2. Состав передаваемых данных.\n3. Сроки подписания регламента.",
+       decisions:"", files:[], mail:"Приглашение разослано 22.09 из почты"},
+      {id:2, title:"Планёрка проекта", date:"2026-09-23", time:"10:00", place:"Кабинет 412",
+       kind:"Планёрка", people:["Проскуряков","Шаганова","Даренских"],
+       agenda:"Перенос сроков по просроченным задачам, отчёт руководству.",
+       decisions:"", files:[], mail:""},
+      {id:3, title:"Согласование протокола разногласий с АО «Теплосеть»", date:"2026-09-18", time:"15:00", place:"ВКС",
+       kind:"Согласование", people:["Шаганова","Горшков П. Н."],
+       agenda:"Разногласия по срокам рассмотрения.",
+       decisions:"Срок рассмотрения продлён на 10 рабочих дней, письмо-подтверждение от 19.09.",
+       files:[{name:"Протокол разногласий.docx", size:"48 КБ"}], mail:"Протокол отправлен участникам"},
+      {id:4, title:"Обсуждение отказа АО «Водоканал»", date:"2026-09-11", time:"14:30", place:"ВКС",
+       kind:"Рабочая встреча", people:["Проскуряков","Шаганова"],
+       agenda:"Причина отказа и варианты формулировок.",
+       decisions:"Готовим новую редакцию раздела о составе данных, направляем до 30.09.",
+       files:[], mail:""}
+    ],
+    refdocs:[
+      {id:1, title:"Архитектура системы", kind:"Схема", who:"Даренских", note:"Контур интеграций и состав модулей", link:"#"},
+      {id:2, title:"Паспорт проекта", kind:"Документ", who:"Проскуряков", note:"Цели, этапы, ответственные", link:"#"},
+      {id:3, title:"Регламент информационного взаимодействия", kind:"Шаблон", who:"Шаганова", note:"Типовая редакция для новых контрагентов", link:"#"},
+      {id:4, title:"Матрица подписания", kind:"Справка", who:"Шаганова", note:"Кто и в каком порядке подписывает", link:"#"},
+      {id:5, title:"Шаблон отчёта руководству", kind:"Шаблон", who:"Даренских", note:"Состав разделов и периодичность", link:"#"}
+    ],
     tasks:[
-      {id:1, track:"LEGAL", title:"Передать подписанный экземпляр регламента согласующему органу", who:"Гончарова", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-12", due:"2026-09-18", p:60, jira:"", res:"Экземпляры на руках", au:"Гончарова", vis:"PUBLIC"},
-      {id:2, track:"LEGAL", title:"Уточнить статус регламента у теплосети", who:"Проскуряков", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-08-20", due:"2026-09-25", p:30, jira:"", res:"", au:"Проскуряков", vis:"PUBLIC"},
-      {id:3, track:"INTERNAL", title:"Письмо о формировании официального запроса данных", who:"Проскуряков", st:"REVIEW", prio:"HIGH", created:"2026-09-01", due:"2026-09-19", p:80, jira:"", res:"Драфт загружен в ЭДО", au:"Проскуряков", vis:"PUBLIC"},
-      {id:4, track:"INTERNAL", title:"Регламент функционирования системы: проверить драфт", who:"Гончарова", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-09-03", due:"", p:40, jira:"", res:"Согласовать с руководителем", au:"Гончарова", vis:"TEAM"},
-      {id:5, track:"INTERNAL", title:"Закупка оборудования: подготовить драфт договора", who:"Гончарова", st:"TODO", prio:"MEDIUM", created:"2026-09-08", due:"2026-10-02", p:0, jira:"", res:"", au:"Гончарова", vis:"TEAM"},
-      {id:6, track:"PRODUCTION", title:"Загрузка данных теплоснабжения в графовую БД", who:"Даренских", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-28", due:"2026-09-30", p:55, jira:"AISRKII-9837", res:"", au:"Даренских", vis:"PUBLIC"},
-      {id:7, track:"PRODUCTION", title:"Доработать геослои и передать для визуализации", who:"Даренских", st:"DONE", prio:"MEDIUM", created:"2026-08-14", due:"2026-09-04", p:100, jira:"AISRKII-9702", res:"Передано", au:"Даренских", vis:"PUBLIC"},
-      {id:8, track:"PRODUCTION", title:"Подготовить релиз 2.7: анализ территории", who:"Даренских", st:"REVIEW", prio:"CRITICAL", created:"2026-08-25", due:"2026-09-24", p:75, jira:"AISRKII-9811", res:"", au:"Даренских", vis:"PUBLIC"},
-      {id:9, track:"EXTERNAL", title:"Получить данные по перспективной застройке", who:"Даренских", st:"TODO", prio:"HIGH", created:"2026-09-10", due:"", p:0, jira:"", ext:"Профильный департамент", res:"", au:"Даренских", vis:"PUBLIC"},
-      {id:10, track:"EXTERNAL", title:"Получить корректные паспорта объектов 2.0", who:"Даренских", st:"IN_PROGRESS", prio:"CRITICAL", created:"2026-07-15", due:"2026-09-11", p:25, jira:"", ext:"ПАО «Энергосеть»", res:"Качество данных низкое", au:"Даренских", vis:"PUBLIC"},
-      {id:11, track:"INTERNAL", title:"Подготовить презентацию по отраслевой аналитике", who:"Проскуряков", st:"DONE", prio:"LOW", created:"2026-08-30", due:"2026-09-12", p:100, jira:"", res:"Показана на ВКС", au:"Проскуряков", vis:"PUBLIC"},
-      {id:12, track:"PRODUCTION", title:"Отладка интеграции с газовой сетью в dev-среде", who:"Даренских", st:"BACKLOG", prio:"MEDIUM", created:"2026-09-15", due:"", p:0, jira:"AISRKII-9840", res:"", au:"Даренских", vis:"PUBLIC"},
-      {id:13, track:"LEGAL", title:"Организовать подписание допсоглашения к NDA", who:"Гончарова", st:"TODO", prio:"HIGH", created:"2026-09-16", due:"", p:0, jira:"", res:"", au:"Гончарова", vis:"TEAM"},
-      {id:14, track:"INTERNAL", title:"Собрать отчёт руководству за период", who:"Проскуряков", st:"IN_PROGRESS", prio:"HIGH", created:"2026-09-17", due:"2026-09-23", p:50, jira:"", res:"", au:"Проскуряков", vis:"PRIVATE"},
-      {id:15, track:"PRODUCTION", title:"Выгрузка реестра писем для еженедельного среза", who:"Даренских", st:"BACKLOG", prio:"LOW", created:"2026-09-18", due:"", p:0, jira:"", res:"", au:"Даренских", vis:"PUBLIC"}
+      {id:1, track:"LEGAL", title:"Передать подписанный экземпляр регламента согласующему органу", who:"Шаганова", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-12", due:"2026-09-18", p:60, jira:"",
+       arts:[{t:"DOC", v:"Регламент обмена с ПАО «Энергосеть»"}],
+       files:[{name:"Экземпляр регламента.pdf", size:"1,2 МБ"}], au:"Шаганова", vis:"PUBLIC"},
+      {id:2, track:"LEGAL", title:"Уточнить статус регламента у теплосети", who:"Проскуряков", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-08-20", due:"2026-09-25", p:30, jira:"", au:"Проскуряков", vis:"PUBLIC"},
+      {id:3, track:"INTERNAL", title:"Письмо о формировании официального запроса данных", who:"Проскуряков", st:"REVIEW", prio:"HIGH", created:"2026-09-01", due:"2026-09-19", p:80, jira:"",
+       arts:[{t:"EDO", v:"Письмо 64-03-244/26 в ЭДО"},{t:"NOTE", v:"Драфт согласован с юристами"}],
+       files:[{name:"Запрос данных, драфт.docx", size:"64 КБ"}], au:"Проскуряков", vis:"PUBLIC"},
+      {id:4, track:"INTERNAL", title:"Регламент функционирования системы: проверить драфт", who:"Шаганова", st:"IN_PROGRESS", prio:"MEDIUM", created:"2026-09-03", due:"", p:40, jira:"", au:"Шаганова", vis:"TEAM"},
+      {id:5, track:"INTERNAL", title:"Закупка оборудования: подготовить драфт договора", who:"Шаганова", st:"TODO", prio:"MEDIUM", created:"2026-09-08", due:"2026-10-02", p:0, jira:"", au:"Шаганова", vis:"TEAM"},
+      {id:6, track:"PRODUCTION", title:"Загрузка данных теплоснабжения в графовую БД", who:"Даренских", st:"IN_PROGRESS", prio:"HIGH", created:"2026-08-28", due:"2026-09-30", p:55, jira:"AISRKII-9837",
+       arts:[{t:"JIRA", v:"AISRKII-9837"},{t:"LINK", v:"Схема загрузки в графовую БД"}], files:[], au:"Даренских", vis:"PUBLIC"},
+      {id:7, track:"PRODUCTION", title:"Доработать геослои и передать для визуализации", who:"Даренских", st:"DONE", prio:"MEDIUM", created:"2026-08-14", due:"2026-09-04", p:100, jira:"AISRKII-9702", au:"Даренских", vis:"PUBLIC"},
+      {id:8, track:"PRODUCTION", title:"Подготовить релиз 2.7: анализ территории", who:"Даренских", st:"REVIEW", prio:"CRITICAL", created:"2026-08-25", due:"2026-09-24", p:75, jira:"AISRKII-9811", au:"Даренских", vis:"PUBLIC"},
+      {id:9, track:"EXTERNAL", title:"Получить данные по перспективной застройке", who:"Даренских", st:"TODO", prio:"HIGH", created:"2026-09-10", due:"", p:0, jira:"", ext:"Профильный департамент", au:"Даренских", vis:"PUBLIC"},
+      {id:10, track:"EXTERNAL", title:"Получить корректные паспорта объектов 2.0", who:"Даренских", st:"IN_PROGRESS", prio:"CRITICAL", created:"2026-07-15", due:"2026-09-11", p:25, jira:"", ext:"ПАО «Энергосеть»", au:"Даренских", vis:"PUBLIC"},
+      {id:11, track:"INTERNAL", title:"Подготовить презентацию по отраслевой аналитике", who:"Проскуряков", st:"DONE", prio:"LOW", created:"2026-08-30", due:"2026-09-12", p:100, jira:"", au:"Проскуряков", vis:"PUBLIC"},
+      {id:12, track:"PRODUCTION", title:"Отладка интеграции с газовой сетью в dev-среде", who:"Даренских", st:"BACKLOG", prio:"MEDIUM", created:"2026-09-15", due:"", p:0, jira:"AISRKII-9840", au:"Даренских", vis:"PUBLIC"},
+      {id:13, track:"LEGAL", title:"Организовать подписание допсоглашения к NDA", who:"Шаганова", st:"TODO", prio:"HIGH", created:"2026-09-16", due:"", p:0, jira:"", au:"Шаганова", vis:"TEAM"},
+      {id:14, track:"INTERNAL", title:"Собрать отчёт руководству за период", who:"Проскуряков", st:"IN_PROGRESS", prio:"HIGH", created:"2026-09-17", due:"2026-09-23", p:50, jira:"", au:"Проскуряков", vis:"PRIVATE"},
+      {id:15, track:"PRODUCTION", title:"Выгрузка реестра писем для еженедельного среза", who:"Даренских", st:"BACKLOG", prio:"LOW", created:"2026-09-18", due:"", p:0, jira:"", au:"Даренских", vis:"PUBLIC"}
     ],
     letters:[
-      {id:9, num:"64-03-249/26", date:"2026-09-16", dir:"out", subject:"Повторный запрос на подписание регламента", org:"ГУП «Водосток»", owner:"Гончарова", due:"2026-09-26", st:"NEW", jira:"", au:"Гончарова", vis:"PUBLIC",
-       snip:"Просим повторно рассмотреть и подписать регламент информационного взаимодействия…", thread:[["2026-09-16","Письмо отправлено через ЭДО","Гончарова"],["2026-09-18","Получено подтверждение регистрации","система"]]},
+      {id:9, num:"64-03-249/26", date:"2026-09-16", dir:"out", subject:"Повторный запрос на подписание регламента", org:"ГУП «Водосток»", owner:"Шаганова", due:"2026-09-26", st:"NEW", jira:"", au:"Шаганова", vis:"PUBLIC",
+       snip:"Просим повторно рассмотреть и подписать регламент информационного взаимодействия…", thread:[["2026-09-16","Письмо отправлено через ЭДО","Шаганова"],["2026-09-18","Получено подтверждение регистрации","система"]]},
       {id:8, num:"64-01-302/26", date:"2026-09-14", dir:"in", subject:"Предложение об интеграции интеллектуального учёта", org:"НПО «Импульс»", owner:"", due:"", st:"NOTED", jira:"", au:"Проскуряков", vis:"PUBLIC",
        snip:"Предлагаем рассмотреть возможность интеграции системы интеллектуального учёта…", thread:[["2026-09-14","Письмо поступило","ЭДО"],["2026-09-15","Принято к сведению, ответ не требуется","Проскуряков"]]},
-      {id:7, num:"64-03-244/26", date:"2026-09-09", dir:"out", subject:"Направление регламента информационного обмена", org:"ГУП «Водосток»", owner:"Гончарова", due:"2026-09-30", st:"ON_APPROVAL", jira:"", au:"Гончарова", vis:"PUBLIC",
-       snip:"Направляем проект регламента для рассмотрения и подписания…", thread:[["2026-09-09","Письмо отправлено","Гончарова"],["2026-09-19","Организация сообщила, что регламент на юридической проверке","Гончарова"]]},
+      {id:7, num:"64-03-244/26", date:"2026-09-09", dir:"out", subject:"Направление регламента информационного обмена", org:"ГУП «Водосток»", owner:"Шаганова", due:"2026-09-30", st:"ON_APPROVAL", jira:"", au:"Шаганова", vis:"PUBLIC",
+       snip:"Направляем проект регламента для рассмотрения и подписания…", thread:[["2026-09-09","Письмо отправлено","Шаганова"],["2026-09-19","Контрагент сообщил, что регламент на юридической проверке","Шаганова"]]},
       {id:6, num:"64-03-241/26", date:"2026-09-02", dir:"in", subject:"О сроках рассмотрения протокола разногласий", org:"АО «Теплосеть»", owner:"", due:"2026-09-15", st:"IN_PROGRESS", jira:"", au:"Проскуряков", vis:"PUBLIC",
        snip:"Просим увеличить срок рассмотрения протокола разногласий на 10 рабочих дней…", thread:[["2026-09-02","Письмо поступило","ЭДО"],["2026-09-03","Требуется ответ, ответственный не назначен","система"]]},
       {id:5, num:"64-03-193/26", date:"2026-08-22", dir:"out", subject:"Запрос сведений об удельных капитальных вложениях", org:"ПАО «Энергосеть»", owner:"Проскуряков", due:"2026-09-10", st:"IN_PROGRESS", jira:"AISRKII-9837", au:"Проскуряков", vis:"PUBLIC",
        snip:"Для подготовки схемы развития просим предоставить сведения об удельных капитальных вложениях…", thread:[["2026-08-22","Письмо отправлено","Проскуряков"],["2026-09-11","Срок ответа истёк, направлено напоминание","Проскуряков"]]},
-      {id:4, num:"64-01-169/26", date:"2026-08-07", dir:"out", subject:"Ответ. Согласование проекта ТЗ на методику", org:"Профильный департамент", owner:"Гончарова", due:"", st:"SIGNED", jira:"", au:"Гончарова", vis:"PUBLIC",
-       snip:"Направляем согласованный проект технического задания…", thread:[["2026-08-07","Письмо подписано и отправлено","Гончарова"]]},
+      {id:4, num:"64-01-169/26", date:"2026-08-07", dir:"out", subject:"Ответ. Согласование проекта ТЗ на методику", org:"Профильный департамент", owner:"Шаганова", due:"", st:"SIGNED", jira:"", au:"Шаганова", vis:"PUBLIC",
+       snip:"Направляем согласованный проект технического задания…", thread:[["2026-08-07","Письмо подписано и отправлено","Шаганова"]]},
       {id:3, num:"64-03-238/26", date:"2026-07-15", dir:"in", subject:"О согласовании материалов в рамках контракта", org:"Профильный департамент", owner:"Проскуряков", due:"2026-07-17", st:"SIGNED", jira:"", au:"Проскуряков", vis:"TEAM",
        snip:"Направляем материалы на согласование в рамках заключённого контракта…", thread:[["2026-07-15","Письмо поступило","ЭДО"],["2026-07-17","Материалы согласованы и подписаны","Проскуряков"]]},
-      {id:2, num:"64-01-167/26", date:"2026-07-08", dir:"in", subject:"Согласование ТЗ на распределительные сети", org:"Профильный департамент", owner:"Гончарова", due:"2026-07-10", st:"ANSWERED", jira:"", au:"Гончарова", vis:"PUBLIC",
-       snip:"Просим согласовать техническое задание на распределительные сети…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-07-10","Дан ответ исходящим письмом","Гончарова"]]},
-      {id:1, num:"64-01-169/26", date:"2026-07-08", dir:"in", subject:"Согласование проекта ТЗ на разработку методики", org:"Профильный департамент", owner:"Гончарова", due:"2026-07-31", st:"ANSWERED", jira:"", au:"Гончарова", vis:"PUBLIC",
-       snip:"Просим согласовать проект технического задания на разработку методики…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-08-07","Дан ответ исходящим письмом","Гончарова"]]}
+      {id:2, num:"64-01-167/26", date:"2026-07-08", dir:"in", subject:"Согласование ТЗ на распределительные сети", org:"Профильный департамент", owner:"Шаганова", due:"2026-07-10", st:"ANSWERED", jira:"", au:"Шаганова", vis:"PUBLIC",
+       snip:"Просим согласовать техническое задание на распределительные сети…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-07-10","Дан ответ исходящим письмом","Шаганова"]]},
+      {id:1, num:"64-01-169/26", date:"2026-07-08", dir:"in", subject:"Согласование проекта ТЗ на разработку методики", org:"Профильный департамент", owner:"Шаганова", due:"2026-07-31", st:"ANSWERED", jira:"", au:"Шаганова", vis:"PUBLIC",
+       snip:"Просим согласовать проект технического задания на разработку методики…", thread:[["2026-07-08","Письмо поступило","ЭДО"],["2026-08-07","Дан ответ исходящим письмом","Шаганова"]]}
     ],
     docs:[
-      {id:1, kind:"REGULATION", name:"Регламент обмена с ПАО «Энергосеть»", st:"SIGNING", org:"ПАО «Энергосеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"PENDING", due:"2026-11-30", next:"Передать подписанный экземпляр согласующему органу", mile:[1,1,1,1,0], vis:"PUBLIC"},
-      {id:2, kind:"REGULATION", name:"Регламент обмена с АО «Электросети»", st:"SIGNED", org:"АО «Электросети»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-09-30", next:"", mile:[1,1,1,1,1], vis:"PUBLIC"},
+      {id:1, kind:"REGULATION", name:"Регламент обмена с ПАО «Энергосеть»", st:"SIGNING", org:"ПАО «Энергосеть»", owner:"Шаганова", dit:"SIGNED", rso:"SIGNED", djkh:"PENDING", due:"2026-11-30", next:"Передать подписанный экземпляр согласующему органу", mile:[1,1,1,1,0], vis:"PUBLIC"},
+      {id:2, kind:"REGULATION", name:"Регламент обмена с АО «Электросети»", st:"SIGNED", org:"АО «Электросети»", owner:"Шаганова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-09-30", next:"", mile:[1,1,1,1,1], vis:"PUBLIC"},
       {id:3, kind:"REGULATION", name:"Регламент обмена с АО «Теплосеть»", st:"SENT", org:"АО «Теплосеть»", owner:"Проскуряков", dit:"PENDING", rso:"PENDING", djkh:"PENDING", due:"2026-09-15", next:"Уточнить статус рассмотрения", mile:[1,0,0,0,0], vis:"PUBLIC"},
       {id:4, kind:"REGULATION", name:"Регламент обмена с ПАО «Генерация»", st:"REVIEW", org:"ПАО «Генерация»", owner:"Проскуряков", dit:"PENDING", rso:"PENDING", djkh:"PENDING", due:"2026-12-30", next:"Узнать статус согласования", mile:[1,0,0,0,0], vis:"PUBLIC"},
-      {id:5, kind:"REGULATION", name:"Регламент обмена с АО «Газсеть»", st:"SIGNING", org:"АО «Газсеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-10-30", next:"Получить подписанный экземпляр", mile:[1,1,1,1,1], vis:"PUBLIC"},
+      {id:5, kind:"REGULATION", name:"Регламент обмена с АО «Газсеть»", st:"SIGNING", org:"АО «Газсеть»", owner:"Шаганова", dit:"SIGNED", rso:"SIGNED", djkh:"SIGNED", due:"2026-10-30", next:"Получить подписанный экземпляр", mile:[1,1,1,1,1], vis:"PUBLIC"},
       {id:6, kind:"REGULATION", name:"Регламент обмена с АО «Водоканал»", st:"DECLINED", org:"АО «Водоканал»", owner:"Проскуряков", dit:"PENDING", rso:"DECLINED", djkh:"PENDING", due:"", next:"Запросить позицию согласующего органа", mile:[1,0,0,0,0], vis:"TEAM"},
-      {id:7, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: ПАО «Энергосеть»", st:"SIGNED", org:"ПАО «Энергосеть»", owner:"Гончарова", dit:"SIGNED", rso:"SIGNED", djkh:"NOT_REQUIRED", due:"2026-08-15", next:"", mile:[1,1,1,1,1], vis:"TEAM"},
-      {id:8, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: АО «Газсеть»", st:"DECLINED", org:"АО «Газсеть»", owner:"Гончарова", dit:"SIGNED", rso:"DECLINED", djkh:"NOT_REQUIRED", due:"2026-09-20", next:"Отказ по составу данных: согласовать формулировки", mile:[1,1,0,0,0], vis:"TEAM"}
+      {id:7, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: ПАО «Энергосеть»", st:"SIGNED", org:"ПАО «Энергосеть»", owner:"Шаганова", dit:"SIGNED", rso:"SIGNED", djkh:"NOT_REQUIRED", due:"2026-08-15", next:"", mile:[1,1,1,1,1], vis:"TEAM"},
+      {id:8, kind:"NDA_ADDENDUM", name:"Допсоглашение к NDA: АО «Газсеть»", st:"DECLINED", org:"АО «Газсеть»", owner:"Шаганова", dit:"SIGNED", rso:"DECLINED", djkh:"NOT_REQUIRED", due:"2026-09-20", next:"Отказ по составу данных: согласовать формулировки", mile:[1,1,0,0,0], vis:"TEAM"}
     ],
     reports:[
       {id:1, from:"2026-09-08", to:"2026-09-21", author:"Даренских", state:"Черновик собран"},
@@ -554,6 +679,7 @@
       {id:3, from:"2026-08-11", to:"2026-08-24", author:"Проскуряков", state:"Отправлен"}
     ]
   };
+  syncTracks();
   var MILE_LABELS = ["Регламент направлен","Регламент подписан","Система готова","Интеграция в dev","Тестовая среда"];
 
   /* ---------- утилиты ---------- */
@@ -626,8 +752,9 @@
   var NAV_MAIN = [
     {k:"today", ico:"◎", label:"Сегодня"},
     {k:"tasks", ico:"◧", label:"Задачи"},
-    {k:"letters", ico:"✉", label:"Переписка"},
-    {k:"docs", ico:"§", label:"Документы"},
+    {k:"letters", ico:"✉", label:"Реестр писем ЭДО"},
+    {k:"docs", ico:"§", label:"Юридический трек"},
+    {k:"meetings", ico:"◇", label:"Встречи"},
     {k:"calendar", ico:"▤", label:"Календарь"}
   ];
   var NAV_SEC = [
@@ -638,10 +765,21 @@
   ];
   var route = "today";
   var taskView = "board", taskFilter = "all";
-  var mailFilter = "needsUs", mailOpen = 9, mailQuery = "";
-  var docFilter = "all";
+  var mailFilter = "all", mailOpen = 9, mailQuery = "";
+  var docKind = "all", docStatus = "all";
   var calM = 8, calY = 2026;
   var step = 2;
+  var dashPanel = false;
+  var DASH = [
+    {k:"kpi",      label:"Плитки с цифрами",      hint:"просрочено, ждут ответа, без срока"},
+    {k:"overdue",  label:"Просроченные задачи",   hint:"самое горячее сверху"},
+    {k:"mail",     label:"Письма без ответа",     hint:"входящие, где ход за нами"},
+    {k:"docs",     label:"Документы на подписании", hint:"чьей подписи не хватает"},
+    {k:"meetings", label:"Ближайшие встречи",     hint:"на неделю вперёд"},
+    {k:"week",     label:"Сроки на этой неделе",  hint:"задачи, письма и документы"},
+    {k:"mine",     label:"Только мои задачи",     hint:"всё, что назначено на меня"}
+  ];
+  var dash = {kpi:true, overdue:true, mail:true, docs:true, meetings:true, week:true, mine:false};
 
   function counts(k){
     if(k === "tasks") return state.tasks.filter(function(t){ return !taskDone(t); }).length;
@@ -672,8 +810,10 @@
     var needAnswer = state.letters.filter(needsUs);
     var signOnUs = state.docs.filter(function(d){ return !docClosed(d) && d.st !== "DECLINED"; });
     var noDue = state.tasks.filter(function(t){ return !taskDone(t) && !t.due; });
+    var meets = state.meetings.filter(function(m){ return m.date >= "2026-09-22"; })
+      .sort(function(a, b){ return a.date < b.date ? -1 : 1; });
 
-    function block(title, sub, items, tone, go){
+    function block(title, sub, items, go){
       return '<div class="card"><h3>' + title + '</h3><div class="sub">' + sub + '</div>' +
         (items.length ? '<div class="list" style="margin:0 -18px">' + items.slice(0,3).join("") + '</div>'
                       : '<p class="dim" style="margin:0;font-size:14px">Ничего не требует внимания.</p>') +
@@ -682,7 +822,7 @@
     }
     function tline(t){
       return '<div class="li" data-open="task:' + t.id + '"><div class="main"><span class="t">' + esc(t.title) + '</span>' +
-        '<span class="m">' + esc(TRACKS[t.track]) + ' · ' + esc(t.who) + '</span></div>' +
+        '<span class="m">' + esc(TRACKS[t.track] || t.track) + ' · ' + esc(t.who) + '</span></div>' +
         '<div class="rt">' + dueTag(t.due, false, true) + '</div></div>';
     }
     function lline(l){
@@ -695,26 +835,43 @@
         '<span class="m">' + esc(DKIND[d.kind]) + ' · ' + esc(docWaiting(d) || "все стороны подписали") + '</span></div>' +
         '<div class="rt">' + dueTag(d.due, false, true) + '</div></div>';
     }
+    function mline(m){
+      return '<div class="li" data-open="meet:' + m.id + '"><div class="main"><span class="t">' + esc(m.title) + '</span>' +
+        '<span class="m">' + esc(m.place) + ' · ' + esc(m.people.join(", ")) + '</span></div>' +
+        '<div class="rt"><span class="due mono">' + fmt(m.date) + ' ' + esc(m.time) + '</span></div></div>';
+    }
 
-    return '<div class="phead"><div><h1>Доброе утро, Проскуряков</h1>' +
+    var head = '<div class="phead"><div><h1>Доброе утро, Проскуряков</h1>' +
       '<p>Вторник, 22 сентября. На вас ' + plural(mine.length, ["открытая задача","открытые задачи","открытых задач"]) + ', ' +
       plural(needAnswer.length, ["письмо ждёт","письма ждут","писем ждут"]) + ' ответа, ' +
-      plural(signOnUs.length, ["документ ждёт","документа ждут","документов ждут"]) + ' подписей.</p></div>' +
-      '<button class="btn primary" type="button" data-new="task">Новая задача</button></div>' +
+      plural(meets.length, ["встреча впереди","встречи впереди","встреч впереди"]) + '.</p></div>' +
+      '<div style="display:flex;gap:8px">' +
+      '<button class="btn" type="button" data-dash aria-pressed="' + dashPanel + '">Настроить дашборд</button>' +
+      '<button class="btn primary" type="button" data-new="task">Новая задача</button></div></div>';
 
-      '<div class="grid g3" style="margin-bottom:14px">' +
+    var panel = dashPanel ? '<div class="facetbar" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">' +
+      DASH.map(function(w){
+        return '<label class="chk"><input type="checkbox" data-dashk="' + w.k + '"' + (dash[w.k] ? " checked" : "") + '>' +
+          '<span><b>' + w.label + '</b><em>' + w.hint + '</em></span></label>'; }).join("") + '</div>' : "";
+
+    var kpis = dash.kpi ? '<div class="grid g3" style="margin-bottom:14px">' +
       kpi(overdue.length, "Просрочено", overdue.length ? "самая старая: " + (-days(overdue[0].due)) + " дн." : "чисто", overdue.length ? "bad" : "good") +
       kpi(needAnswer.length, "Ждут нашего ответа", "входящие без ответа", needAnswer.length ? "warn" : "good") +
       kpi(noDue.length, "Без срока", "не попадают в календарь", noDue.length ? "warn" : "good") +
       kpi(sigDone() + " / " + state.docs.length, "Документов подписано", "всеми сторонами", "good") +
-      '</div>' +
+      '</div>' : "";
 
-      '<div class="grid g2">' +
-      block("Просрочено", "Требует решения в первую очередь", overdue.map(tline), "bad", "tasks") +
-      block("Письма без ответа", "Мяч на нашей стороне", needAnswer.map(lline), "warn", "letters") +
-      block("Документы на подписании", "Видно, чьей подписи не хватает", signOnUs.map(dline), "warn", "docs") +
-      block("Сроки на этой неделе", "Успеть до понедельника", week.map(tline), "brand", "calendar") +
-      '</div>';
+    var cards = [];
+    if(dash.overdue) cards.push(block("Просрочено", "Требует решения в первую очередь", overdue.map(tline), "tasks"));
+    if(dash.mail) cards.push(block("Письма без ответа", "Мяч на нашей стороне", needAnswer.map(lline), "letters"));
+    if(dash.docs) cards.push(block("Документы на подписании", "Видно, чьей подписи не хватает", signOnUs.map(dline), "docs"));
+    if(dash.meetings) cards.push(block("Ближайшие встречи", "Повестка и участники в карточке", meets.map(mline), "meetings"));
+    if(dash.week) cards.push(block("Сроки на этой неделе", "Успеть до понедельника", week.map(tline), "calendar"));
+    if(dash.mine) cards.push(block("Мои задачи", "Всё, что назначено на меня", mine.map(tline), "tasks"));
+
+    return head + panel + kpis +
+      (cards.length ? '<div class="grid g2">' + cards.join("") + '</div>'
+                    : '<div class="listbox"><div class="empty">Все виджеты выключены. Включите нужные в «Настроить дашборд».</div></div>');
   }
   function kpi(v, label, sub, cls){
     return '<div class="kpi ' + cls + '"><b>' + v + '</b><span>' + label + '</span><em>' + sub + '</em></div>';
@@ -768,6 +925,7 @@
           return '<div class="tcard' + (over ? " hot" : "") + '" data-open="task:' + t.id + '" tabindex="0" role="button">' +
             '<span class="t">' + esc(t.title) + '</span>' +
             (t.jira ? '<span class="pill p-neutral"><i></i>' + esc(t.jira) + '</span>' : "") +
+            ((t.files || []).length ? '<span class="pill p-neutral"><i></i>' + t.files.length + ' файл</span>' : "") +
             '<div class="f">' + who(t.who) + dueTag(t.due, taskDone(t)) + '</div></div>';
         }).join("") +
         (items.length ? "" : '<p class="dim" style="font-size:13px;margin:4px 4px 8px">Пусто</p>') + '</div>';
@@ -826,7 +984,7 @@
   var FACETS = [
     {k:"dir", label:"Направление", opts:[["","Любое"],["in","Входящие"],["out","Исходящие"]]},
     {k:"st", label:"Статус", opts:[["","Любой"]].concat(Object.keys(LSTATUS).map(function(k){ return [k, LSTATUS[k].label]; }))},
-    {k:"org", label:"Организация", opts:null},
+    {k:"org", label:"Контрагент", opts:null},
     {k:"owner", label:"Ответственный", opts:null},
     {k:"term", label:"Срок", opts:[["","Любой"],["over","Просрочен"],["week","Ближайшая неделя"],["none","Не задан"]]},
     {k:"from", label:"Дата письма с", type:"date"},
@@ -893,112 +1051,95 @@
   }
   function screenLetters(){
     var rows = visibleMail();
-    if(rows.length && !rows.some(function(l){ return l.id === mailOpen; })) mailOpen = rows[0].id;
-    var head = '<div class="phead"><div><h1>Переписка</h1>' +
-      '<p>Реестр ведётся руками, поэтому письмо заводится одной формой за полминуты, а найти его можно по номеру, слову из темы или набору фильтров.</p></div>' +
-      '<button class="btn primary" type="button" data-new="letter">Завести письмо</button></div>';
+    var head = '<div class="phead"><div><h1>Реестр писем ЭДО</h1>' +
+      '<p>Реестр ведётся руками: письмо заводится одной формой, а найти его можно по номеру, слову из темы или набору фильтров. Форма подстраивается под входящее и исходящее.</p></div>' +
+      '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Реестр выгружен в .xlsx с текущими фильтрами">Выгрузить</button>' +
+      '<button class="btn primary" type="button" data-new="letter">Завести письмо</button></div></div>';
     var chips = '<div class="filters">' + MAIL_FILTERS.map(function(f){
       var n = state.letters.filter(f.f).length;
       return '<button class="fchip" type="button" data-mfilter="' + f.k + '" aria-pressed="' + (mailFilter === f.k) + '">' +
         f.label + '<span class="b">' + n + '</span></button>'; }).join("") +
       '<span style="flex:1"></span>' +
-      '<input id="mq" type="search" placeholder="Номер или слово из темы" value="' + esc(mailQuery) + '" ' +
+      '<input id="mq" type="search" placeholder="Номер, тема, ключевое слово" value="' + esc(mailQuery) + '" ' +
       'style="font:inherit;font-size:13.5px;padding:6px 12px;border:1px solid var(--hair);border-radius:99px;' +
-      'background:var(--surface);color:var(--ink);width:240px" aria-label="Поиск по письмам">' +
+      'background:var(--surface);color:var(--ink);width:260px" aria-label="Поиск по письмам">' +
       '<button class="fchip" type="button" data-mpanel aria-pressed="' + mailPanel + '">Фильтры' +
       (facetCount() ? '<span class="b">' + facetCount() + '</span>' : "") + '</button></div>';
     var saved = '<div class="filters" style="margin-top:-8px">' +
       '<span class="dim" style="font-size:12.5px">Сохранённые:</span>' +
       SAVED.map(function(sv){
-        return '<button class="fchip" type="button" data-msaved="' + sv.k + '">' + sv.label + '</button>'; }).join("") + '</div>';
+        return '<button class="fchip" type="button" data-msaved="' + sv.k + '">' + sv.label + '</button>'; }).join("") +
+      '<span style="flex:1"></span><span class="dim" style="font-size:12.5px">Найдено: ' + rows.length +
+      ' из ' + state.letters.length + '</span></div>';
 
-    var body;
     if(!rows.length){
-      body = '<div class="listbox"><div class="empty">Ничего не нашлось. Попробуйте часть номера — например 64-03 — или сбросьте фильтры.</div></div>';
-    } else {
-      var list = '<div class="mailist">' + rows.map(function(l){
-        return '<div class="mail' + (needsUs(l) ? " unread" : "") + '" data-mail="' + l.id + '" aria-current="' + (l.id === mailOpen) + '">' +
-          '<span class="dot"></span><div class="body">' +
-          '<div class="from"><span>' + esc(l.org) + '</span><span class="mono">' + fmt(l.date) + '</span></div>' +
-          '<div class="subj">' + esc(l.subject) + '</div>' +
-          '<div class="snip">' + esc(l.snip) + '</div>' +
-          '<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">' +
-          pill(l.dir === "in" ? "Входящее" : "Исходящее", "p-neutral") +
-          pill(letterState(l).txt, letterState(l).tone) + '</div></div></div>';
-      }).join("") + '</div>';
-
-      var l = byId("letters", mailOpen) || rows[0];
-      var reader = '<div class="reader"><div class="rh">' +
-        '<h2>' + esc(l.subject) + '</h2>' +
-        '<div class="meta">' +
-        '<span>' + (l.dir === "in" ? "От: " : "Кому: ") + '<b>' + esc(l.org) + '</b></span>' +
-        '<span>№ <b class="mono">' + esc(l.num) + '</b></span>' +
-        '<span>Дата: <b class="mono">' + fmtFull(l.date) + '</b></span>' +
-        '<span>Ответственный: ' + (l.owner ? '<b>' + esc(l.owner) + '</b>' : '<b style="color:var(--bad)">не назначен</b>') + '</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
-        pill(LSTATUS[l.st].label, LSTATUS[l.st].tone) + pill(letterState(l).txt, letterState(l).tone) +
-        pill("Видят: " + VIS[l.vis || "PUBLIC"].short, VIS[l.vis || "PUBLIC"].tone) +
-        (l.jira ? pill(l.jira, "p-neutral") : "") + '</div></div>' +
-        '<p style="margin:0 0 16px;font-size:14.5px;color:var(--ink-2)">' + esc(l.snip) + '</p>' +
-        '<div class="blk"><h4>История</h4><div class="thread">' +
-        l.thread.map(function(ev, i){
-          return '<div class="tev' + (i === l.thread.length - 1 ? " now" : "") + '">' +
-            '<span class="line"><i></i><span></span></span>' +
-            '<span class="txt">' + esc(ev[1]) + '<em>' + fmtFull(ev[0]) + ' · ' + esc(ev[2]) + '</em></span></div>';
-        }).join("") + '</div></div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button class="btn primary" type="button" data-act="Ответ подготовлен и отправлен на согласование">Подготовить ответ</button>' +
-        '<button class="btn" type="button" data-eletter="' + l.id + '">Редактировать</button>' +
-        '<button class="btn" type="button" data-new="task">Создать задачу</button>' +
-        '<button class="btn danger" type="button" data-del="letter:' + l.id + '">Удалить</button>' +
-        '</div></div>';
-      body = '<div class="inbox">' + list + reader + '</div>';
+      return head + chips + saved + (mailPanel ? facetBar() : "") +
+        '<div class="listbox"><div class="empty">Ничего не нашлось. Попробуйте часть номера — например 64-03 — или сбросьте фильтры.</div></div>';
     }
-    return head + chips + saved + (mailPanel ? facetBar() : "") + body;
+    var table = '<div class="reg"><div class="reghead">' +
+      '<span>Номер</span><span>Тип</span><span>Тема</span><span>Контрагент</span>' +
+      '<span>Ответственный</span><span>Срок</span><span>Статус</span></div>' +
+      rows.map(function(l){
+        return '<div class="regrow' + (needsUs(l) ? " act" : "") + '" data-open="letter:' + l.id + '" tabindex="0" role="button">' +
+          '<span class="mono" style="font-size:12.5px">' + esc(l.num) + '<br><span class="dim">' + fmtFull(l.date) + '</span></span>' +
+          '<span class="dirmark ' + l.dir + '" title="' + (l.dir === "in" ? "Входящее" : "Исходящее") + '">' +
+          (l.dir === "in" ? "вх" : "исх") + '</span>' +
+          '<span class="subj">' + esc(l.subject) + '</span>' +
+          '<span class="cut">' + esc(l.org) + '</span>' +
+          '<span class="cut">' + (l.owner ? esc(l.owner) : '<span style="color:var(--bad)">не назначен</span>') + '</span>' +
+          '<span>' + dueTag(l.due, letterDone(l)) + '</span>' +
+          '<span>' + pill(LSTATUS[l.st].label, LSTATUS[l.st].tone) + '</span></div>';
+      }).join("") + '</div>';
+    return head + chips + saved + (mailPanel ? facetBar() : "") + table;
   }
 
   /* ---------- документы ---------- */
   function screenDocs(){
     var rows = state.docs.filter(function(d){
-      if(docFilter === "all") return true;
-      if(docFilter === "declined") return d.st === "DECLINED";
-      if(docFilter === "mine") return d.owner === ME && !docClosed(d);
-      return d[docFilter] === "PENDING";
+      if(docKind !== "all" && d.kind !== docKind) return false;
+      if(docStatus !== "all" && d.st !== docStatus) return false;
+      return true;
     });
-    var head = '<div class="phead"><div><h1>Документы на подписании</h1>' +
-      '<p>У документа несколько подписывающих сторон, поэтому он движется по стадиям, а не имеет один статус. Кольцо показывает, сколько подписей собрано.</p></div>' +
-      '<button class="btn primary" type="button" data-new="doc">Новый документ</button></div>';
-    var chips = '<div class="filters">' +
-      [["all","Все"],["mine","На мне"],["dit","Ждут нашей подписи"],["rso","У организации"],["djkh","У согласующего органа"],["declined","Отказы"]].map(function(f){
-        var n = state.docs.filter(function(d){
-          return f[0] === "all" ? true
-               : f[0] === "declined" ? d.st === "DECLINED"
-               : f[0] === "mine" ? (d.owner === ME && !docClosed(d))
-               : d[f[0]] === "PENDING"; }).length;
-        return '<button class="fchip" type="button" data-dfilter="' + f[0] + '" aria-pressed="' + (docFilter === f[0]) + '">' +
+    var head = '<div class="phead"><div><h1>Юридический трек</h1>' +
+      '<p>Документы с несколькими подписывающими сторонами: список с фильтрами по виду и стадии. Подписи показаны точками, итог считается из матрицы сторон.</p></div>' +
+      '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Список выгружен в .xlsx">Выгрузить</button>' +
+      '<button class="btn primary" type="button" data-new="doc">Новый документ</button></div></div>';
+
+    var kindChips = '<div class="filters"><span class="dim" style="font-size:12.5px">Вид:</span>' +
+      [["all","Все"]].concat(Object.keys(DKIND).map(function(k){ return [k, DKIND[k]]; })).map(function(f){
+        var n = f[0] === "all" ? state.docs.length : state.docs.filter(function(d){ return d.kind === f[0]; }).length;
+        if(!n && f[0] !== "all") return "";
+        return '<button class="fchip" type="button" data-dkind="' + f[0] + '" aria-pressed="' + (docKind === f[0]) + '">' +
           f[1] + '<span class="b">' + n + '</span></button>'; }).join("") + '</div>';
 
-    var stages = Object.keys(DSTATUS);
-    var pipe = '<div class="pipe">' + stages.map(function(k){
-      var items = rows.filter(function(d){ return d.st === k; });
-      return '<div class="pcol"><h4>' + DSTATUS[k].label + '<span class="mono dim">' + items.length + '</span></h4>' +
-        items.map(function(d){
-          var c = sigCount(d), w = docWaiting(d);
-          return '<div class="dcard" data-open="doc:' + d.id + '" tabindex="0" role="button">' +
-            '<div class="cp">' + esc(d.name) + '</div><div class="kind">' + esc(DKIND[d.kind]) + ' · ' + esc(d.owner) + '</div>' +
-            '<div class="sigs">' + ring(c.done, c.total) +
-            '<div><div class="sigdots">' + PARTIES.map(function(p){
-              var v = d[p[0]];
-              return '<i class="' + (v === "SIGNED" ? "ok" : v === "DECLINED" ? "no" : "") + '" title="' + esc(p[1] + ": " + SIG[v]) + '"></i>';
-            }).join("") + '</div>' +
-            '<div style="font-size:12px;color:var(--ink-3);margin-top:4px">' + c.done + ' из ' + c.total + ' подписей</div></div></div>' +
-            (w ? '<div class="waiting">' + (w === "отказ стороны" ? '<span class="pill p-bad"><i></i>отказ</span>' : esc(w)) + '</div>' : "") +
-            '<div style="margin-top:9px">' + dueTag(d.due, docClosed(d), true) + '</div></div>';
-        }).join("") +
-        (items.length ? "" : '<p class="dim" style="font-size:13px;margin:2px 4px 6px">Пусто</p>') + '</div>';
-    }).join("") + '</div>';
-    return head + chips + pipe;
+    var stChips = '<div class="filters" style="margin-top:-8px"><span class="dim" style="font-size:12.5px">Стадия:</span>' +
+      [["all","Любая"]].concat(Object.keys(DSTATUS).map(function(k){ return [k, DSTATUS[k].label]; })).map(function(f){
+        var n = f[0] === "all" ? state.docs.length : state.docs.filter(function(d){ return d.st === f[0]; }).length;
+        return '<button class="fchip" type="button" data-dstatus="' + f[0] + '" aria-pressed="' + (docStatus === f[0]) + '">' +
+          f[1] + '<span class="b">' + n + '</span></button>'; }).join("") +
+      '<span style="flex:1"></span><span class="dim" style="font-size:12.5px">Найдено: ' + rows.length +
+      ' из ' + state.docs.length + '</span></div>';
+
+    if(!rows.length) return head + kindChips + stChips + '<div class="listbox"><div class="empty">Под фильтр ничего не подошло.</div></div>';
+
+    var table = '<div class="reg docs"><div class="reghead">' +
+      '<span>Документ</span><span>Вид</span><span>Контрагент</span><span>Подписи</span>' +
+      '<span>Ответственный</span><span>Срок</span><span>Стадия</span></div>' +
+      rows.map(function(d){
+        var c = sigCount(d), w = docWaiting(d);
+        return '<div class="regrow" data-open="doc:' + d.id + '" tabindex="0" role="button">' +
+          '<span class="subj">' + esc(d.name) + (w ? '<br><span class="dim" style="font-size:12px">' + esc(w) + '</span>' : "") + '</span>' +
+          '<span class="cut">' + esc(DKIND[d.kind]) + '</span>' +
+          '<span class="cut">' + esc(d.org) + '</span>' +
+          '<span style="display:flex;align-items:center;gap:8px"><span class="sigdots">' + PARTIES.map(function(p){
+            var val = d[p[0]];
+            return '<i class="' + (val === "SIGNED" ? "ok" : val === "DECLINED" ? "no" : "") + '" title="' + esc(p[1] + ": " + SIG[val]) + '"></i>';
+          }).join("") + '</span><span class="mono dim" style="font-size:12px">' + c.done + '/' + c.total + '</span></span>' +
+          '<span class="cut">' + esc(d.owner) + '</span>' +
+          '<span>' + dueTag(d.due, docClosed(d)) + '</span>' +
+          '<span>' + pill(DSTATUS[d.st].label, DSTATUS[d.st].tone) + '</span></div>';
+      }).join("") + '</div>';
+    return head + kindChips + stChips + table;
   }
   function ring(done, total){
     var r = 12, c = 2 * Math.PI * r, pct = total ? done / total : 0;
@@ -1012,26 +1153,38 @@
   /* ---------- календарь ---------- */
   var MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
   var DOW = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
-  var EVK = {task:{label:"Задача", tok:"c1"}, letter:{label:"Письмо", tok:"c3"}, doc:{label:"Документ", tok:"c2"}};
-  var calShow = {task:true, letter:true, doc:true};
+  var EVK = {
+    task:{label:"Задачи", tok:"c1"}, letter:{label:"Письма", tok:"c3"},
+    doc:{label:"Документы", tok:"c2"}, meet:{label:"Встречи", tok:"c4"}
+  };
+  var calShow = {task:true, letter:true, doc:true, meet:true};
+  function iso(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+  function dayDiff(a, b){ return Math.round((b - a)/86400000); }
   function events(){
     var out = [];
     if(calShow.task) state.tasks.forEach(function(t){
-      if(t.due) out.push({d:t.due, kind:"task", title:t.title, open:"task:" + t.id, over:!taskDone(t) && days(t.due) < 0});
+      if(!t.due) return;
+      out.push({kind:"task", from:t.created && t.created < t.due ? t.created : t.due, to:t.due,
+                title:t.title, open:"task:" + t.id, over:!taskDone(t) && days(t.due) < 0});
     });
     if(calShow.letter) state.letters.forEach(function(l){
-      if(l.due) out.push({d:l.due, kind:"letter", title:l.subject, open:"letter:" + l.id, over:!letterDone(l) && days(l.due) < 0});
+      if(!l.due) return;
+      out.push({kind:"letter", from:l.date < l.due ? l.date : l.due, to:l.due,
+                title:l.subject, open:"letter:" + l.id, over:!letterDone(l) && days(l.due) < 0});
     });
     if(calShow.doc) state.docs.forEach(function(d){
-      if(d.due) out.push({d:d.due, kind:"doc", title:d.name, open:"doc:" + d.id, over:!docClosed(d) && days(d.due) < 0});
+      if(!d.due) return;
+      out.push({kind:"doc", from:d.due, to:d.due, title:d.name, open:"doc:" + d.id, over:!docClosed(d) && days(d.due) < 0});
+    });
+    if(calShow.meet) state.meetings.forEach(function(v){
+      out.push({kind:"meet", from:v.date, to:v.date, title:v.time + " " + v.title, open:"meet:" + v.id, over:false});
     });
     return out;
   }
   function screenCalendar(){
-    var evs = events(), byDay = {};
-    evs.forEach(function(e){ (byDay[e.d] = byDay[e.d] || []).push(e); });
+    var evs = events();
     var head = '<div class="phead"><div><h1>Календарь</h1>' +
-      '<p>Один календарь на задачи, письма и документы: срок есть у всех трёх, и разносить их по разным экранам незачем.</p></div>' +
+      '<p>Задача показана полосой от постановки до срока, письмо — от поступления до срока ответа, документы и встречи — днём события. Полоса переходит на следующую неделю, если задача длиннее.</p></div>' +
       '<div style="display:flex;gap:8px;align-items:center">' +
       '<button class="btn sm" type="button" data-cal="-1" aria-label="Предыдущий месяц">←</button>' +
       '<b style="font-family:Manrope;min-width:150px;text-align:center">' + MONTHS[calM] + " " + calY + '</b>' +
@@ -1044,23 +1197,170 @@
         EVK[k].label + '<span class="b">' + n + '</span></button>'; }).join("") + '</div>';
 
     var first = new Date(calY, calM, 1), shift = (first.getDay() + 6) % 7;
-    var start = new Date(calY, calM, 1 - shift), cells = "";
-    for(var i = 0; i < 35; i++){
-      var day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      var iso = day.getFullYear() + "-" + String(day.getMonth()+1).padStart(2,"0") + "-" + String(day.getDate()).padStart(2,"0");
-      var list = byDay[iso] || [];
-      cells += '<div class="cday' + (day.getMonth() !== calM ? " out" : "") + (day.getTime() === TODAY.getTime() ? " today" : "") + '">' +
-        '<span class="d">' + day.getDate() + '</span>' +
-        list.slice(0,3).map(function(e){
-          return '<span class="ev' + (e.over ? " over" : "") + '" data-open="' + e.open + '" tabindex="0" role="button" title="' +
-            esc(EVK[e.kind].label + ": " + e.title) + '"><i style="background:var(--' + EVK[e.kind].tok + ')"></i>' +
-            '<span>' + esc(e.title) + '</span></span>';
-        }).join("") +
-        (list.length > 3 ? '<span class="dim" style="font-size:11px;padding-left:4px">ещё ' + (list.length - 3) + '</span>' : "") +
-        '</div>';
+    var start = new Date(calY, calM, 1 - shift), weeks = "";
+    for(var w = 0; w < 6; w++){
+      var wStart = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+      var wEnd = new Date(wStart.getFullYear(), wStart.getMonth(), wStart.getDate() + 6);
+      if(w === 5 && wStart.getMonth() !== calM) break;
+      var cells = "";
+      for(var i = 0; i < 7; i++){
+        var day = new Date(wStart.getFullYear(), wStart.getMonth(), wStart.getDate() + i);
+        cells += '<div class="' + (day.getMonth() !== calM ? "out" : "") +
+          (day.getTime() === TODAY.getTime() ? " today" : "") + '"><span>' + day.getDate() + '</span></div>';
+      }
+      var items = evs.filter(function(e){
+        return parse(e.to) >= wStart && parse(e.from) <= wEnd;
+      }).sort(function(a, b){
+        var d = parse(a.from) - parse(b.from);
+        return d || (parse(b.to) - parse(b.from)) - (parse(a.to) - parse(a.from));
+      });
+      var lanes = [], bars = "", hidden = 0, MAXL = 5;
+      items.forEach(function(e){
+        var a = Math.max(0, dayDiff(wStart, parse(e.from)));
+        var b = Math.min(6, dayDiff(wStart, parse(e.to)));
+        if(b < a) b = a;
+        var lane = 0;
+        while(lanes[lane] && lanes[lane].some(function(r){ return !(b < r[0] || a > r[1]); })) lane++;
+        if(lane >= MAXL){ hidden++; return; }
+        lanes[lane] = lanes[lane] || [];
+        lanes[lane].push([a, b]);
+        bars += '<span class="cbar k-' + e.kind + (e.over ? " over" : "") + '" data-open="' + e.open + '" tabindex="0" role="button" ' +
+          'style="grid-column:' + (a + 1) + ' / ' + (b + 2) + ';grid-row:' + (lane + 1) + '" ' +
+          'title="' + esc(EVK[e.kind].label.slice(0, -1) + ": " + e.title) + '"><i></i>' + esc(e.title) + '</span>';
+      });
+      if(hidden) bars += '<span class="cbar" style="grid-column:1 / 8;grid-row:' + (MAXL + 1) +
+        ';background:var(--surface-2);color:var(--ink-3)">ещё ' + hidden + ' на этой неделе</span>';
+      weeks += '<div class="cweek"><div class="cdays">' + cells + '</div>' +
+        '<div class="cbars">' + (bars || '<span></span>') + '</div></div>';
     }
     return head + chips + '<div class="cal"><div class="calhead">' + DOW.map(function(d){ return "<div>" + d + "</div>"; }).join("") +
-      '</div><div class="calbody">' + cells + '</div></div>';
+      '</div><div class="calweeks">' + weeks + '</div></div>';
+  }
+
+  /* ---------- встречи ---------- */
+  function meetSort(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }
+  function screenMeetings(){
+    var soon = state.meetings.filter(function(m){ return m.date >= "2026-09-22"; }).sort(meetSort);
+    var past = state.meetings.filter(function(m){ return m.date < "2026-09-22"; }).sort(meetSort).reverse();
+    function row(m){
+      var hasMat = (m.decisions ? 1 : 0) + (m.files || []).length;
+      return '<div class="li" data-open="meet:' + m.id + '"><div class="main">' +
+        '<span class="t">' + esc(m.title) + '</span>' +
+        '<span class="m"><span class="mono">' + fmtFull(m.date) + ' ' + esc(m.time) + '</span> · ' + esc(m.place) +
+        ' · ' + esc(m.people.join(", ")) + '</span></div>' +
+        '<div class="rt">' + pill(m.kind, "p-neutral") +
+        (m.decisions ? pill("есть решения", "p-good") : pill("материалы не внесены", "p-warn")) +
+        ((m.files || []).length ? '<span class="dim" style="font-size:12.5px">' + m.files.length + ' файл</span>' : "") +
+        '</div></div>';
+    }
+    return '<div class="phead"><div><h1>Встречи</h1>' +
+      '<p>Повестка, участники и решения хранятся вместе со встречей, а не в переписке. Приглашения и протоколы ходят через почту.</p></div>' +
+      '<div style="display:flex;gap:8px">' +
+      '<button class="btn" type="button" data-act="Нужен коннектор почты: подключим — встречи будут подтягиваться из приглашений">Загрузить из почты</button>' +
+      '<button class="btn primary" type="button" data-new="meet">Новая встреча</button></div></div>' +
+      '<div class="grid g2" style="align-items:start">' +
+      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Ближайшие</h3>' +
+      '<div class="sub">' + plural(soon.length, ["встреча впереди","встречи впереди","встреч впереди"]) + '</div></div>' +
+      (soon.length ? '<div class="list">' + soon.map(row).join("") + '</div>'
+                   : '<p class="dim" style="padding:0 18px 18px;font-size:14px">Ничего не запланировано.</p>') + '</div>' +
+      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Прошедшие</h3>' +
+      '<div class="sub">Материалы и решения</div></div>' +
+      '<div class="list">' + past.map(row).join("") + '</div></div></div>' +
+      '<div class="card" style="margin-top:14px"><h3>Почта</h3>' +
+      '<div class="sub">Что появится после подключения почтового ящика проекта</div>' +
+      '<ul style="margin:0;padding-left:19px;color:var(--ink-2);font-size:14.5px;line-height:1.6">' +
+      '<li>Приглашения из календаря почты создают встречу с участниками и временем.</li>' +
+      '<li>Протокол рассылается участникам одной кнопкой, отправка пишется в историю встречи.</li>' +
+      '<li>Письма по теме встречи подтягиваются в её материалы ссылкой на реестр ЭДО.</li></ul></div>';
+  }
+  function openMeeting(id){
+    var m = byId("meetings", +id);
+    if(!m) return;
+    openSheet('<div class="sheet-top"><div><div class="dim" style="font-size:12.5px">' + esc(m.kind) + '</div>' +
+      '<h2 style="margin-top:4px">' + esc(m.title) + '</h2></div>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<div class="props">' +
+      prop("Дата и время", '<span class="mono">' + fmtFull(m.date) + ' ' + esc(m.time) + '</span>') +
+      prop("Место", esc(m.place)) +
+      prop("Участники", esc(m.people.join(", "))) +
+      prop("Почта", m.mail ? esc(m.mail) : '<span class="dim">не отправлялось</span>') +
+      '</div>' +
+      '<div class="blk"><h4>Повестка</h4><p style="white-space:pre-line">' + esc(m.agenda || "не заполнена") + '</p></div>' +
+      '<div class="blk"><h4>Решения</h4><p style="white-space:pre-line">' + esc(m.decisions || "не внесены") + '</p></div>' +
+      '<div class="blk"><h4>Материалы</h4>' +
+      ((m.files || []).length ? '<div class="files">' + m.files.map(function(f){
+        return '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">' + esc(f.name) + '</span>' +
+          '<span class="sz">' + esc(f.size) + '</span></div>'; }).join("") + '</div>'
+        : '<p class="dim" style="font-size:13.5px;margin:0">Файлов нет</p>') + '</div>' +
+      '<div class="facts"><button class="btn danger" type="button" data-del="meet:' + m.id + '">Удалить</button>' +
+      '<button class="btn" type="button" data-act="Протокол отправлен участникам по почте">Разослать протокол</button>' +
+      '<button class="btn" type="button" data-new="task">Задача по решению</button>' +
+      '<button class="btn primary" type="button" data-emeet="' + m.id + '">Редактировать</button></div>',
+      function(sh){
+        sh.querySelector("[data-del]").addEventListener("click", function(){ removeItem("meet", m.id); closeSheet(); });
+        sh.querySelector("[data-emeet]").addEventListener("click", function(){ openMeetingForm(m.id); });
+      });
+  }
+  function openMeetingForm(id){
+    var m = id ? byId("meetings", +id) : null;
+    var v = m || {title:"", date:"2026-09-22", time:"11:00", place:"ВКС", kind:"Рабочая встреча",
+                  people:[ME], agenda:"", decisions:"", files:[], mail:""};
+    var ext = v.people.filter(function(p){ return !state.members.some(function(x){ return x.name === p; }); });
+    openSheet('<div class="sheet-top"><h2>' + (m ? "Правка встречи" : "Новая встреча") + '</h2>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="mf">' +
+      '<div class="field"><label for="m1">Тема встречи</label><input id="m1" name="title" value="' + esc(v.title) + '" placeholder="О чём собираемся">' +
+      '<span class="err" id="me1" hidden>Тема обязательна</span></div>' +
+      '<div class="two"><div class="field"><label for="m2">Дата</label><input id="m2" name="date" type="date" value="' + esc(v.date) + '"></div>' +
+      '<div class="field"><label for="m3">Время</label><input id="m3" name="time" value="' + esc(v.time) + '" placeholder="11:00"></div></div>' +
+      '<div class="two"><div class="field"><label for="m4">Место</label><input id="m4" name="place" value="' + esc(v.place) + '" placeholder="ВКС или кабинет"></div>' +
+      '<div class="field"><label for="m5">Вид</label><select id="m5" name="kind">' +
+      ["Рабочая встреча","Планёрка","Согласование","Демонстрация","Совещание у руководства"].map(function(k){
+        return '<option' + (v.kind === k ? " selected" : "") + '>' + k + '</option>'; }).join("") +
+      '</select></div></div>' +
+      '<div class="field"><label>Участники от нас</label>' +
+      state.members.map(function(x, i){
+        return '<label class="chk"><input type="checkbox" data-mp="' + i + '" value="' + esc(x.name) + '"' +
+          (v.people.indexOf(x.name) !== -1 ? " checked" : "") + '><span><b>' + esc(x.name) + '</b><em>' + esc(x.role) + '</em></span></label>';
+      }).join("") + '</div>' +
+      '<div class="field"><label for="m6">Участники со стороны контрагента</label>' +
+      '<input id="m6" name="ext" value="' + esc(ext.join(", ")) + '" placeholder="ФИО через запятую, из справочника представителей"></div>' +
+      '<div class="field"><label for="m7">Повестка</label><textarea id="m7" name="agenda" rows="3" placeholder="Пункты обсуждения">' + esc(v.agenda) + '</textarea></div>' +
+      '<div class="field"><label for="m8">Решения</label><textarea id="m8" name="decisions" rows="3" placeholder="Что решили и кто отвечает">' + esc(v.decisions) + '</textarea></div>' +
+      '<div class="field"><label>Материалы</label><div class="drop" id="mdrop">Перетащите файл или нажмите, чтобы приложить</div>' +
+      '<div class="files" id="mfiles">' + (v.files || []).map(function(f){
+        return '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">' + esc(f.name) + '</span>' +
+          '<span class="sz">' + esc(f.size) + '</span></div>'; }).join("") + '</div></div>' +
+      '<p class="hint">Приглашение и протокол уходят по почте, когда подключён ящик проекта.</p>' +
+      '<div class="facts">' + (m ? '<button class="btn danger" type="button" data-del="meet:' + m.id + '">Удалить</button>' : "") +
+      '<button class="btn" type="button" data-close>Отмена</button>' +
+      '<button class="btn primary" type="submit">' + (m ? "Сохранить" : "Создать") + '</button></div></form>',
+      function(sh){
+        sh.querySelector("#mdrop").addEventListener("click", function(){
+          sh.querySelector("#mfiles").insertAdjacentHTML("beforeend",
+            '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">Материалы встречи.pdf</span><span class="sz">210 КБ</span></div>');
+        });
+        sh.querySelector("#mf").addEventListener("submit", function(e){
+          e.preventDefault();
+          var f = e.target, title = f.title.value.trim();
+          sh.querySelector("#me1").hidden = !!title;
+          if(!title) return;
+          var people = Array.prototype.filter.call(sh.querySelectorAll("[data-mp]"), function(c){ return c.checked; })
+            .map(function(c){ return c.value; })
+            .concat(f.ext.value.split(",").map(function(x){ return x.trim(); }).filter(Boolean));
+          var data = {title:title, date:f.date.value, time:f.time.value.trim(), place:f.place.value.trim(),
+                      kind:f.kind.value, people:people, agenda:f.agenda.value, decisions:f.decisions.value};
+          if(m){ Object.keys(data).forEach(function(k){ m[k] = data[k]; }); toast("Встреча сохранена"); }
+          else {
+            data.id = ++uid; data.files = []; data.mail = "";
+            state.meetings.push(data);
+            toast("Встреча создана", function(){ state.meetings = state.meetings.filter(function(x){ return x.id !== data.id; }); });
+          }
+          closeSheet(); render();
+        });
+        var del = sh.querySelector("[data-del]");
+        if(del) del.addEventListener("click", function(){ removeItem("meet", m.id); closeSheet(); });
+      });
   }
 
   /* ---------- аналитика ---------- */
@@ -1153,10 +1453,10 @@
         {v:by[k].all - by[k].open, name:"закрыто", color:"var(--seq2)"}
       ]};
     });
-    return '<figure><h3>С кем переписка не закрыта</h3><div class="sub">Письма по организациям</div>' +
+    return '<figure><h3>С кем переписка не закрыта</h3><div class="sub">Письма по контрагентам</div>' +
       '<div class="legend"><span><i style="background:var(--c1)"></i>В работе</span><span><i style="background:var(--seq2)"></i>Закрыто</span></div>' +
-      hbar(rows, {padL:172, alt:"Письма по организациям"}) +
-      '<figcaption>Шесть организаций с самой активной перепиской.</figcaption></figure>';
+      hbar(rows, {padL:172, alt:"Письма по контрагентам"}) +
+      '<figcaption>Шесть контрагентов с самой активной перепиской.</figcaption></figure>';
   }
   function chartSigning(){
     var total = state.docs.length;
@@ -1164,7 +1464,7 @@
       var n = state.docs.filter(function(d){ return d.mile[i]; }).length;
       return {label:l.length > 22 ? l.slice(0,21) + "…" : l, total:n, parts:[{v:n, name:"дошло", color:"var(--c2)"}]};
     });
-    return '<figure><h3>Где стоит подписание</h3><div class="sub">Сколько организаций дошло до каждой стадии</div>' +
+    return '<figure><h3>Где стоит подписание</h3><div class="sub">Сколько контрагентов дошло до каждой стадии</div>' +
       hbar(rows, {padL:150, alt:"Воронка подписания"}) +
       '<figcaption>Всего документов в работе: ' + total + '.</figcaption></figure>';
   }
@@ -1221,7 +1521,7 @@
     texts:{
       release:"Релиз 2.7 — 30.09.2026. Состав: анализ территории, обновлённые геослои, интеграция газового модуля в dev-среде.",
       decisions:"По отказу АО «Водоканал» — согласовать формулировки о составе передаваемых данных и направить повторно до 30.09. По просроченным задачам — перенос сроков обсуждается на планёрке 23.09.",
-      plan:"Получить подписанные экземпляры регламентов от двух организаций.\nЗакрыть допсоглашение к NDA с АО «Газсеть».\nВыпустить релиз 2.7 и открыть тестовую среду."
+      plan:"Получить подписанные экземпляры регламентов от двух контрагентов.\nЗакрыть допсоглашение к NDA с АО «Газсеть».\nВыпустить релиз 2.7 и открыть тестовую среду."
     }
   };
   function inPeriod(d){ return d && d >= reportCfg.from && d <= reportCfg.to; }
@@ -1261,7 +1561,8 @@
   function screenReport(){
     var shown = REPORT_BLOCKS.filter(function(b){ return reportCfg.blocks[b.k]; });
     return '<div class="phead"><div><h1>Отчёт руководству</h1>' +
-      '<p>Отчёт собирается по настройке: слева черновик, справа — период, состав блоков и кто его увидит. Пункты с пометкой «собрано системой» считаются из данных, остальные заполняются прямо в форме.</p></div>' +
+      '<p>Отчёт собирается по настройке: слева черновик, справа — период, состав блоков и кто его увидит. Пункты с пометкой «собрано системой» считаются из данных, остальные заполняются прямо в форме.</p>' +
+      '<p style="color:var(--copper)">Экран доделываем отдельно: состав разделов и выгрузки в бэклоге.</p></div>' +
       '<div style="display:flex;gap:8px"><button class="btn" type="button" data-act="Выгружено в .docx и .xlsx">Выгрузить</button>' +
       '<button class="btn primary" type="button" data-act="Отчёт отправлен руководителю, версия заморожена">Отправить</button></div></div>' +
 
@@ -1311,41 +1612,131 @@
       '</div></div></div></div>';
   }
   function screenRefs(){
-    return '<div class="phead"><div><h1>Справочники и доступ</h1>' +
-      '<p>Организации нужны как адресат письма и сторона подписания, пользователями системы они не будут. Отдельного раздела с их карточками нет: список пополняется сам из формы письма.</p></div>' +
-      '<button class="btn" type="button" data-act="Форма нового участника">Участник</button></div>' +
-      '<div class="grid g2">' +
-      '<div style="display:grid;gap:14px;align-content:start">' +
-      '<div class="card" style="padding:0"><div style="padding:18px 18px 4px"><h3>Участники</h3>' +
-      '<div class="sub">Пилот на трёх людях, проект ведут все трое</div></div><div class="list">' +
-      state.members.map(function(m){
+    var card = function(title, sub, body, act){
+      return '<div class="card" style="padding:0"><div style="padding:18px 18px 10px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
+        '<div><h3>' + title + '</h3><div class="sub" style="margin:0">' + sub + '</div></div>' + (act || "") + '</div>' + body + '</div>';
+    };
+    var members = card("Участники проекта", "Роли и нагрузка",
+      '<div class="list">' + state.members.map(function(m){
         return '<div class="li"><div class="main"><span class="t">' + who(m.name) + '</span>' +
           '<span class="m">' + esc(m.role) + '</span></div>' +
           '<div class="rt">' + pill(m.acc === "admin" ? "Администратор" : "Участник", m.acc === "admin" ? "p-brand" : "p-neutral") +
           '<span class="dim" style="font-size:13px">' +
-          state.tasks.filter(function(t){ return t.who === m.name && !taskDone(t); }).length + ' задач · ' +
-          state.letters.filter(function(l){ return l.owner === m.name; }).length + ' писем</span></div></div>';
-      }).join("") + '</div></div>' +
-      '<div class="card"><h3>Организации в переписке</h3>' +
-      '<div class="sub">Список из писем и документов, число — сколько записей на организацию</div>' +
-      '<div class="filters" style="margin:0">' + state.orgs.map(function(o){
+          state.tasks.filter(function(t){ return t.who === m.name && !taskDone(t); }).length + ' задач</span></div></div>';
+      }).join("") + '</div>',
+      '<button class="btn sm" type="button" data-act="Форма нового участника">Добавить</button>');
+
+    var tracks = card("Треки работ", "Свои треки можно заводить: они появятся в задачах и фильтрах",
+      '<div class="list">' + state.tracks.map(function(t){
+        return '<div class="li"><div class="main"><span class="t">' + esc(t.label) + '</span>' +
+          '<span class="m">код ' + esc(t.k) + (t.own ? ' · заведён вручную' : ' · из Excel') + '</span></div>' +
+          '<div class="rt"><span class="dim" style="font-size:13px">' +
+          state.tasks.filter(function(x){ return x.track === t.k; }).length + ' задач</span>' +
+          (t.own ? '<span class="rowact"><button class="btn sm danger" type="button" data-track-del="' + esc(t.k) + '">Удалить</button></span>' : "") +
+          '</div></div>';
+      }).join("") + '</div>',
+      '<button class="btn sm primary" type="button" data-new="track">Новый трек</button>');
+
+    var orgs = card("Контрагенты", "Адресаты писем и стороны подписания; список пополняется из формы письма",
+      '<div style="padding:0 18px 18px"><div class="filters" style="margin:0">' + state.orgs.map(function(o){
         var n = state.letters.filter(function(l){ return l.org === o.name; }).length +
                 state.docs.filter(function(d){ return d.org === o.name; }).length;
+        var rr = state.reps.filter(function(r){ return r.org === o.name; }).length;
         return '<span class="fchip" style="cursor:default">' + esc(o.name) +
-          (o.internal ? ' <span class="b">наша сторона</span>' : '<span class="b">' + n + '</span>') + '</span>';
-      }).join("") + '</div>' +
-      '<p class="hint" style="margin:14px 0 0">Разные написания одной организации сводятся при импорте: в файле их 14, организаций — 9.</p></div></div>' +
+          (o.internal ? ' <span class="b">наша сторона</span>' : '<span class="b">' + n + (rr ? " · " + rr + " предст." : "") + '</span>') + '</span>';
+      }).join("") + '</div></div>');
 
-      '<div class="card"><h3>Публичное отображение</h3>' +
-      '<div class="sub">Одно правило на задачи, письма и документы</div>' +
-      '<p style="margin:0 0 12px;font-size:14px;color:var(--ink-2)">Видимость выбирается в форме заведения артефакта — это делает сотрудник, который его заводит. После сохранения её меняет только администратор, у остальных поле заблокировано с подсказкой, к кому обратиться.</p>' +
-      Object.keys(VIS).map(function(k){
-        var n = state.tasks.filter(function(t){ return (t.vis || "PUBLIC") === k; }).length +
-                state.letters.filter(function(l){ return (l.vis || "PUBLIC") === k; }).length +
-                state.docs.filter(function(d){ return (d.vis || "PUBLIC") === k; }).length;
-        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--hair)">' +
-          pill(VIS[k].label, VIS[k].tone) + '<span class="dim mono" style="font-size:12.5px">' + n + '</span></div>';
+    var info = card("Справочная информация по проекту", "Всё, что нужно новому человеку на проекте",
+      '<div class="list">' + state.refdocs.map(function(d){
+        return '<div class="li" data-act="Открыт документ: ' + esc(d.title) + '"><div class="main">' +
+          '<span class="t">' + esc(d.title) + '</span><span class="m">' + esc(d.note) + ' · ведёт ' + esc(d.who) + '</span></div>' +
+          '<div class="rt">' + pill(d.kind, "p-neutral") + '</div></div>';
+      }).join("") + '</div>',
+      '<button class="btn sm" type="button" data-act="Форма нового справочного документа">Добавить</button>');
+
+    var reps = '<div class="card" style="padding:0;margin-bottom:14px">' +
+      '<div style="padding:18px 18px 12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start">' +
+      '<div><h3>Ответственные представители контрагентов</h3>' +
+      '<div class="sub" style="margin:0">' + state.reps.length + ' контактов, к которым обращаются по письмам и подписанию</div></div>' +
+      '<button class="btn sm primary" type="button" data-new="rep">Добавить представителя</button></div>' +
+      '<div class="reg reps" style="border:0;border-radius:0"><div class="reghead">' +
+      '<span>ФИО</span><span>Контрагент</span><span>Должность</span><span>Телефон</span><span>Почта</span><span>Закреплено</span></div>' +
+      state.reps.map(function(r){
+        return '<div class="regrow" data-erep="' + r.id + '" tabindex="0" role="button">' +
+          '<span class="subj">' + esc(r.name) + '</span>' +
+          '<span class="cut">' + esc(r.org) + '</span>' +
+          '<span class="cut">' + esc(r.role) + '</span>' +
+          '<span class="mono cut" style="font-size:12.5px">' + esc(r.phone) + '</span>' +
+          '<span class="cut">' + esc(r.mail) + '</span>' +
+          '<span class="cut">' + esc(r.note || "—") + '</span></div>';
       }).join("") + '</div></div>';
+
+    return '<div class="phead"><div><h1>Справочники</h1>' +
+      '<p>Вся справочная информация по проекту и контрагентам: представители, документы проекта, участники, треки и список контрагентов.</p></div></div>' +
+      reps +
+      '<div class="grid g2f" style="align-items:start;margin-bottom:14px">' + info + orgs + '</div>' +
+      '<div class="grid g2f" style="align-items:start">' + members + tracks + '</div>';
+  }
+  function openRepForm(id){
+    var r = id ? byId("reps", +id) : null;
+    var v = r || {name:"", org:state.orgs[1].name, role:"", phone:"", mail:"", note:""};
+    openSheet('<div class="sheet-top"><h2>' + (r ? "Правка представителя" : "Представитель контрагента") + '</h2>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="rf">' +
+      '<div class="field"><label for="r1">ФИО</label><input id="r1" name="name" value="' + esc(v.name) + '" placeholder="Фамилия И. О.">' +
+      '<span class="err" id="re1" hidden>ФИО обязательно</span></div>' +
+      '<div class="two"><div class="field"><label for="r2">Контрагент</label><select id="r2" name="org">' +
+      state.orgs.map(function(o){ return '<option' + (v.org === o.name ? " selected" : "") + '>' + esc(o.name) + '</option>'; }).join("") +
+      '</select></div><div class="field"><label for="r3">Должность</label><input id="r3" name="role" value="' + esc(v.role) + '"></div></div>' +
+      '<div class="two"><div class="field"><label for="r4">Телефон</label><input id="r4" name="phone" class="mono" value="' + esc(v.phone) + '"></div>' +
+      '<div class="field"><label for="r5">Почта</label><input id="r5" name="mail" value="' + esc(v.mail) + '"></div></div>' +
+      '<div class="field"><label for="r6">Примечание</label><input id="r6" name="note" value="' + esc(v.note) + '" placeholder="Что за ним закреплено"></div>' +
+      '<div class="facts">' + (r ? '<button class="btn danger" type="button" data-del="rep:' + r.id + '">Удалить</button>' : "") +
+      '<button class="btn" type="button" data-close>Отмена</button>' +
+      '<button class="btn primary" type="submit">' + (r ? "Сохранить" : "Добавить") + '</button></div></form>',
+      function(sh){
+        sh.querySelector("#rf").addEventListener("submit", function(e){
+          e.preventDefault();
+          var f = e.target, name = f.name.value.trim();
+          sh.querySelector("#re1").hidden = !!name;
+          if(!name) return;
+          var data = {name:name, org:f.org.value, role:f.role.value.trim(), phone:f.phone.value.trim(),
+                      mail:f.mail.value.trim(), note:f.note.value.trim()};
+          if(r){ Object.keys(data).forEach(function(k){ r[k] = data[k]; }); toast("Представитель сохранён"); }
+          else {
+            data.id = ++uid; state.reps.push(data);
+            toast("Представитель добавлен", function(){ state.reps = state.reps.filter(function(x){ return x.id !== data.id; }); });
+          }
+          closeSheet(); render();
+        });
+        var del = sh.querySelector("[data-del]");
+        if(del) del.addEventListener("click", function(){ removeItem("rep", r.id); closeSheet(); });
+      });
+  }
+  function openTrackForm(){
+    openSheet('<div class="sheet-top"><h2>Новый трек</h2>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<form id="tkf">' +
+      '<div class="field"><label for="k1">Название трека</label><input id="k1" name="label" placeholder="Например, Аналитика данных">' +
+      '<span class="err" id="ke1" hidden>Название обязательно</span></div>' +
+      '<p class="hint">Трек появится в задачах, фильтрах и аналитике. Удалить можно, пока в нём нет задач.</p>' +
+      '<div class="facts"><button class="btn" type="button" data-close>Отмена</button>' +
+      '<button class="btn primary" type="submit">Создать трек</button></div></form>',
+      function(sh){
+        sh.querySelector("#tkf").addEventListener("submit", function(e){
+          e.preventDefault();
+          var label = e.target.label.value.trim();
+          sh.querySelector("#ke1").hidden = !!label;
+          if(!label) return;
+          var k = "T" + (++uid);
+          state.tracks.push({k:k, label:label, own:true});
+          syncTracks();
+          toast("Трек «" + label + "» создан", function(){
+            state.tracks = state.tracks.filter(function(x){ return x.k !== k; }); syncTracks();
+          });
+          closeSheet(); render();
+        });
+      });
   }
 
   /* ---------- импорт ---------- */
@@ -1367,7 +1758,7 @@
       ["Тема","Согласование проекта ТЗ","Тема","ok"],
       ["Ссылка на письмо","гиперссылка на ЭДО","Ссылка на ЭДО","ok"],
       ["Тип","Входящее · Исходящее","Направление","ok"],
-      ["Контрагент","14 написаний, 9 организаций","Организация (справочник)","ask"],
+      ["Контрагент","14 написаний, 9 организаций","Контрагент (справочник)","ok"],
       ["Срок исполнения","заполнен у 17 из 50","Срок","ok"],
       ["Просроченные","формула","Не импортировать, считаем сами","skip"],
       ["Статус","Подписано · Дан ответ","Статус письма","ok"],
@@ -1402,7 +1793,7 @@
          '<li>4 строки — несколько ответственных через запятую.</li></ul></div>',
       4: '<div class="grid g3" style="margin-bottom:14px">' +
          kpi(93, "Записи созданы", "", "good") + kpi(11, "Участников", "", "") +
-         kpi(9, "Организаций", "", "") + kpi(3, "Колонки в доп. поля", "", "warn") + '</div>' +
+         kpi(9, "Контрагентов", "", "") + kpi(3, "Колонки в доп. поля", "", "warn") + '</div>' +
          '<div class="card"><h3>Отчёт об импорте</h3>' +
          '<ul style="margin:0;padding-left:19px;color:var(--ink-2);font-size:14.5px;line-height:1.6">' +
          '<li>Задачи разложены по трекам: внутренние 20, производственные 3, внешние 2.</li>' +
@@ -1460,10 +1851,10 @@
       prop("Видимость", pill(VIS[t.vis || "PUBLIC"].label, VIS[t.vis || "PUBLIC"].tone)) +
       prop("Автор", esc(t.au || ME)) +
       '</div>' +
-      (t.res ? '<div class="blk"><h4>Результат</h4><p>' + esc(t.res) + '</p></div>' : "") +
+      artBlock(t) + fileBlock(t) +
       '<div class="blk"><h4>Связи</h4><p>Письмо-основание: исходящее от 09.09.2026<br>Документ: регламент информационного взаимодействия</p></div>' +
       '<div class="blk"><h4>История</h4><div class="thread">' +
-      [["2026-09-18","Срок перенесён с 11.09 на " + (t.due ? fmtFull(t.due) : "—"),"Гончарова"],
+      [["2026-09-18","Срок перенесён с 11.09 на " + (t.due ? fmtFull(t.due) : "—"),"Шаганова"],
        ["2026-09-12","Статус изменён на «" + TSTATUS[t.st].label + "»","Проскуряков"],
        ["2026-09-01","Создана импортом из Excel, лист «Внутренние задачи»","система"]].map(function(ev, i){
         return '<div class="tev' + (i ? "" : " now") + '"><span class="line"><i></i><span></span></span>' +
@@ -1477,18 +1868,51 @@
       });
   }
 
+  function artBlock(t){
+    var a = t.arts || [];
+    if(!a.length) return '<div class="blk"><h4>Артефакты</h4><p class="dim" style="font-size:13.5px">Не добавлены</p></div>';
+    return '<div class="blk"><h4>Артефакты</h4>' + a.map(function(x){
+      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:13.5px">' +
+        pill(ARTS[x.t] || "Своё", x.t === "JIRA" ? "p-brand" : x.t === "EDO" ? "p-copper" : "p-neutral") +
+        '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.v) + '</span></div>';
+    }).join("") + '</div>';
+  }
+  function fileBlock(t){
+    var f = t.files || [];
+    return '<div class="blk"><h4>Вложения</h4>' +
+      (f.length ? '<div class="files">' + f.map(function(x){
+        return '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">' + esc(x.name) + '</span>' +
+          '<span class="sz">' + esc(x.size) + '</span></div>'; }).join("") + '</div>'
+              : '<p class="dim" style="font-size:13.5px;margin:0 0 10px">Документов не приложено</p>') +
+      '<button class="btn sm" type="button" data-act="Файл приложен к задаче">Приложить документ</button></div>';
+  }
+
   function openTaskForm(id){
     var t = id ? byId("tasks", id) : null;
-    var v = t || {track:"INTERNAL", st:"TODO", prio:"MEDIUM", who:ME, title:"", due:"", jira:"", res:"", p:0};
+    var v = t || {track:state.tracks[0].k, st:"NEW", prio:"MEDIUM", who:ME, title:"", due:"", jira:"", p:0,
+                  arts:[{t:"EDO", v:""}], files:[]};
+    var arts = (v.arts && v.arts.length ? v.arts : [{t:"EDO", v:""}]).map(function(x){ return {t:x.t, v:x.v}; });
+    function artsHtml(){
+      return arts.map(function(a, i){
+        return '<div class="artrow" data-ai="' + i + '"><select data-art-t="' + i + '">' +
+          Object.keys(ARTS).map(function(k){ return '<option value="' + k + '"' + (a.t === k ? " selected" : "") + '>' + ARTS[k] + '</option>'; }).join("") +
+          '</select><input data-art-v="' + i + '" value="' + esc(a.v) + '" placeholder="Ссылка, номер или описание">' +
+          '<button class="iconbtn" type="button" data-art-del="' + i + '" aria-label="Убрать артефакт">✕</button></div>';
+      }).join("");
+    }
     openSheet('<div class="sheet-top"><h2>' + (t ? "Правка задачи" : "Новая задача") + '</h2>' +
       '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
       '<form id="tf">' +
       '<div class="field"><label for="f1">Название</label><input id="f1" name="title" value="' + esc(v.title) + '" placeholder="Что нужно сделать"><span class="err" id="e1" hidden>Название обязательно</span></div>' +
       '<div class="two"><div class="field"><label for="f2">Трек</label><select id="f2" name="track">' +
       Object.keys(TRACKS).map(function(k){ return '<option value="' + k + '"' + (v.track === k ? " selected" : "") + '>' + TRACKS[k] + '</option>'; }).join("") +
-      '</select></div><div class="field"><label for="f3">Статус</label><select id="f3" name="st">' +
-      Object.keys(TSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + TSTATUS[k].label + '</option>'; }).join("") +
-      '</select></div></div>' +
+      '</select></div>' +
+      (t ? '<div class="field"><label for="f3">Статус</label><select id="f3" name="st">' +
+        Object.keys(TSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + TSTATUS[k].label + '</option>'; }).join("") +
+        '</select></div>'
+        : '<div class="field"><label>Статус</label><div style="padding:9px 0">' + pill("Новая", "p-copper") +
+          '<span class="dim" style="font-size:12.5px;margin-left:8px">двигается в самой задаче</span></div></div>') +
+      '</div>' +
       '<div class="two"><div class="field"><label for="f4">Ответственный</label><select id="f4" name="who">' +
       state.members.map(function(m){ return '<option' + (v.who === m.name ? " selected" : "") + '>' + m.name + '</option>'; }).join("") +
       '</select></div><div class="field"><label for="f5">Срок</label><input id="f5" name="due" type="date" value="' + esc(v.due) + '">' +
@@ -1496,7 +1920,13 @@
       '<div class="two"><div class="field"><label for="f6">Приоритет</label><select id="f6" name="prio">' +
       Object.keys(PRIO).map(function(k){ return '<option value="' + k + '"' + (v.prio === k ? " selected" : "") + '>' + PRIO[k] + '</option>'; }).join("") +
       '</select></div><div class="field"><label for="f7">Задача в Jira</label><input id="f7" name="jira" value="' + esc(v.jira) + '" placeholder="AISRKII-0000"></div></div>' +
-      '<div class="field"><label for="f8">Результат и ссылки</label><textarea id="f8" name="res" rows="3" placeholder="Ссылка на ЭДО, комментарий о выполнении">' + esc(v.res) + '</textarea></div>' +
+      '<div class="field"><label>Артефакты</label><div id="arts">' + artsHtml() + '</div>' +
+      '<div class="quick"><button type="button" id="artadd">+ ещё артефакт</button></div></div>' +
+      '<div class="field"><label>Вложения</label>' +
+      '<div class="drop" id="drop">Перетащите документ или нажмите, чтобы выбрать файл</div>' +
+      '<div class="files" id="flist">' + (v.files || []).map(function(x){
+        return '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">' + esc(x.name) + '</span>' +
+          '<span class="sz">' + esc(x.size) + '</span></div>'; }).join("") + '</div></div>' +
       '<div class="field"><label for="f9">Кто видит задачу</label><select id="f9" name="vis"' + (canSetVis(t) ? "" : " disabled") + '>' +
       Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + ((v.vis || "PUBLIC") === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
       '</select></div>' +
@@ -1511,12 +1941,15 @@
           sh.querySelector("#e1").hidden = !!title;
           sh.querySelector("#e2").hidden = !!due;
           if(!title || !due) return;
-          var data = {title:title, track:f.track.value, st:f.st.value, who:f.who.value, prio:f.prio.value,
-                      due:due, jira:f.jira.value.trim(), res:f.res.value.trim()};
+          var data = {title:title, track:f.track.value, who:f.who.value, prio:f.prio.value,
+                      due:due, jira:f.jira.value.trim(),
+                      arts:arts.filter(function(a){ return a.v.trim(); })};
+          if(t) data.st = f.st.value;
           if(!f.vis.disabled) data.vis = f.vis.value;
           if(t){ Object.keys(data).forEach(function(k){ t[k] = data[k]; }); toast("Задача сохранена"); }
           else {
-            data.id = ++uid; data.created = "2026-09-22"; data.p = 0; data.au = ME; data.vis = data.vis || "PUBLIC";
+            data.id = ++uid; data.created = "2026-09-22"; data.p = 0; data.au = ME; data.st = "NEW";
+            data.vis = data.vis || "PUBLIC"; data.files = [];
             state.tasks.push(data);
             toast("Задача создана", function(){ state.tasks = state.tasks.filter(function(x){ return x.id !== data.id; }); });
           }
@@ -1524,6 +1957,29 @@
         });
         var d = sh.querySelector("[data-del]");
         if(d) d.addEventListener("click", function(){ removeItem("task", t.id); closeSheet(); });
+        var box = sh.querySelector("#arts");
+        function redrawArts(){ box.innerHTML = artsHtml(); }
+        box.addEventListener("change", function(e){
+          var i = e.target.getAttribute("data-art-t");
+          if(i !== null) arts[+i].t = e.target.value;
+        });
+        box.addEventListener("input", function(e){
+          var i = e.target.getAttribute("data-art-v");
+          if(i !== null) arts[+i].v = e.target.value;
+        });
+        box.addEventListener("click", function(e){
+          var b = e.target.closest("[data-art-del]");
+          if(!b) return;
+          arts.splice(+b.getAttribute("data-art-del"), 1);
+          if(!arts.length) arts.push({t:"EDO", v:""});
+          redrawArts();
+        });
+        sh.querySelector("#artadd").addEventListener("click", function(){ arts.push({t:"LINK", v:""}); redrawArts(); });
+        sh.querySelector("#drop").addEventListener("click", function(){
+          var list = sh.querySelector("#flist");
+          list.insertAdjacentHTML("beforeend",
+            '<div class="fileit"><span aria-hidden="true">🖿</span><span class="nm">Новый документ.pdf</span><span class="sz">320 КБ</span></div>');
+        });
       });
   }
 
@@ -1541,38 +1997,59 @@
   function openLetterForm(id, seed){
     var l = id ? byId("letters", id) : null;
     var v = l || seed || {dir:"in", num:"", date:"2026-09-22", subject:"", org:state.orgs[0].name,
-                          owner:ME, due:"", jira:"", st:"NEW", vis:"PUBLIC", snip:""};
+                          owner:ME, due:"", jira:"", st:"NEW", vis:"PUBLIC", snip:"", signer:"", reply:"", res:""};
+    var incoming = state.letters.filter(function(x){ return x.dir === "in"; });
     openSheet('<div class="sheet-top"><div><h2>' + (l ? "Правка письма" : "Новое письмо в реестр") + '</h2>' +
-      (l ? "" : '<p class="muted" style="margin:4px 0 0;font-size:13px">Обязательны номер, дата, тема и срок. Остальное можно дозаполнить позже.</p>') +
+      '<p class="muted" style="margin:4px 0 0;font-size:13px">Поля меняются в зависимости от того, входящее письмо или исходящее.</p>' +
       '</div><button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
       '<form id="lf">' +
-      '<div class="two"><div class="field"><label for="l1">Направление</label><select id="l1" name="dir">' +
+      '<div class="field"><label for="l1">Направление</label><select id="l1" name="dir">' +
       '<option value="in"' + (v.dir === "in" ? " selected" : "") + '>Входящее</option>' +
       '<option value="out"' + (v.dir === "out" ? " selected" : "") + '>Исходящее</option></select></div>' +
-      '<div class="field"><label for="l2">Номер</label><input id="l2" name="num" class="mono" value="' + esc(v.num) + '" placeholder="64-03-000/26" autocomplete="off">' +
+
+      '<div class="two"><div class="field"><label for="l2" id="lab-num">Номер</label>' +
+      '<input id="l2" name="num" class="mono" value="' + esc(v.num) + '" placeholder="64-03-000/26" autocomplete="off">' +
       '<span class="err" id="le1" hidden>Номер обязателен</span>' +
-      '<span class="err" id="le4" style="color:var(--warn)" hidden>Такое письмо уже есть в реестре — проверьте, не дубль ли это</span></div></div>' +
-      '<div class="two"><div class="field"><label for="l3">Дата письма</label><input id="l3" name="date" type="date" value="' + esc(v.date) + '"></div>' +
-      '<div class="field"><label for="l4">Срок исполнения</label><input id="l4" name="due" type="date" value="' + esc(v.due) + '">' +
-      '<div class="quick"><button type="button" data-due="3">+3 дня</button><button type="button" data-due="7">+7 дней</button>' +
-      '<button type="button" data-due="14">+14 дней</button></div>' +
-      '<span class="err" id="le3" hidden>Срок обязателен, иначе письмо не попадёт в календарь</span></div></div>' +
-      '<label class="chk" style="margin:-4px 0 12px"><input type="checkbox" id="lnodue"' + (l && !l.due ? " checked" : "") + '>' +
-      '<span><b>Ответ не требуется</b><em>Письмо принимается к сведению, срок не нужен</em></span></label>' +
-      '<div class="field"><label for="l5">Тема</label><input id="l5" name="subject" value="' + esc(v.subject) + '" placeholder="О чём письмо">' +
-      '<span class="err" id="le2" hidden>Тема обязательна</span></div>' +
-      '<div class="two"><div class="field"><label for="l6">Организация</label><select id="l6" name="org">' +
+      '<span class="err" id="le4" style="color:var(--warn)" hidden>Такое письмо уже есть в реестре — проверьте, не дубль ли это</span></div>' +
+      '<div class="field"><label for="l3" id="lab-date">Дата</label><input id="l3" name="date" type="date" value="' + esc(v.date) + '"></div></div>' +
+
+      '<div class="two"><div class="field"><label for="l6" id="lab-org">Контрагент</label><select id="l6" name="org">' +
       state.orgs.map(function(u){ return '<option' + (v.org === u.name ? " selected" : "") + '>' + esc(u.name) + '</option>'; }).join("") +
       '</select></div>' +
       '<div class="field"><label for="l7">Ответственный</label><select id="l7" name="owner">' +
       '<option value=""' + (v.owner ? "" : " selected") + '>Не назначен</option>' +
       state.members.map(function(m){ return '<option' + (v.owner === m.name ? " selected" : "") + '>' + esc(m.name) + '</option>'; }).join("") +
       '</select></div></div>' +
+
+      '<div class="field"><label for="l5">Тема</label><input id="l5" name="subject" value="' + esc(v.subject) + '" placeholder="О чём письмо">' +
+      '<span class="err" id="le2" hidden>Тема обязательна</span></div>' +
+
+      '<div class="field"><label for="l4" id="lab-due">Срок ответа</label><input id="l4" name="due" type="date" value="' + esc(v.due) + '">' +
+      '<div class="quick"><button type="button" data-due="3">+3 дня</button><button type="button" data-due="7">+7 дней</button>' +
+      '<button type="button" data-due="14">+14 дней</button></div>' +
+      '<span class="err" id="le3" hidden>Срок обязателен, иначе письмо не попадёт в календарь</span></div>' +
+      '<label class="chk" style="margin:-4px 0 12px"><input type="checkbox" id="lnodue"' + (l && !l.due ? " checked" : "") + '>' +
+      '<span><b id="lab-nodue">Ответ не требуется</b><em>Письмо принимается к сведению, срок не нужен</em></span></label>' +
+
+      '<div data-only="in"><div class="field"><label for="l12">Резолюция</label>' +
+      '<input id="l12" name="res" value="' + esc(v.res || "") + '" placeholder="Кому расписано и что поручено"></div></div>' +
+
+      '<div data-only="out"><div class="two">' +
+      '<div class="field"><label for="l13">Подписант</label><select id="l13" name="signer">' +
+      '<option value="">Не выбран</option>' +
+      state.members.map(function(m){ return '<option' + (v.signer === m.name ? " selected" : "") + '>' + esc(m.name) + '</option>'; }).join("") +
+      '</select></div>' +
+      '<div class="field"><label for="l14">В ответ на входящее</label><select id="l14" name="reply">' +
+      '<option value="">Не ответ</option>' +
+      incoming.map(function(x){ return '<option value="' + esc(x.num) + '"' + (v.reply === x.num ? " selected" : "") + '>' +
+        esc(x.num + " от " + fmtFull(x.date)) + '</option>'; }).join("") +
+      '</select></div></div></div>' +
+
       '<div class="two"><div class="field"><label for="l8">Статус</label><select id="l8" name="st">' +
       Object.keys(LSTATUS).map(function(k){ return '<option value="' + k + '"' + (v.st === k ? " selected" : "") + '>' + LSTATUS[k].label + '</option>'; }).join("") +
       '</select></div>' +
       '<div class="field"><label for="l9">Задача в Jira</label><input id="l9" name="jira" class="mono" value="' + esc(v.jira) + '" placeholder="AISRKII-0000"></div></div>' +
-      '<div class="field"><label for="l10">Краткое содержание</label><textarea id="l10" name="snip" rows="2" placeholder="Одна строка, по которой письмо узнают в списке">' + esc(v.snip) + '</textarea></div>' +
+      '<div class="field"><label for="l10">Краткое содержание</label><textarea id="l10" name="snip" rows="2" placeholder="Одна строка, по которой письмо узнают в реестре">' + esc(v.snip) + '</textarea></div>' +
       '<div class="field"><label for="l11">Кто видит письмо</label><select id="l11" name="vis"' + (canSetVis(l) ? "" : " disabled") + '>' +
       Object.keys(VIS).map(function(k){ return '<option value="' + k + '"' + ((v.vis || "PUBLIC") === k ? " selected" : "") + '>' + VIS[k].label + '</option>'; }).join("") +
       '</select></div>' +
@@ -1580,10 +2057,23 @@
       '<div class="facts">' + (l ? '<button class="btn danger" type="button" data-del="letter:' + l.id + '">Удалить</button>' : "") +
       '<button class="btn" type="button" data-close>Отмена</button>' +
       (l ? "" : '<button class="btn" type="submit" name="more" value="1">Сохранить и следующее</button>') +
-      '<button class="btn primary" type="submit">' + (l ? "Сохранить" : "Сохранить") + '</button></div></form>',
+      '<button class="btn primary" type="submit">Сохранить</button></div></form>',
       function(sh){
         var form = sh.querySelector("#lf");
         var more = false;
+        function applyDir(){
+          var out = form.dir.value === "out";
+          sh.querySelector("#lab-num").textContent = out ? "Исходящий номер" : "Входящий номер";
+          sh.querySelector("#lab-date").textContent = out ? "Дата отправки" : "Дата поступления";
+          sh.querySelector("#lab-org").textContent = out ? "Кому (контрагент)" : "От кого (контрагент)";
+          sh.querySelector("#lab-due").textContent = out ? "Контроль ответа до" : "Срок ответа";
+          sh.querySelector("#lab-nodue").textContent = out ? "Ответ не ожидается" : "Ответ не требуется";
+          Array.prototype.forEach.call(sh.querySelectorAll("[data-only]"), function(b){
+            b.hidden = b.getAttribute("data-only") !== (out ? "out" : "in");
+          });
+        }
+        applyDir();
+        form.dir.addEventListener("change", applyDir);
         Array.prototype.forEach.call(sh.querySelectorAll("[data-due]"), function(b){
           b.addEventListener("click", function(){
             form.due.value = addDays(form.date.value || "2026-09-22", +b.dataset.due);
@@ -1608,9 +2098,13 @@
           sh.querySelector("#le2").hidden = !!subject;
           sh.querySelector("#le3").hidden = !!(due || noDue);
           if(!num || !subject || (!due && !noDue)) return;
+          var out = form.dir.value === "out";
           var data = {num:num, date:form.date.value, dir:form.dir.value, subject:subject, org:form.org.value,
                       owner:form.owner.value, due:due, st:form.st.value, jira:form.jira.value.trim(),
-                      snip:form.snip.value.trim() || subject};
+                      snip:form.snip.value.trim() || subject,
+                      res:out ? "" : form.res.value.trim(),
+                      signer:out ? form.signer.value : "",
+                      reply:out ? form.reply.value : ""};
           if(!form.vis.disabled) data.vis = form.vis.value;
           if(l){
             Object.keys(data).forEach(function(k){ l[k] = data[k]; });
@@ -1618,13 +2112,14 @@
             toast("Письмо сохранено"); closeSheet(); render(); return;
           }
           data.id = ++uid; data.au = ME; data.vis = data.vis || "PUBLIC";
-          data.thread = [[data.date, data.dir === "in" ? "Письмо внесено в реестр вручную" : "Письмо отправлено и внесено в реестр", ME]];
+          data.thread = [[data.date, out ? "Письмо отправлено и внесено в реестр" : "Письмо внесено в реестр вручную", ME]];
           state.letters.unshift(data);
           mailOpen = data.id;
           toast("Письмо в реестре", function(){ state.letters = state.letters.filter(function(x){ return x.id !== data.id; }); });
           closeSheet(); render();
           if(more) openLetterForm(null, {dir:data.dir, num:"", date:data.date, subject:"", org:data.org,
-                                          owner:data.owner, due:"", jira:"", st:"NEW", vis:data.vis, snip:""});
+                                          owner:data.owner, due:"", jira:"", st:"NEW", vis:data.vis, snip:"",
+                                          signer:data.signer, reply:"", res:""});
         });
       });
   }
@@ -1640,7 +2135,7 @@
       '<span class="err" id="de1" hidden>Название обязательно</span></div>' +
       '<div class="two"><div class="field"><label for="d2">Вид</label><select id="d2" name="kind">' +
       Object.keys(DKIND).map(function(k){ return '<option value="' + k + '"' + (v.kind === k ? " selected" : "") + '>' + DKIND[k] + '</option>'; }).join("") +
-      '</select></div><div class="field"><label for="d3">Организация</label><select id="d3" name="org">' +
+      '</select></div><div class="field"><label for="d3">Контрагент</label><select id="d3" name="org">' +
       state.orgs.map(function(u){ return '<option' + (v.org === u.name ? " selected" : "") + '>' + esc(u.name) + '</option>'; }).join("") +
       '</select></div></div>' +
       '<div class="two"><div class="field"><label for="d4">Ответственный</label><select id="d4" name="owner">' +
@@ -1685,11 +2180,38 @@
   }
 
   function openLetter(id){
-    mailOpen = +id;
-    if(route !== "letters"){ route = "letters"; mailFilter = "all"; render(); }
-    else render();
-    var el = document.querySelector('.mail[data-mail="' + id + '"]');
-    if(el) el.scrollIntoView({block:"nearest"});
+    var l = byId("letters", +id);
+    if(!l) return;
+    var vis = VIS[l.vis || "PUBLIC"];
+    openSheet('<div class="sheet-top"><div>' +
+      '<div class="dim" style="font-size:12.5px">' + (l.dir === "in" ? "Входящее" : "Исходящее") + ' · № ' + esc(l.num) + '</div>' +
+      '<h2 style="margin-top:4px">' + esc(l.subject) + '</h2></div>' +
+      '<button class="btn ghost sm" type="button" data-close>Закрыть</button></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' +
+      pill(LSTATUS[l.st].label, LSTATUS[l.st].tone) + pill(letterState(l).txt, letterState(l).tone) +
+      pill("Видят: " + vis.short, vis.tone) + (l.jira ? pill(l.jira, "p-neutral") : "") + '</div>' +
+      '<div class="props">' +
+      prop(l.dir === "in" ? "От кого" : "Кому", esc(l.org)) +
+      prop("Дата", '<span class="mono">' + fmtFull(l.date) + '</span>') +
+      prop("Ответственный", l.owner ? who(l.owner) : '<span class="pill p-bad"><i></i>не назначен</span>') +
+      prop(l.dir === "in" ? "Срок ответа" : "Контроль ответа", dueTag(l.due, letterDone(l), true)) +
+      (l.signer ? prop("Подписант", esc(l.signer)) : "") +
+      (l.reply ? prop("В ответ на", '<span class="mono">' + esc(l.reply) + '</span>') : "") +
+      '</div>' +
+      '<div class="blk"><h4>Содержание</h4><p>' + esc(l.snip) + '</p></div>' +
+      '<div class="blk"><h4>История</h4><div class="thread">' +
+      l.thread.map(function(ev, i){
+        return '<div class="tev' + (i === l.thread.length - 1 ? " now" : "") + '">' +
+          '<span class="line"><i></i><span></span></span>' +
+          '<span class="txt">' + esc(ev[1]) + '<em>' + fmtFull(ev[0]) + ' · ' + esc(ev[2]) + '</em></span></div>';
+      }).join("") + '</div></div>' +
+      '<div class="facts"><button class="btn danger" type="button" data-del="letter:' + l.id + '">Удалить</button>' +
+      '<button class="btn" type="button" data-new="task">Создать задачу</button>' +
+      '<button class="btn" type="button" data-act="Открыта карточка письма в ЭДО">Открыть в ЭДО</button>' +
+      '<button class="btn primary" type="button" data-eletter="' + l.id + '">Редактировать</button></div>',
+      function(sh){
+        sh.querySelector("[data-del]").addEventListener("click", function(){ removeItem("letter", l.id); closeSheet(); });
+      });
   }
 
   function openDoc(id){
@@ -1719,7 +2241,7 @@
           esc(MILE_LABELS[i]) + '</div>';
       }).join("") + '</div>' +
       '<div class="props">' + prop("Ответственный", who(d.owner)) + prop("Срок", dueTag(d.due, docClosed(d), true)) +
-      prop("Организация", esc(d.org)) + prop("Видимость", pill(VIS[d.vis || "PUBLIC"].label, VIS[d.vis || "PUBLIC"].tone)) + '</div>' +
+      prop("Контрагент", esc(d.org)) + prop("Видимость", pill(VIS[d.vis || "PUBLIC"].label, VIS[d.vis || "PUBLIC"].tone)) + '</div>' +
       (d.next ? '<div class="blk"><h4>Следующий шаг</h4><p>' + esc(d.next) + '</p></div>' : "") +
       '<div class="facts"><button class="btn danger" type="button" data-del="doc:' + d.id + '">Удалить</button>' +
       '<button class="btn" type="button" data-new="task">Создать задачу</button>' +
@@ -1730,13 +2252,14 @@
       });
   }
 
+  var COLL = {task:"tasks", letter:"letters", doc:"docs", meet:"meetings", rep:"reps"};
+  var GONE = {task:"Задача удалена", letter:"Письмо удалено", doc:"Документ удалён",
+              meet:"Встреча удалена", rep:"Представитель удалён"};
   function removeItem(kind, id){
-    var coll = kind === "task" ? "tasks" : kind === "letter" ? "letters" : "docs";
+    var coll = COLL[kind];
     var item = byId(coll, id), idx = state[coll].indexOf(item);
     state[coll].splice(idx, 1);
-    toast((kind === "task" ? "Задача удалена" : kind === "letter" ? "Письмо удалено" : "Документ удалён"), function(){
-      state[coll].splice(idx, 0, item);
-    });
+    toast(GONE[kind], function(){ state[coll].splice(idx, 0, item); });
     render();
   }
 
@@ -1791,7 +2314,7 @@
   /* ---------- сборка ---------- */
   var SCREENS = {
     today:screenToday, tasks:screenTasks, letters:screenLetters, docs:screenDocs,
-    calendar:screenCalendar, analytics:screenAnalytics, report:screenReport,
+    calendar:screenCalendar, meetings:screenMeetings, analytics:screenAnalytics, report:screenReport,
     refs:screenRefs, import:screenImport, projects:screenProjects
   };
   function render(){
@@ -1804,7 +2327,7 @@
   function go(r){ route = r; closePalette(); render(); window.scrollTo(0,0); }
 
   document.addEventListener("click", function(e){
-    var el = e.target.closest("[data-go],[data-open],[data-del],[data-new],[data-tview],[data-tfilter],[data-mfilter],[data-mail],[data-dfilter],[data-cal],[data-calk],[data-step],[data-act],[data-eletter],[data-mpanel],[data-mreset],[data-msaved],[data-rperiod]");
+    var el = e.target.closest("[data-go],[data-open],[data-del],[data-new],[data-tview],[data-tfilter],[data-mfilter],[data-mail],[data-dfilter],[data-cal],[data-calk],[data-step],[data-act],[data-eletter],[data-mpanel],[data-mreset],[data-msaved],[data-rperiod],[data-dkind],[data-dstatus],[data-dash],[data-emeet],[data-erep],[data-track-del]");
     if(!el) return;
     var d = el.dataset;
     if(d.go){ go(d.go); return; }
@@ -1813,6 +2336,8 @@
       closePalette();
       if(p[0] === "task") openTask(+p[1]);
       else if(p[0] === "letter") openLetter(+p[1]);
+      else if(p[0] === "meet") openMeeting(+p[1]);
+      else if(p[0] === "rep") openRepForm(+p[1]);
       else openDoc(+p[1]);
       return;
     }
@@ -1820,10 +2345,24 @@
     if(d.new){
       if(d.new === "task") openTaskForm(null);
       else if(d.new === "letter") openLetterForm(null);
+      else if(d.new === "meet") openMeetingForm(null);
+      else if(d.new === "rep") openRepForm(null);
+      else if(d.new === "track") openTrackForm();
       else openDocForm(null);
       return;
     }
     if(d.eletter){ openLetterForm(+d.eletter); return; }
+    if(d.emeet){ openMeetingForm(+d.emeet); return; }
+    if(d.erep){ openRepForm(+d.erep); return; }
+    if(d.dkind){ docKind = d.dkind; render(); return; }
+    if(d.dstatus){ docStatus = d.dstatus; render(); return; }
+    if(d.dash !== undefined){ dashPanel = !dashPanel; render(); return; }
+    if(d.trackDel){
+      var used = state.tasks.some(function(t){ return t.track === d.trackDel; });
+      if(used){ toast("В треке есть задачи — сначала перенесите их"); return; }
+      state.tracks = state.tracks.filter(function(t){ return t.k !== d.trackDel; });
+      syncTracks(); toast("Трек удалён"); render(); return;
+    }
     if(d.mpanel !== undefined){ mailPanel = !mailPanel; render(); return; }
     if(d.mreset !== undefined){
       Object.keys(mailFacets).forEach(function(k){ mailFacets[k] = ""; });
@@ -1846,7 +2385,6 @@
     if(d.tfilter){ taskFilter = d.tfilter; render(); return; }
     if(d.mfilter){ mailFilter = d.mfilter; render(); return; }
     if(d.mail){ mailOpen = +d.mail; render(); return; }
-    if(d.dfilter){ docFilter = d.dfilter; render(); return; }
     if(d.cal !== undefined){
       if(d.cal === "0"){ calM = TODAY.getMonth(); calY = TODAY.getFullYear(); }
       else { calM += +d.cal; if(calM < 0){ calM = 11; calY--; } if(calM > 11){ calM = 0; calY++; } }
@@ -1865,6 +2403,7 @@
     var t = e.target;
     if(t.dataset && t.dataset.facet !== undefined && t.dataset.facet){ mailFacets[t.dataset.facet] = t.value; render(); return; }
     if(t.hasAttribute && t.hasAttribute("data-mopen")){ mailOpenOnly = t.checked; render(); return; }
+    if(t.dataset && t.dataset.dashk){ dash[t.dataset.dashk] = t.checked; render(); return; }
     if(t.dataset && t.dataset.rblock){ reportCfg.blocks[t.dataset.rblock] = t.checked; render(); return; }
     if(t.dataset && t.dataset.rdate){ reportCfg[t.dataset.rdate] = t.value; render(); return; }
     if(t.hasAttribute && t.hasAttribute("data-rvis")){ reportCfg.vis = t.value; toast("Видимость отчёта изменена: " + VIS[t.value].label); return; }
