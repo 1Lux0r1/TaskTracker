@@ -18,7 +18,10 @@ export async function importFromExcel(
   await requireUser();
   const file = formData.get("file");
   const projectId = String(formData.get("projectId") ?? "");
-  const kind = (String(formData.get("kind") ?? "tasks") as ImportKind) satisfies ImportKind;
+  // «Что загружаем» у реестров подписания несёт ещё и вид документа:
+  // «documents:REGULATION», «documents:NDA_ANNEX».
+  const [rawKind, documentKind] = String(formData.get("kind") ?? "tasks").split(":");
+  const kind = (rawKind as ImportKind) satisfies ImportKind;
 
   if (!projectId) return { status: "error", error: "Выберите проект для загрузки" };
   if (!(file instanceof File) || file.size === 0) {
@@ -38,6 +41,7 @@ export async function importFromExcel(
     const report = await importFromXlsx(await file.arrayBuffer(), file.name, {
       projectId,
       kind,
+      documentKind,
       sheetName: String(formData.get("sheetName") ?? "").trim() || undefined,
       createMissingMembers: formData.get("createMissingMembers") === "on",
       createMissingCounterparties: formData.get("createMissingCounterparties") === "on",
@@ -47,6 +51,7 @@ export async function importFromExcel(
     revalidatePath(`/projects/${projectId}`);
     revalidatePath("/tasks");
     revalidatePath("/letters");
+    revalidatePath("/documents");
     return { status: "done", report };
   } catch (error) {
     return {

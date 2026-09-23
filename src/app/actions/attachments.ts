@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   MAX_ATTACHMENT_SIZE,
+  MAX_UPLOAD_BATCH_SIZE,
   buildStorageKey,
   formatFileSize,
   removeAttachmentFile,
@@ -43,6 +44,16 @@ export async function uploadAttachment(
     return {
       ok: false,
       error: `Файл «${safeFileName(tooBig.name)}» больше ${formatFileSize(MAX_ATTACHMENT_SIZE)}`,
+    };
+  }
+
+  const total = chosen.reduce((size, file) => size + file.size, 0);
+  if (total > MAX_UPLOAD_BATCH_SIZE) {
+    return {
+      ok: false,
+      error: `Вместе файлы весят ${formatFileSize(total)}, а за один раз можно отправить ${formatFileSize(
+        MAX_UPLOAD_BATCH_SIZE,
+      )}`,
     };
   }
 

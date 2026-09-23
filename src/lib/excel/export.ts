@@ -1,6 +1,11 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
-import { TASK_COLUMNS } from "@/lib/excel/columns";
+import {
+  DOCUMENT_COLUMNS,
+  LETTER_COLUMNS,
+  TASK_COLUMNS,
+  type TaskColumn,
+} from "@/lib/excel/columns";
 import {
   documentKindLabel,
   documentStatusLabel,
@@ -91,20 +96,17 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
 }
 
 /** Пустой файл-образец с правильными заголовками и одной строкой-примером. */
+/**
+ * Образец для импорта: по листу на каждый вид реестра, который умеет
+ * загружать система. Лист подписания один: регламенты и ДС к NDA ведутся
+ * одинаково, а какой это вид, человек выбирает в форме загрузки.
+ */
 export function buildImportTemplate(): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "TaskTracker";
 
-  const sheet = workbook.addWorksheet("Задачи");
-  sheet.columns = TASK_COLUMNS.map(
-    (column) => ({ key: column.key, header: column.header, width: column.width }) as ExcelJS.Column,
-  );
-
-  const headerRow = sheet.getRow(1);
-  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  headerRow.fill = HEADER_FILL;
-
-  sheet.addRow({
+  const tasks = addTemplateSheet(workbook, "Задачи", TASK_COLUMNS);
+  tasks.addRow({
     externalKey: "1",
     title: "Согласовать техническое задание",
     description: "Собрать замечания у заказчика и зафиксировать объём работ",
@@ -117,12 +119,62 @@ export function buildImportTemplate(): ExcelJS.Workbook {
     spentHours: 4,
     progress: 25,
   });
-
   for (const key of ["startDate", "dueDate"]) {
-    sheet.getColumn(key).numFmt = "dd.mm.yyyy";
+    tasks.getColumn(key).numFmt = "dd.mm.yyyy";
   }
 
+  const letters = addTemplateSheet(workbook, "Переписка ЭДО", LETTER_COLUMNS);
+  letters.addRow({
+    number: "64-01-1234/26",
+    date: new Date(),
+    subject: "О согласовании технического задания",
+    direction: "Входящее",
+    counterparty: "ПАО МОЭК",
+    dueDate: new Date(Date.now() + 14 * 86_400_000),
+    status: "В работе",
+  });
+  for (const key of ["date", "dueDate"]) {
+    letters.getColumn(key).numFmt = "dd.mm.yyyy";
+  }
+
+  // Стороны подписания задаются колонками «Статус подписания <сторона>»:
+  // сторон в реестре может быть сколько угодно, и список их не ограничен.
+  const signing = addTemplateSheet(workbook, "Реестр подписания", [
+    ...DOCUMENT_COLUMNS,
+    { key: "partyDit", header: "Статус подписания ДИТ", width: 26, aliases: [] },
+    { key: "partyDjkh", header: "Статус подписания ДЖКХ", width: 26, aliases: [] },
+    { key: "partyRso", header: "Статус подписания РСО", width: 26, aliases: [] },
+  ]);
+  signing.addRow({
+    counterparty: "ПАО МОЭК",
+    title: "Регламент информационного обмена",
+    statusNote: "Направлен на подписание",
+    nextAction: "Дождаться ответа",
+    owner: "Иванов Иван",
+    dueDate: new Date(Date.now() + 30 * 86_400_000),
+    partyDit: "Подписано",
+    partyDjkh: "Ожидает",
+    partyRso: "Ожидает",
+  });
+  signing.getColumn("dueDate").numFmt = "dd.mm.yyyy";
+
   return workbook;
+}
+
+function addTemplateSheet(
+  workbook: ExcelJS.Workbook,
+  name: string,
+  columns: TaskColumn[],
+): ExcelJS.Worksheet {
+  const sheet = workbook.addWorksheet(name);
+  sheet.columns = columns.map(
+    (column) => ({ key: column.key, header: column.header, width: column.width }) as ExcelJS.Column,
+  );
+
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  headerRow.fill = HEADER_FILL;
+  return sheet;
 }
 
 

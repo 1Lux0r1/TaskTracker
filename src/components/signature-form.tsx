@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
 import { SubmitButton } from "@/components/submit-button";
 import { SIGNATURE_STATUS_LABELS, SIGNATURE_STATUSES } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
@@ -17,6 +18,7 @@ export function SignatureForm({ action, documentId, counterparties }: Props) {
 
   return (
     <form action={formAction} className="space-y-3 rounded-lg bg-gray-50 p-4">
+      <KeepFormValues state={state} />
       {state && !state.ok && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}

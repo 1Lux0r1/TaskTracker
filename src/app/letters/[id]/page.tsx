@@ -6,7 +6,7 @@ import { LetterForm } from "@/components/letter-form";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
 import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { formatDate, isLetterOpen, startOfToday } from "@/lib/domain";
@@ -133,9 +133,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
           Хроника по письму удалится вместе с ним, задачи останутся. Действие необратимо.
         </p>
         <input type="hidden" name="letterId" value={letter.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить письмо
-        </SubmitButton>
+        <ConfirmSubmit>Удалить письмо</ConfirmSubmit>
       </form>
     </div>
   );

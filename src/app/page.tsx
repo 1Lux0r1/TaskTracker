@@ -1,6 +1,6 @@
 import Link from "next/link";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { buildDocumentWhere, readDocumentFilter } from "@/lib/document-filters";
 import { buildLetterWhere, readLetterFilter } from "@/lib/letter-filters";
 import { buildTaskWhere, readTaskFilter } from "@/lib/task-filters";
 import {
@@ -58,7 +58,11 @@ export default async function TodayPage() {
 
   const overdueTaskWhere = buildTaskWhere(readTaskFilter({ preset: "overdue" }), today);
   const waitingLetterWhere = buildLetterWhere(readLetterFilter({ preset: "waitingUs" }), today);
-  const signingWhere = buildDocumentWhere(readDocumentFilter({ waiting: "us" }));
+  // Карточка про документы на подписании целиком, а не только про наши
+  // подписи: человеку важно видеть и то, что стоит на другой стороне.
+  const signingWhere: Prisma.DocumentWhereInput = {
+    signatures: { some: { status: "PENDING" } },
+  };
 
   const [
     taskGroups,
@@ -93,7 +97,13 @@ export default async function TodayPage() {
     prisma.letter.count({ where: waitingLetterWhere }),
     prisma.document.findMany({
       where: signingWhere,
-      include: { counterparty: { select: { name: true } } },
+      include: {
+        signatures: {
+          where: { status: "PENDING" },
+          select: { party: true, counterparty: { select: { isInternal: true } } },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
       orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }],
       take: 3,
     }),
@@ -117,7 +127,7 @@ export default async function TodayPage() {
       title: "Задачи",
       href: "/tasks",
       total: sum(taskBy),
-      totalLabel: "в работе",
+      totalLabel: "открытых",
       pill: `новых: ${taskBy.get("NEW") ?? 0}`,
       segments: [
         segment("NEW", TASK_STATUS_LABELS.NEW, taskBy, "bg-sky-400"),
@@ -132,7 +142,7 @@ export default async function TodayPage() {
       title: "Письма",
       href: "/letters",
       total: sum(letterBy),
-      totalLabel: "в работе",
+      totalLabel: "открытых",
       pill: `новых: ${letterBy.get("NEW") ?? 0}`,
       segments: [
         segment("NEW", LETTER_STATUS_LABELS.NEW, letterBy, "bg-indigo-400"),
@@ -192,16 +202,14 @@ export default async function TodayPage() {
     {
       key: "documents",
       title: "Документы на подписании",
-      href: "/documents?waiting=us",
+      href: "/documents",
       linkLabel: "Весь юридический трек",
-      empty: "Документов, ждущих нашей подписи, нет.",
+      empty: "Документов, ждущих подписи, нет.",
       rows: signingDocuments.map((document) => ({
         id: document.id,
         href: `/documents/${document.id}`,
         label: document.title,
-        note: `${document.counterparty?.name ?? "сторона не указана"} · срок ${formatDate(
-          document.dueDate,
-        )}`,
+        note: `${waitingFor(document.signatures)} · срок ${formatDate(document.dueDate)}`,
         accent: document.dueDate !== null && document.dueDate < today,
       })),
       more: signingCount - signingDocuments.length,
@@ -380,4 +388,15 @@ function sum(counts: Map<string, number>): number {
   let total = 0;
   for (const value of counts.values()) total += value;
   return total;
+}
+
+/** Чьей подписи не хватает: своя сторона называется «нами», чужая — собой. */
+function waitingFor(
+  signatures: { party: string; counterparty: { isInternal: boolean } | null }[],
+): string {
+  if (signatures.length === 0) return "стороны не заданы";
+  const names = signatures.map((signature) =>
+    signature.counterparty?.isInternal ? "нас" : signature.party,
+  );
+  return `ждём: ${[...new Set(names)].join(", ")}`;
 }

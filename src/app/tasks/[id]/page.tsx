@@ -4,7 +4,7 @@ import { deleteTask, updateTask } from "@/app/actions/tasks";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
 import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { formatFileSize } from "@/lib/attachments";
@@ -189,9 +189,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
           Подзадачи и комментарии удалятся вместе с ней. Действие необратимо.
         </p>
         <input type="hidden" name="taskId" value={task.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить задачу
-        </SubmitButton>
+        <ConfirmSubmit>Удалить задачу</ConfirmSubmit>
       </form>
     </div>
   );

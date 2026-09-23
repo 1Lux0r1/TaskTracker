@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
 import { SubmitButton } from "@/components/submit-button";
 import type { ActionResult } from "@/lib/validation";
 
@@ -19,6 +20,7 @@ export function MeetingTaskForm({ action, meetingId, members }: Props) {
 
   return (
     <form action={formAction} className="space-y-3 border-t border-gray-100 pt-3">
+      <KeepFormValues state={state} />
       <input type="hidden" name="meetingId" value={meetingId} />
 
       <div className="grid gap-3 sm:grid-cols-4">

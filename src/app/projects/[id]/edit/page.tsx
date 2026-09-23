@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteProject, updateProject } from "@/app/actions/projects";
 import { ProjectForm } from "@/components/project-form";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 
@@ -51,9 +51,7 @@ export default async function EditProjectPage(props: PageProps<"/projects/[id]/e
           Действие необратимо — перед удалением выгрузите данные в Excel.
         </p>
         <input type="hidden" name="projectId" value={project.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить проект
-        </SubmitButton>
+        <ConfirmSubmit>Удалить проект</ConfirmSubmit>
       </form>
     </div>
   );

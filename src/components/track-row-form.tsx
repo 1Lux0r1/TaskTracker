@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
 import { SubmitButton } from "@/components/submit-button";
 import { TRACK_COLORS, trackColor } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
@@ -41,6 +42,7 @@ export function TrackRowForm({ track, action }: Props) {
 
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
+      <KeepFormValues state={state} />
       <input type="hidden" name="trackId" value={track.id} />
       <input name="name" required maxLength={80} defaultValue={track.name} className="input w-52" />
       <select name="color" defaultValue={track.color} className="input w-40">

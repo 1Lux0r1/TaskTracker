@@ -5,7 +5,7 @@ import { createTaskFromMeeting, deleteMeeting, updateMeeting } from "@/app/actio
 import { AttachmentPanel } from "@/components/attachment-panel";
 import { MeetingForm } from "@/components/meeting-form";
 import { MeetingTaskForm } from "@/components/meeting-task-form";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import {
@@ -185,9 +185,7 @@ export default async function MeetingPage(props: PageProps<"/meetings/[id]">) {
           Действие необратимо.
         </p>
         <input type="hidden" name="meetingId" value={meeting.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить встречу
-        </SubmitButton>
+        <ConfirmSubmit>Удалить встречу</ConfirmSubmit>
       </form>
     </div>
   );

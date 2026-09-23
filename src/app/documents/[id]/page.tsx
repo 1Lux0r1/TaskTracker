@@ -13,7 +13,7 @@ import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
 import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
 import { SignatureForm } from "@/components/signature-form";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { SIGNATURE_STATUS_LABELS, SIGNATURE_STATUSES, formatDate } from "@/lib/domain";
@@ -208,9 +208,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
           Стороны подписания и хроника удалятся вместе с ним. Действие необратимо.
         </p>
         <input type="hidden" name="documentId" value={document.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить документ
-        </SubmitButton>
+        <ConfirmSubmit>Удалить документ</ConfirmSubmit>
       </form>
     </div>
   );

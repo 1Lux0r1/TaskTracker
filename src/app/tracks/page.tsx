@@ -6,6 +6,7 @@ import {
   toggleTrackArchived,
   updateTrack,
 } from "@/app/actions/tracks";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { SubmitButton } from "@/components/submit-button";
 import { ProjectSwitch } from "@/components/project-switch";
 import { TrackForm } from "@/components/track-form";
@@ -123,9 +124,14 @@ export default async function TracksPage(props: PageProps<"/tracks">) {
                     {track._count.tasks === 0 && (
                       <form action={deleteTrack}>
                         <input type="hidden" name="trackId" value={track.id} />
-                        <SubmitButton className="btn-secondary" pendingLabel="…">
+                        <ConfirmSubmit
+                          className="btn-secondary"
+                          question="Удалить трек?"
+                          confirmLabel="Да, удалить"
+                          pendingLabel="…"
+                        >
                           Удалить
-                        </SubmitButton>
+                        </ConfirmSubmit>
                       </form>
                     )}
                   </div>

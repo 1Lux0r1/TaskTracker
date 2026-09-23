@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { SubmitButton } from "@/components/submit-button";
-import { MAX_ATTACHMENT_SIZE } from "@/lib/limits";
+import { MAX_ATTACHMENT_SIZE, MAX_UPLOAD_BATCH_SIZE } from "@/lib/limits";
 import type { ActionResult } from "@/lib/validation";
 
 function formatSize(bytes: number): string {
@@ -41,10 +42,21 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
    */
   function tooBig(files: FileList | null): string | null {
     if (!files) return null;
+
+    let total = 0;
     for (const file of files) {
+      total += file.size;
       if (file.size > MAX_ATTACHMENT_SIZE) {
         return `Файл «${file.name}» больше ${formatSize(MAX_ATTACHMENT_SIZE)}. Приложите ссылку на него или разделите файл.`;
       }
+    }
+
+    // Пачка едет в теле одного запроса, поэтому сумма важна не меньше
+    // размера самого большого файла.
+    if (total > MAX_UPLOAD_BATCH_SIZE) {
+      return `Вместе файлы весят ${formatSize(total)}, а за один раз можно отправить ${formatSize(
+        MAX_UPLOAD_BATCH_SIZE,
+      )}. Прикрепите их в несколько приёмов.`;
     }
     return null;
   }
@@ -87,9 +99,14 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
               </span>
               <form action={remove} className="ml-auto">
                 <input type="hidden" name="attachmentId" value={attachment.id} />
-                <SubmitButton className="btn-secondary" pendingLabel="…">
+                <ConfirmSubmit
+                  className="btn-secondary"
+                  question="Удалить файл?"
+                  confirmLabel="Да, удалить"
+                  pendingLabel="…"
+                >
                   Убрать
-                </SubmitButton>
+                </ConfirmSubmit>
               </form>
             </li>
           ))}
@@ -129,7 +146,8 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
         />
         <p className="mt-2 text-gray-500">
           Перетащите файлы сюда или выберите их выше. Один файл — до{" "}
-          {formatSize(MAX_ATTACHMENT_SIZE)}.
+          {formatSize(MAX_ATTACHMENT_SIZE)}, за один раз — до{" "}
+          {formatSize(MAX_UPLOAD_BATCH_SIZE)}.
         </p>
         <div className="mt-3">
           <SubmitButton pendingLabel="Загружаем…">Прикрепить</SubmitButton>

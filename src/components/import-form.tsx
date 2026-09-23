@@ -33,6 +33,8 @@ export function ImportForm({ projects }: Props) {
             <select name="kind" defaultValue="tasks" className="input">
               <option value="tasks">Реестр задач</option>
               <option value="letters">Реестр переписки ЭДО</option>
+              <option value="documents:REGULATION">Реестр подписания регламентов</option>
+              <option value="documents:NDA_ANNEX">Реестр подписания ДС к NDA</option>
             </select>
           </label>
         </div>
@@ -174,8 +176,8 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
       )}
 
       {!isDryRun && (
-        <Link href={report.kind === "letters" ? "/letters" : "/tasks"} className="btn-secondary w-fit">
-          {report.kind === "letters" ? "Открыть переписку" : "Открыть задачи"}
+        <Link href={reportHref(report.kind)} className="btn-secondary w-fit">
+          {reportLinkLabel(report.kind)}
         </Link>
       )}
     </div>
@@ -189,4 +191,17 @@ function Stat({ label, value }: { label: string; value: number }) {
       <dd className="mt-0.5 text-xl font-semibold tabular-nums text-gray-900">{value}</dd>
     </div>
   );
+}
+
+/** Куда вести после загрузки: реестр того же вида, что и загруженный. */
+function reportHref(kind: string): string {
+  if (kind === "letters") return "/letters";
+  if (kind === "documents") return "/documents";
+  return "/tasks";
+}
+
+function reportLinkLabel(kind: string): string {
+  if (kind === "letters") return "Открыть переписку";
+  if (kind === "documents") return "Открыть юридический трек";
+  return "Открыть задачи";
 }
