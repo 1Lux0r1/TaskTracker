@@ -21,7 +21,7 @@ export type AttachmentRow = {
 
 type Props = {
   attachments: AttachmentRow[];
-  owner: { field: "taskId" | "letterId" | "documentId"; id: string };
+  owner: { field: "taskId" | "letterId" | "documentId" | "meetingId"; id: string };
   upload: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   remove: (formData: FormData) => Promise<void>;
 };

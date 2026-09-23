@@ -5,6 +5,7 @@ import {
   DOCUMENT_STATUSES,
   LETTER_DIRECTIONS,
   LETTER_STATUSES,
+  MEETING_KINDS,
   PROJECT_STATUSES,
   SIGNATURE_STATUSES,
   TASK_PRIORITIES,
@@ -167,6 +168,48 @@ export const letterInputSchema = z.object({
   comment: optionalText,
 });
 
+/** Время встречи: «ЧЧ:ММ» или пусто. */
+const optionalTime = z
+  .string()
+  .trim()
+  .transform((value) => (value.length === 0 ? null : value))
+  .nullable()
+  .refine((value) => value === null || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), {
+    message: "Время указывается как ЧЧ:ММ",
+  });
+
+export const meetingInputSchema = z
+  .object({
+    projectId: z.string().trim().min(1, "Выберите проект"),
+    date: z
+      .string()
+      .trim()
+      .min(1, "Укажите дату встречи")
+      .transform((value) => new Date(`${value}T00:00:00`))
+      .refine((value) => !Number.isNaN(value.getTime()), { message: "Некорректная дата" }),
+    startTime: optionalTime,
+    endTime: optionalTime,
+    place: optionalText,
+    kind: z.enum(MEETING_KINDS),
+    subject: z.string().trim().min(1, "Укажите тему встречи").max(500),
+    agenda: optionalText,
+    decisions: optionalText,
+    ownerId: optionalText,
+  })
+  .refine(
+    (value) => !value.startTime || !value.endTime || value.startTime <= value.endTime,
+    { message: "Встреча заканчивается раньше, чем начинается", path: ["endTime"] },
+  );
+
+export const orgContactInputSchema = z.object({
+  counterpartyId: z.string().trim().min(1, "Выберите организацию"),
+  fullName: z.string().trim().min(1, "Укажите ФИО").max(200),
+  position: optionalText,
+  email: optionalText,
+  phone: optionalText,
+  comment: optionalText,
+});
+
 export const documentInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),
   kind: z.enum(DOCUMENT_KINDS),
@@ -217,6 +260,8 @@ export const weeklyReportInputSchema = z
 export type CounterpartyInput = z.infer<typeof counterpartyInputSchema>;
 export type LetterInput = z.infer<typeof letterInputSchema>;
 export type DocumentInput = z.infer<typeof documentInputSchema>;
+export type MeetingInput = z.infer<typeof meetingInputSchema>;
+export type OrgContactInput = z.infer<typeof orgContactInputSchema>;
 export type SignatureInput = z.infer<typeof signatureInputSchema>;
 export type WeeklyReportInput = z.infer<typeof weeklyReportInputSchema>;
 

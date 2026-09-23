@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { href: "/tasks", label: "Задачи" },
   { href: "/letters", label: "Переписка" },
   { href: "/documents", label: "Юридический трек" },
+  { href: "/meetings", label: "Встречи" },
   { href: "/calendar", label: "Календарь" },
   { href: "/reports", label: "Отчёты" },
   { href: "/analytics", label: "Аналитика" },

@@ -25,6 +25,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
       artifacts: { orderBy: { sortOrder: "asc" } },
       attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
+      meeting: { select: { id: true, subject: true, date: true } },
     },
   });
 
@@ -79,6 +80,16 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         {task.externalTaskKey && (
           <p className="mt-1 font-mono text-sm text-gray-500">
             Во внешнем трекере: {task.externalTaskKey}
+          </p>
+        )}
+        {/* Задача из протокола: видно, на какой встрече её решили завести. */}
+        {task.meeting && (
+          <p className="mt-1 text-sm text-gray-500">
+            Из встречи{" "}
+            <Link href={`/meetings/${task.meeting.id}`} className="text-gray-700 hover:underline">
+              «{task.meeting.subject}»
+            </Link>{" "}
+            от {formatDate(task.meeting.date)}
           </p>
         )}
         {task.artifacts.length > 0 && (

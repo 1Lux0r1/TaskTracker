@@ -14,7 +14,7 @@ import {
 import type { ActionResult } from "@/lib/validation";
 
 /** К чему крепим файл: у вложения заполнено ровно одно из полей. */
-const OWNERS = ["taskId", "letterId", "documentId"] as const;
+const OWNERS = ["taskId", "letterId", "documentId", "meetingId"] as const;
 
 type Owner = (typeof OWNERS)[number];
 
@@ -65,6 +65,7 @@ export async function uploadAttachment(
   revalidatePath("/tasks");
   revalidatePath("/letters");
   revalidatePath("/documents");
+  revalidatePath("/meetings");
   return {
     ok: true,
     message: chosen.length === 1 ? "Файл прикреплён" : `Прикреплено файлов: ${chosen.length}`,
@@ -86,4 +87,5 @@ export async function deleteAttachment(formData: FormData): Promise<void> {
   revalidatePath("/tasks");
   revalidatePath("/letters");
   revalidatePath("/documents");
+  revalidatePath("/meetings");
 }

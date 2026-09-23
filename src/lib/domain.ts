@@ -237,6 +237,47 @@ export function isLetterOpen(status: string): boolean {
   return !CLOSED_LETTER_STATUSES.includes(status as LetterStatus);
 }
 
+/* ─── Встречи ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Вид встречи. Перечень короткий намеренно: он нужен, чтобы отличать
+ * внутреннее обсуждение от встречи со сторонней организацией, а не чтобы
+ * описать всё многообразие совещаний.
+ */
+export const MEETING_KINDS = [
+  "WORKING",
+  "STATUS",
+  "TECHNICAL",
+  "COUNTERPARTY",
+  "OTHER",
+] as const;
+export type MeetingKind = (typeof MEETING_KINDS)[number];
+
+export const MEETING_KIND_LABELS: Record<MeetingKind, string> = {
+  WORKING: "Рабочая",
+  STATUS: "Статус проекта",
+  TECHNICAL: "Техническая",
+  COUNTERPARTY: "С организацией",
+  OTHER: "Иная",
+};
+
+export function meetingKindLabel(value: string): string {
+  return MEETING_KIND_LABELS[value as MeetingKind] ?? value;
+}
+
+/** Время встречи: «10:00 — 11:30», «с 10:00» или пусто. */
+export function formatMeetingTime(start: string | null, end: string | null): string {
+  if (start && end) return `${start} — ${end}`;
+  if (start) return `с ${start}`;
+  if (end) return `до ${end}`;
+  return "";
+}
+
+/** Встреча ещё впереди, если её день не раньше сегодняшнего. */
+export function isUpcomingMeeting(date: Date, today: Date = startOfToday()): boolean {
+  return date.getTime() >= today.getTime();
+}
+
 /* ─── Юридически значимые документы ───────────────────────────────────────── */
 
 export const DOCUMENT_KINDS = [
