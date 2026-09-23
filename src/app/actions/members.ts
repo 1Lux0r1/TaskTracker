@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { type ActionResult, formatZodError, memberInputSchema } from "@/lib/validation";
@@ -91,4 +91,26 @@ export async function toggleMemberActive(formData: FormData): Promise<void> {
     await prisma.session.deleteMany({ where: { memberId } });
   }
   revalidatePath("/members");
+}
+
+/**
+ * Имя для обращения человек задаёт себе сам: администратор для этого не нужен,
+ * а в ФИО из импорта имя не всегда стоит там, где его ждёт приветствие.
+ */
+export async function updateOwnDisplayName(
+  _state: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  const value = String(formData.get("displayName") ?? "").trim();
+  if (value.length > 60) return { ok: false, error: "Имя длиннее 60 символов" };
+
+  await prisma.member.update({
+    where: { id: user.id },
+    data: { displayName: value.length === 0 ? null : value },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/profile");
+  return { ok: true, message: value ? "Имя сохранено" : "Имя будет браться из ФИО" };
 }

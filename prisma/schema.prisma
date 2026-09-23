@@ -16,6 +16,9 @@ datasource db {
 model Member {
   id           String    @id @default(cuid())
   fullName     String
+  /// Имя для обращения: в справочнике «Сидоров Алексей», в приветствии
+  /// «Алексей». Пусто — имя берётся из ФИО.
+  displayName  String?
   email        String?   @unique
   position     String?
   isActive     Boolean   @default(true)

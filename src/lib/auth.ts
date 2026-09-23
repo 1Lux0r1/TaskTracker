@@ -15,6 +15,8 @@ export type Role = "ADMIN" | "MEMBER";
 export type CurrentUser = {
   id: string;
   fullName: string;
+  /** Имя для обращения; пусто — берётся из ФИО. */
+  displayName: string | null;
   email: string | null;
   position: string | null;
   role: Role;
@@ -99,6 +101,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: session.member.id,
     fullName: session.member.fullName,
+    displayName: session.member.displayName,
     email: session.member.email,
     position: session.member.position,
     role: normalizeRole(session.member.role),

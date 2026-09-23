@@ -26,6 +26,10 @@ export function MemberForm({ action }: Props) {
         <input name="fullName" required className="input w-64" />
       </label>
       <label className="field">
+        Имя для обращения
+        <input name="displayName" placeholder="Алексей" className="input w-44" />
+      </label>
+      <label className="field">
         Должность
         <input name="position" className="input w-56" />
       </label>

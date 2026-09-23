@@ -85,6 +85,7 @@ export default async function MembersPage() {
                         member={{
                           id: member.id,
                           fullName: member.fullName,
+                          displayName: member.displayName,
                           position: member.position,
                           email: member.email,
                         }}

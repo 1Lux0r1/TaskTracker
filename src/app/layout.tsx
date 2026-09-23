@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 const NAV_LINKS = [
-  { href: "/", label: "Сводка" },
+  { href: "/", label: "Сегодня" },
   { href: "/projects", label: "Проекты" },
   { href: "/tasks", label: "Задачи" },
   { href: "/letters", label: "Переписка" },

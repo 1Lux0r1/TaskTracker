@@ -5,7 +5,13 @@ import { SubmitButton } from "@/components/submit-button";
 import type { ActionResult } from "@/lib/validation";
 
 type Props = {
-  member: { id: string; fullName: string; position: string | null; email: string | null };
+  member: {
+    id: string;
+    fullName: string;
+    displayName: string | null;
+    position: string | null;
+    email: string | null;
+  };
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
 };
 
@@ -47,6 +53,12 @@ export function MemberEditForm({ member, action }: Props) {
           defaultValue={member.fullName}
           className="input w-52"
           placeholder="ФИО"
+        />
+        <input
+          name="displayName"
+          defaultValue={member.displayName ?? ""}
+          className="input w-36"
+          placeholder="Имя для обращения"
         />
         <input
           name="position"

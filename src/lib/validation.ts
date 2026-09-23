@@ -120,6 +120,8 @@ export const taskInputSchema = z.object({
 
 export const memberInputSchema = z.object({
   fullName: z.string().trim().min(1, "Укажите ФИО").max(200),
+  // Поле есть не во всех формах: в быстром заведении сотрудника его нет.
+  displayName: optionalText.optional().transform((value) => value ?? null),
   email: z
     .string()
     .trim()
