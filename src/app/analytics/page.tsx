@@ -12,6 +12,8 @@ import {
   type TaskStatus,
 } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
+import { TrendChart } from "@/components/trend-chart";
+import { TREND_RANGES, buildTrend, readTrendWeeks, trendDates } from "@/lib/trend";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,9 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
     documentsByStatus,
     declinedDocuments,
     members,
+    trendTasks,
+    trendLetters,
+    trendDocuments,
   ] = await Promise.all([
     prisma.task.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
     prisma.task.groupBy({ by: ["trackId"], where: scope, _count: { _all: true } }),
@@ -68,6 +73,11 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
       include: { counterparty: true },
     }),
     prisma.member.findMany({ select: { id: true, fullName: true } }),
+    // Динамика считается из самих записей: снимков система не ведёт, но у
+    // задачи есть дата закрытия, а у письма — дата исполнения.
+    prisma.task.findMany({ where: scope, select: { dueDate: true, completedAt: true } }),
+    prisma.letter.findMany({ where: scope, select: { dueDate: true, closedAt: true } }),
+    prisma.document.findMany({ where: scope, select: { dueDate: true, signedAt: true } }),
   ]);
 
   const counterparties = await prisma.counterparty.findMany({
@@ -80,6 +90,29 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
   const tracks = await prisma.track.findMany({ select: { id: true, name: true } });
   const trackNames = new Map(tracks.map((item) => [item.id, item.name]));
   const memberName = new Map(members.map((item) => [item.id, item.fullName]));
+
+  const weeks = readTrendWeeks(single(params.weeks));
+  const dates = trendDates(today, weeks);
+  const taskTrend = buildTrend(
+    trendTasks.map((task) => ({ dueDate: task.dueDate, closedAt: task.completedAt })),
+    dates,
+  );
+  const letterTrend = buildTrend(
+    trendLetters.map((letter) => ({ dueDate: letter.dueDate, closedAt: letter.closedAt })),
+    dates,
+  );
+  // Просрочки складываем: человеку важно, сколько всего горит, а не где.
+  const overdueTrend = taskTrend.map((point, index) => ({
+    ...point,
+    overdue: point.overdue + (letterTrend[index]?.overdue ?? 0),
+  }));
+
+  const documentTrend = buildTrend(
+    trendDocuments.map((document) => ({ dueDate: document.dueDate, closedAt: document.signedAt })),
+    dates,
+  );
+
+  const signingDated = trendDocuments.some((document) => document.signedAt !== null);
 
   const totalTasks = byStatus.reduce((sum, row) => sum + row._count._all, 0);
   const doneTasks = byStatus
@@ -130,6 +163,64 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
         <Metric label="Закрыто задач за 30 дней" value={String(closedLastMonth)} />
       </div>
 
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-900">Динамика во времени</h2>
+          <form className="flex items-center gap-2 text-sm">
+            <input type="hidden" name="projectId" value={projectId} />
+            <label className="text-gray-500">
+              Период
+              <select name="weeks" defaultValue={String(weeks)} className="input ml-2 w-40">
+                {TREND_RANGES.map((range) => (
+                  <option key={range.value} value={range.value}>
+                    {range.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" className="btn-secondary">
+              Показать
+            </button>
+          </form>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <TrendChart
+            title="Готовность задач"
+            points={taskTrend}
+            pick={(point) => point.readiness}
+            unit="%"
+            ceiling={100}
+            growthIsGood
+          />
+          <TrendChart
+            title="Просрочено задач и писем"
+            points={overdueTrend}
+            pick={(point) => point.overdue}
+            growthIsGood={false}
+          />
+          {/* В загруженных реестрах подписания нет дат: у документов из Excel
+              стоит статус «Подписан», но не день. График появится, когда
+              подписания начнут отмечать в системе, — рисовать «0 подписано»
+              рядом с двумя десятками подписанных было бы враньём. */}
+          {signingDated && (
+            <TrendChart
+              title="Подписано документов"
+              points={documentTrend}
+              pick={(point) => point.done}
+              growthIsGood
+            />
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500">
+          Прошлое считается из самих записей: видно, что к каждой неделе было закрыто и что уже
+          просрочено. Состав работ при этом берётся сегодняшний — в загруженных из Excel реестрах
+          нет дат заведения строк, поэтому «сколько задач было в работе в июле» по ним не
+          восстановить.
+        </p>
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Задачи по статусам">
           <BarList
@@ -141,14 +232,10 @@ export default async function AnalyticsPage(props: PageProps<"/analytics">) {
         </Panel>
 
         <Panel title="Задачи по трекам">
-          <BarList
-            rows={byTrack
-              .map((row) => ({
-                label: trackNames.get(row.trackId) ?? "Без трека",
-                value: row._count._all,
-              }))
-              .sort((a, b) => b.value - a.value)}
-          />
+          <BarList rows={mergeByLabel(byTrack.map((row) => ({
+            label: trackNames.get(row.trackId) ?? "Без трека",
+            value: row._count._all,
+          })))} />
         </Panel>
 
         <Panel title="Открытые задачи по исполнителям">
@@ -267,8 +354,11 @@ function BarList({ rows }: { rows: { label: string; value: number }[] }) {
 
   return (
     <ul className="space-y-2">
-      {rows.map((row) => (
-        <li key={row.label} className="grid grid-cols-[minmax(0,11rem)_1fr_2.5rem] items-center gap-3">
+      {rows.map((row, index) => (
+        <li
+          key={`${row.label}-${index}`}
+          className="grid grid-cols-[minmax(0,11rem)_1fr_2.5rem] items-center gap-3"
+        >
           <span className="truncate text-sm text-gray-600" title={row.label}>
             {row.label}
           </span>
@@ -283,6 +373,20 @@ function BarList({ rows }: { rows: { label: string; value: number }[] }) {
       ))}
     </ul>
   );
+}
+
+/**
+ * Треки у каждого проекта свои, и «Производственный» есть почти в каждом. В
+ * общем срезе такие строки складываются в одну, иначе список показывает один
+ * и тот же трек четыре раза.
+ */
+function mergeByLabel(rows: { label: string; value: number }[]): { label: string; value: number }[] {
+  const merged = new Map<string, number>();
+  for (const row of rows) merged.set(row.label, (merged.get(row.label) ?? 0) + row.value);
+
+  return [...merged.entries()]
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
 }
 
 function single(value: string | string[] | undefined): string | undefined {
