@@ -7,8 +7,8 @@ export const ATTACHMENTS_DIR = path.isAbsolute(process.env.ATTACHMENTS_DIR ?? ""
   ? (process.env.ATTACHMENTS_DIR as string)
   : path.join(process.cwd(), process.env.ATTACHMENTS_DIR ?? "var/attachments");
 
-/** Предел размера файла. Тот же предел стоит в next.config.ts для действий. */
-export const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
+/** Предел размера файла. Он же ограничивает тело запроса в next.config.ts. */
+export { MAX_ATTACHMENT_SIZE } from "@/lib/limits";
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} Б`;

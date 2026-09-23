@@ -386,16 +386,27 @@ async function importTasks(
       };
 
       const externalKey = cellText(row.cells.get("externalKey") ?? null);
+      // Поисковая строка готовится при записи: без неё перенесённые задачи
+      // не находились бы поиском по реестру.
+      const searchIndex = buildSearchIndex([
+        data.title,
+        data.description,
+        data.progressNote,
+        data.externalAssignee,
+        externalKey,
+      ]);
       const existingId =
         (externalKey ? byExternalKey.get(externalKey) : undefined) ??
         byTitle.get(title.toLowerCase());
 
       const taskId = existingId
-        ? (await prisma.task.update({ where: { id: existingId }, data })).id
+        ? (await prisma.task.update({ where: { id: existingId }, data: { ...data, searchIndex } }))
+            .id
         : (
             await prisma.task.create({
               data: {
                 ...data,
+                searchIndex,
                 projectId: options.projectId,
                 number: nextNumber,
                 sortOrder: nextNumber,
@@ -648,6 +659,14 @@ async function importDocuments(
         statusNote,
         nextAction: cellText(row.cells.get("nextAction") ?? null),
         dueDate: cellDate(row.cells.get("dueDate") ?? null),
+        // Поисковая строка готовится при записи: без неё перенесённые
+        // документы не находились бы поиском по юридическому треку.
+        searchIndex: buildSearchIndex([
+          title,
+          counterpartyName,
+          statusNote,
+          cellText(row.cells.get("nextAction") ?? null),
+        ]),
       };
 
       const existing = await prisma.document.findFirst({

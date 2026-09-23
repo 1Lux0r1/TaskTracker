@@ -2,7 +2,14 @@
 
 import { useActionState, useRef, useState } from "react";
 import { SubmitButton } from "@/components/submit-button";
+import { MAX_ATTACHMENT_SIZE } from "@/lib/limits";
 import type { ActionResult } from "@/lib/validation";
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+}
 
 export type AttachmentRow = {
   id: string;
@@ -23,11 +30,33 @@ type Props = {
 export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
   const [state, formAction] = useActionState(upload, null);
   const [dragOver, setDragOver] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  /**
+   * Слишком большой файл отсекаем в браузере: если отправить его на сервер,
+   * запрос упрётся в предел тела и страница ответит ошибкой вместо
+   * понятного сообщения.
+   */
+  function tooBig(files: FileList | null): string | null {
+    if (!files) return null;
+    for (const file of files) {
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        return `Файл «${file.name}» больше ${formatSize(MAX_ATTACHMENT_SIZE)}. Приложите ссылку на него или разделите файл.`;
+      }
+    }
+    return null;
+  }
+
   function acceptFiles(files: FileList) {
     if (!inputRef.current || files.length === 0) return;
+    const error = tooBig(files);
+    if (error) {
+      setLocalError(error);
+      return;
+    }
+    setLocalError(null);
     // Кладём перетащенные файлы в поле формы и отправляем её как обычно.
     const transfer = new DataTransfer();
     for (const file of files) transfer.items.add(file);
@@ -75,6 +104,11 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
+        onSubmit={(event) => {
+          const error = tooBig(inputRef.current?.files ?? null);
+          setLocalError(error);
+          if (error) event.preventDefault();
+        }}
         onDrop={(event) => {
           event.preventDefault();
           setDragOver(false);
@@ -85,12 +119,25 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
         }`}
       >
         <input type="hidden" name={owner.field} value={owner.id} />
-        <input ref={inputRef} type="file" name="file" multiple className="mx-auto block text-sm" />
-        <p className="mt-2 text-gray-500">Перетащите файлы сюда или выберите их выше.</p>
+        <input
+          ref={inputRef}
+          type="file"
+          name="file"
+          multiple
+          onChange={(event) => setLocalError(tooBig(event.target.files))}
+          className="mx-auto block text-sm"
+        />
+        <p className="mt-2 text-gray-500">
+          Перетащите файлы сюда или выберите их выше. Один файл — до{" "}
+          {formatSize(MAX_ATTACHMENT_SIZE)}.
+        </p>
         <div className="mt-3">
           <SubmitButton pendingLabel="Загружаем…">Прикрепить</SubmitButton>
         </div>
-        {state && !state.ok && <p className="mt-2 text-sm text-red-700">{state.error}</p>}
+        {localError && <p className="mt-2 text-sm text-red-700">{localError}</p>}
+        {!localError && state && !state.ok && (
+          <p className="mt-2 text-sm text-red-700">{state.error}</p>
+        )}
         {state?.ok && state.message && (
           <p className="mt-2 text-sm text-emerald-700">{state.message}</p>
         )}

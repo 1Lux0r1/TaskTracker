@@ -3,7 +3,7 @@
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
+import { NEW_TASK_STATUS, TASK_STATUSES, type TaskStatus } from "@/lib/domain";
 import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
@@ -33,7 +33,9 @@ export async function createTask(
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
-  const input = parsed.data;
+  // Статус новой задачи всегда «Новая»: его ставит сервер, а не форма.
+  // Форма создания статус не спрашивает, и присланное значение не в счёт.
+  const input = { ...parsed.data, status: NEW_TASK_STATUS };
   if (!(await trackBelongsToProject(input.trackId, input.projectId))) {
     return { ok: false, error: "Выбранный трек относится к другому проекту" };
   }
@@ -51,7 +53,7 @@ export async function createTask(
       ...input,
       number,
       sortOrder: number,
-      completedAt: input.status === "DONE" ? new Date() : null,
+      completedAt: null,
       searchIndex: taskSearchIndex(input),
       artifacts: { create: artifacts },
     },
