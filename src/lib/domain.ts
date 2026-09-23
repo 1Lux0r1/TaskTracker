@@ -436,3 +436,58 @@ export function plural(count: number, one: string, few: string, many: string): s
   if (units >= 2 && units <= 4) return few;
   return many;
 }
+
+/* ─── График интеграций ───────────────────────────────────────────────────── */
+
+/**
+ * Этапы интеграции организации. Строка графика — организация, колонка —
+ * этап: в исходном файле это отдельный лист «График интеграций с РСО».
+ * Порядок важен: по нему считается, докуда организация дошла.
+ */
+export const INTEGRATION_STAGES = [
+  { value: "REGULATION_SENT", label: "Регламент направлен", short: "Направлен" },
+  { value: "REGULATION_SIGNED", label: "Регламент подписан", short: "Подписан" },
+  { value: "SYSTEM_READY", label: "Система организации готова", short: "Готовность" },
+  { value: "DEV_INTEGRATION", label: "Интеграция в dev-среде", short: "Dev" },
+  { value: "TEST_OPENED", label: "Открытие в тестовой среде", short: "Тест" },
+] as const;
+
+export type IntegrationStage = (typeof INTEGRATION_STAGES)[number]["value"];
+
+export function integrationStageLabel(value: string): string {
+  return INTEGRATION_STAGES.find((item) => item.value === value)?.label ?? value;
+}
+
+export type MilestoneState = "done" | "overdue" | "soon" | "planned" | "empty";
+
+/**
+ * Состояние вехи: факт важнее плана, просрочка считается от сегодняшнего дня,
+ * «скоро» — неделя вперёд. Цвет в графике берётся отсюда.
+ */
+export function milestoneState(
+  milestone: { plannedDate: Date | null; actualDate: Date | null } | undefined,
+  today: Date,
+): MilestoneState {
+  if (!milestone) return "empty";
+  if (milestone.actualDate) return "done";
+  if (!milestone.plannedDate) return "empty";
+  if (milestone.plannedDate < today) return "overdue";
+  if (milestone.plannedDate.getTime() <= today.getTime() + 7 * 86_400_000) return "soon";
+  return "planned";
+}
+
+/** Докуда организация дошла: число пройденных этапов подряд с начала. */
+export function integrationProgress(
+  milestones: { stage: string; actualDate: Date | null }[],
+): number {
+  const done = new Set(
+    milestones.filter((item) => item.actualDate).map((item) => item.stage),
+  );
+
+  let passed = 0;
+  for (const stage of INTEGRATION_STAGES) {
+    if (!done.has(stage.value)) break;
+    passed += 1;
+  }
+  return passed;
+}
