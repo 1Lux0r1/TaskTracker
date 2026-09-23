@@ -401,3 +401,38 @@ export function signatureProgress(signatures: { status: string }[]): number {
 export function formatPeriod(start: Date, end: Date): string {
   return `${formatDate(start)} — ${formatDate(end)}`;
 }
+
+/* ─── Справочная информация ───────────────────────────────────────────────── */
+
+/**
+ * Разделы справочника: команда держит рядом с работой описание системы,
+ * паспорт проекта и правила подписания. Список закрытый — иначе разделы
+ * расплодятся и справочник превратится в свалку заметок.
+ */
+export const REFERENCE_SECTIONS = [
+  { value: "ARCHITECTURE", label: "Архитектура системы" },
+  { value: "PASSPORT", label: "Паспорт проекта" },
+  { value: "SIGNING", label: "Матрица подписания" },
+  { value: "PROCESS", label: "Порядок работы" },
+  { value: "OTHER", label: "Прочее" },
+] as const;
+
+export type ReferenceSection = (typeof REFERENCE_SECTIONS)[number]["value"];
+
+export function referenceSectionLabel(value: string): string {
+  return REFERENCE_SECTIONS.find((item) => item.value === value)?.label ?? value;
+}
+
+/**
+ * Русская форма числительного: 1 страница, 2 страницы, 5 страниц.
+ * «11 страниц», а не «11 страница» — отсюда отдельная проверка десятков.
+ */
+export function plural(count: number, one: string, few: string, many: string): string {
+  const tens = count % 100;
+  if (tens >= 11 && tens <= 14) return many;
+
+  const units = count % 10;
+  if (units === 1) return one;
+  if (units >= 2 && units <= 4) return few;
+  return many;
+}

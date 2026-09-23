@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revokeMemberAccess, setMemberPassword, toggleMemberRole } from "@/app/actions/auth";
 import { createMember, toggleMemberActive, updateMember } from "@/app/actions/members";
 import { MemberAccess } from "@/components/member-access";
@@ -47,7 +48,10 @@ export default async function MembersPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Сотрудники</h1>
+        <Link href="/directory" className="text-sm text-gray-500 hover:underline">
+          ← Справочники
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold text-gray-900">Сотрудники</h1>
         <p className="text-sm text-gray-500">
           {isAdmin
             ? "Карточки, пароли и роли сотрудников ведёт администратор. Роли различаются только этим: работать с задачами, письмами и документами могут все."

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { breakdownText, greeting, greetingName, segmentShares } from "@/lib/today";
+import { plural } from "@/lib/domain";
 
 const bar = "bg-gray-300";
 
@@ -62,5 +63,22 @@ describe("breakdownText", () => {
 
   it("пустой состав говорит об этом словами", () => {
     expect(breakdownText([{ key: "a", label: "В работе", count: 0, bar }])).toBe("пока пусто");
+  });
+});
+
+describe("plural", () => {
+  it("даёт правильную форму числительного", () => {
+    const форма = (n: number) => `${n} ${plural(n, "страница", "страницы", "страниц")}`;
+    expect(форма(1)).toBe("1 страница");
+    expect(форма(2)).toBe("2 страницы");
+    expect(форма(5)).toBe("5 страниц");
+    expect(форма(0)).toBe("0 страниц");
+  });
+
+  it("не спотыкается на одиннадцати и двенадцати", () => {
+    expect(plural(11, "страница", "страницы", "страниц")).toBe("страниц");
+    expect(plural(12, "страница", "страницы", "страниц")).toBe("страниц");
+    expect(plural(21, "страница", "страницы", "страниц")).toBe("страница");
+    expect(plural(112, "страница", "страницы", "страниц")).toBe("страниц");
   });
 });

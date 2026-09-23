@@ -1,5 +1,6 @@
 /**
- * Пересобирает поисковые строки задач, писем, документов и встреч.
+ * Пересобирает поисковые строки задач, писем, документов, встреч и
+ * страниц справочной информации.
  *
  * SQLite не приводит кириллицу к нижнему регистру, поэтому строку готовит
  * приложение, а не база: после миграции, переноса данных или правки правил
@@ -119,9 +120,21 @@ async function main(): Promise<void> {
     });
   }
 
+  const pages = await prisma.referencePage.findMany({
+    select: { id: true, title: true, content: true },
+  });
+
+  for (const page of pages) {
+    await prisma.referencePage.update({
+      where: { id: page.id },
+      data: { searchIndex: buildSearchIndex([page.title, page.content]) },
+    });
+  }
+
   console.log(
     `Поиск пересобран: задач ${tasks.length}, писем ${letters.length}, ` +
-      `документов ${documents.length}, встреч ${meetings.length}.`,
+      `документов ${documents.length}, встреч ${meetings.length}, ` +
+      `страниц справочника ${pages.length}.`,
   );
 }
 

@@ -26,7 +26,7 @@ const NAV_LINKS = [
   { href: "/calendar", label: "Календарь" },
   { href: "/reports", label: "Отчёты" },
   { href: "/analytics", label: "Аналитика" },
-  { href: "/members", label: "Сотрудники" },
+  { href: "/directory", label: "Справочники" },
   { href: "/import", label: "Импорт" },
 ];
 
@@ -75,17 +75,27 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
-        {/* Справочник организаций служебный: им пользуются при импорте и при
-            настройке сторон подписания, поэтому он живёт не в меню, а здесь. */}
+        {/* Часто нужные справочники под рукой, остальные — в разделе. */}
         {user && (
           <footer className="border-t border-gray-200 bg-white">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 text-sm text-gray-500">
-              <span>Справочники:</span>
+              <Link href="/directory" className="hover:text-gray-900 hover:underline">
+                Справочники:
+              </Link>
+              <Link href="/members" className="hover:text-gray-900 hover:underline">
+                Сотрудники
+              </Link>
               <Link href="/organizations" className="hover:text-gray-900 hover:underline">
                 Организации
               </Link>
+              <Link href="/org-contacts" className="hover:text-gray-900 hover:underline">
+                Представители
+              </Link>
               <Link href="/tracks" className="hover:text-gray-900 hover:underline">
                 Треки работ
+              </Link>
+              <Link href="/reference" className="hover:text-gray-900 hover:underline">
+                Справочная информация
               </Link>
             </div>
           </footer>

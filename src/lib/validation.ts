@@ -10,6 +10,7 @@ import {
   SIGNATURE_STATUSES,
   TASK_PRIORITIES,
   TASK_STATUSES,
+  REFERENCE_SECTIONS,
   TRACK_COLORS,
 } from "@/lib/domain";
 
@@ -211,6 +212,17 @@ export const orgContactInputSchema = z.object({
   phone: optionalText,
   comment: optionalText,
 });
+
+export const referencePageInputSchema = z.object({
+  // Страница может быть общей: раздел справочника живёт не только у проекта.
+  projectId: optionalText,
+  section: z.enum(REFERENCE_SECTIONS.map((item) => item.value) as [string, ...string[]]),
+  title: z.string().trim().min(1, "Укажите заголовок").max(200),
+  content: z.string().trim().min(1, "Страница без содержания не нужна"),
+  authorId: optionalText,
+});
+
+export type ReferencePageInput = z.infer<typeof referencePageInputSchema>;
 
 export const documentInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),

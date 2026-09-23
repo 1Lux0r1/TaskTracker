@@ -54,7 +54,10 @@ export default async function TracksPage(props: PageProps<"/tracks">) {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Треки работ</h1>
+        <Link href="/directory" className="text-sm text-gray-500 hover:underline">
+          ← Справочники
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold text-gray-900">Треки работ</h1>
         <p className="text-sm text-gray-500">
           Свой список направлений работы у каждого проекта. Четыре трека из Excel заведены
           сразу, их можно переименовать, перекрасить и дополнить своими. Цветом трек виден
