@@ -124,13 +124,14 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
                     ))}
                     <form action={deleteSignature}>
                       <input type="hidden" name="signatureId" value={signature.id} />
-                      <button
-                        type="submit"
+                      <ConfirmSubmit
                         className="text-xs text-gray-400 hover:text-red-600"
-                        title="Убрать сторону"
+                        question="Убрать сторону?"
+                        confirmLabel="да"
+                        pendingLabel="…"
                       >
                         убрать
-                      </button>
+                      </ConfirmSubmit>
                     </form>
                   </div>
                 </div>

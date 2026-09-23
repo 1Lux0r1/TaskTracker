@@ -11,6 +11,7 @@ import {
   TASK_STATUS_LABELS,
   formatDate,
   formatMeetingTime,
+  plural,
   startOfToday,
 } from "@/lib/domain";
 import {
@@ -127,7 +128,7 @@ export default async function TodayPage() {
       title: "Задачи",
       href: "/tasks",
       total: sum(taskBy),
-      totalLabel: "открытых",
+      totalLabel: plural(sum(taskBy), "открытая", "открытые", "открытых"),
       pill: `новых: ${taskBy.get("NEW") ?? 0}`,
       segments: [
         segment("NEW", TASK_STATUS_LABELS.NEW, taskBy, "bg-sky-400"),
@@ -142,7 +143,7 @@ export default async function TodayPage() {
       title: "Письма",
       href: "/letters",
       total: sum(letterBy),
-      totalLabel: "открытых",
+      totalLabel: plural(sum(letterBy), "открытое", "открытых", "открытых"),
       pill: `новых: ${letterBy.get("NEW") ?? 0}`,
       segments: [
         segment("NEW", LETTER_STATUS_LABELS.NEW, letterBy, "bg-indigo-400"),

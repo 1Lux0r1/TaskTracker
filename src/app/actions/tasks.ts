@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { NEW_TASK_STATUS, TASK_STATUSES, type TaskStatus } from "@/lib/domain";
 import { buildSearchIndex } from "@/lib/search";
@@ -140,6 +141,8 @@ export async function deleteTask(formData: FormData): Promise<void> {
   await prisma.task.delete({ where: { id: taskId } });
   revalidatePath(`/projects/${task.projectId}`);
   revalidatePath("/tasks");
+  // Карточки больше нет: оставлять человека на её адресе — показать ему 404.
+  redirect("/tasks");
 }
 
 /**
