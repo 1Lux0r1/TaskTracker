@@ -49,6 +49,8 @@ type Props = {
   /** Входящие письма: исходящее часто идёт ответом на одно из них. */
   incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
   sticky: StickyLetterValues;
+  /** Срок из календаря: «внести письмо со сроком на этот день». */
+  initialDueDate?: string;
 };
 
 export function QuickLetterForm({
@@ -58,9 +60,10 @@ export function QuickLetterForm({
   members,
   incomingLetters = [],
   sticky,
+  initialDueDate = "",
 }: Props) {
   const [state, formAction] = useActionState(action, null);
-  const [values, setValues] = useState({ ...sticky, ...BLANK_LETTER });
+  const [values, setValues] = useState({ ...sticky, ...BLANK_LETTER, dueDate: initialDueDate });
   const [answerNotRequired, setAnswerNotRequired] = useState(false);
   const numberInput = useRef<HTMLInputElement>(null);
 

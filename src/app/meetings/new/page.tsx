@@ -6,8 +6,12 @@ import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewMeetingPage() {
+export default async function NewMeetingPage(props: PageProps<"/meetings/new">) {
   await requireUser();
+  const params = await props.searchParams;
+  // Дата и проект приходят из панели дня в календаре.
+  const date = parseDay(single(params.date));
+  const projectId = single(params.projectId) ?? "";
   const [projects, members, contacts] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
@@ -64,8 +68,37 @@ export default async function NewMeetingPage() {
           position: contact.position,
           counterparty: contact.counterparty.name,
         }))}
+        defaults={
+          date
+            ? {
+                projectId: projects.some((project) => project.id === projectId)
+                  ? projectId
+                  : projects[0].id,
+                date,
+                startTime: null,
+                endTime: null,
+                place: null,
+                kind: "WORKING",
+                subject: "",
+                agenda: null,
+                decisions: null,
+                ownerId: null,
+                participants: [],
+              }
+            : undefined
+        }
         submitLabel="Завести встречу"
       />
     </div>
   );
+}
+
+function parseDay(value: string | undefined): Date | null {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function single(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }

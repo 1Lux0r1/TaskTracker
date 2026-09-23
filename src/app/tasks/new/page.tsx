@@ -12,6 +12,8 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   await requireUser();
   const params = await props.searchParams;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  // Дата приходит из панели дня в календаре: «завести задачу на этот день».
+  const dueDate = parseDay(Array.isArray(params.dueDate) ? params.dueDate[0] : params.dueDate);
 
   const [projects, members] = await Promise.all([
     prisma.project.findMany({
@@ -100,7 +102,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           letterId: null,
           parentId: null,
           startDate: null,
-          dueDate: null,
+          dueDate,
           estimateHours: null,
           spentHours: null,
           progress: 0,
@@ -109,4 +111,10 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
       />
     </div>
   );
+}
+
+function parseDay(value: string | undefined): Date | null {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }

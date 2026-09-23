@@ -7,8 +7,14 @@ import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewLetterPage() {
+export default async function NewLetterPage(props: PageProps<"/letters/new">) {
   await requireUser();
+  const params = await props.searchParams;
+  // Срок и проект приходят из панели дня в календаре.
+  const initialDueDate = /^\d{4}-\d{2}-\d{2}$/.test(single(params.dueDate) ?? "")
+    ? (single(params.dueDate) as string)
+    : "";
+  const fromCalendar = single(params.projectId) ?? "";
   const [projects, counterparties, members, last, incomingLetters] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
@@ -54,7 +60,9 @@ export default async function NewLetterPage() {
 
   const known = last && projects.some((project) => project.id === last.projectId) ? last : null;
   const sticky: StickyLetterValues = {
-    projectId: known?.projectId ?? projects[0].id,
+    projectId: projects.some((project) => project.id === fromCalendar)
+      ? fromCalendar
+      : (known?.projectId ?? projects[0].id),
     direction: known?.direction ?? "INCOMING",
     date: toDateInputValue(startOfToday()),
     counterpartyId:
@@ -79,6 +87,7 @@ export default async function NewLetterPage() {
         </p>
       </div>
       <QuickLetterForm
+        initialDueDate={initialDueDate}
         action={createLetter}
         projects={projects}
         counterparties={counterparties}
@@ -88,4 +97,8 @@ export default async function NewLetterPage() {
       />
     </div>
   );
+}
+
+function single(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
