@@ -84,24 +84,51 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
   const scope = filter.projectId ? { projectId: filter.projectId } : {};
   const wants = (type: CalendarType) => filter.types.includes(type);
 
+  // Лента показывает и просроченное, как бы далеко оно ни было: незакрытая
+  // запись висит, пока её не закроют, и в октябре сентябрьская просрочка не
+  // должна пропадать из виду. В сетке месяца и недели такого нет: там
+  // показывается ровно выбранный период.
+  const late = filter.view === "list";
+  const taskWhere = late
+    ? {
+        ...scope,
+        OR: [
+          { dueDate: range },
+          { status: { notIn: [...CLOSED_TASK_STATUSES] }, dueDate: { lt: today } },
+        ],
+      }
+    : { ...scope, dueDate: range };
+  const letterWhere = late
+    ? {
+        ...scope,
+        OR: [
+          { dueDate: range },
+          { status: { notIn: [...CLOSED_LETTER_STATUSES] }, dueDate: { lt: today } },
+        ],
+      }
+    : { ...scope, dueDate: range };
+  const documentWhere = late
+    ? { ...scope, OR: [{ dueDate: range }, { status: { not: "SIGNED" }, dueDate: { lt: today } }] }
+    : { ...scope, dueDate: range };
+
   const [tasks, letters, documents, meetings, running, projects] = await Promise.all([
     wants("task")
       ? prisma.task.findMany({
-          where: { ...scope, dueDate: range },
+          where: taskWhere,
           include: { assignee: { select: { fullName: true } }, project: { select: { code: true } } },
           orderBy: { dueDate: "asc" },
         })
       : [],
     wants("letter")
       ? prisma.letter.findMany({
-          where: { ...scope, dueDate: range },
+          where: letterWhere,
           include: { counterparty: { select: { name: true } } },
           orderBy: { dueDate: "asc" },
         })
       : [],
     wants("document")
       ? prisma.document.findMany({
-          where: { ...scope, dueDate: range },
+          where: documentWhere,
           include: { counterparty: { select: { name: true } } },
           orderBy: { dueDate: "asc" },
         })
@@ -200,7 +227,9 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
   const periodTitle =
     filter.view === "week"
       ? `${formatDate(grid[0])} — ${formatDate(grid[6])}`
-      : `${MONTHS[filter.day.getMonth()]} ${filter.day.getFullYear()}`;
+      : filter.view === "list"
+        ? `С ${formatDate(from)} и дальше`
+        : `${MONTHS[filter.day.getMonth()]} ${filter.day.getFullYear()}`;
 
   return (
     <div className="space-y-4">
@@ -512,51 +541,88 @@ function EventList({
   events: CalendarEvent[];
   today: Date;
 }) {
-  if (events.length === 0) {
-    return <p className="card p-6 text-sm text-gray-500">В этом месяце записей нет.</p>;
+  // Просроченное стоит наверху отдельным блоком: оно не про «что впереди», и
+  // в ленте по датам ушло бы в прошлое, где его никто не увидит.
+  const overdue = events.filter((event) => event.overdue);
+  const ahead = events.filter((event) => !event.overdue);
+
+  if (overdue.length === 0 && ahead.length === 0) {
+    return <p className="card p-6 text-sm text-gray-500">Впереди записей нет.</p>;
   }
 
+  return (
+    <div className="space-y-2">
+      {overdue.length > 0 && (
+        <section className="card border-red-200 bg-red-50 p-4">
+          <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-red-900">
+            Просрочено
+            <span className="badge bg-red-100 text-red-800 tabular-nums">{overdue.length}</span>
+          </h3>
+          <ul className="mt-2 divide-y divide-red-100">
+            {overdue.map((event) => (
+              <EventRow key={`${event.type}-${event.id}`} event={event} withDate />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ahead.length === 0 ? (
+        <p className="card p-6 text-sm text-gray-500">Впереди записей нет.</p>
+      ) : (
+        <ul className="space-y-2">
+          {groupByDay(ahead).map(([key, dayEvents]) => (
+            <li key={key} className="card p-4">
+              <Link
+                href={calendarHref(filter, { day: dayEvents[0].date })}
+                className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900 hover:underline"
+              >
+                {longDate(dayEvents[0].date)}
+                {isSameDay(dayEvents[0].date, today) && (
+                  <span className="badge bg-gray-900 text-white">сегодня</span>
+                )}
+              </Link>
+              <ul className="mt-2 divide-y divide-gray-100">
+                {dayEvents.map((event) => (
+                  <EventRow key={`${event.type}-${event.id}`} event={event} />
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Строка записи в ленте. В блоке просрочек рядом стоит срок: он в прошлом. */
+function EventRow({ event, withDate = false }: { event: CalendarEvent; withDate?: boolean }) {
+  return (
+    <li className="flex flex-wrap items-center gap-2 py-2">
+      <span
+        className={`badge ${event.overdue ? "bg-red-100 text-red-800" : TYPE_CHIP[event.type]}`}
+      >
+        {typeLabel(event.type)}
+      </span>
+      <Link href={event.href} className="text-sm text-gray-900 hover:underline">
+        {event.label}
+      </Link>
+      {event.note && <span className="text-sm text-gray-500">{event.note}</span>}
+      {event.overdue && (
+        <span className="ml-auto text-sm text-red-700">
+          {withDate ? `срок ${formatDate(event.date)}` : "просрочено"}
+        </span>
+      )}
+    </li>
+  );
+}
+
+function groupByDay(events: CalendarEvent[]): [string, CalendarEvent[]][] {
   const days = new Map<string, CalendarEvent[]>();
   for (const event of events) {
     const key = dayKey(event.date);
     days.set(key, [...(days.get(key) ?? []), event]);
   }
-
-  return (
-    <ul className="space-y-2">
-      {[...days.entries()].map(([key, dayEvents]) => (
-        <li key={key} className="card p-4">
-          <Link
-            href={calendarHref(filter, { day: dayEvents[0].date })}
-            className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900 hover:underline"
-          >
-            {longDate(dayEvents[0].date)}
-            {isSameDay(dayEvents[0].date, today) && (
-              <span className="badge bg-gray-900 text-white">сегодня</span>
-            )}
-          </Link>
-          <ul className="mt-2 divide-y divide-gray-100">
-            {dayEvents.map((event) => (
-              <li key={`${event.type}-${event.id}`} className="flex flex-wrap items-center gap-2 py-2">
-                <span
-                  className={`badge ${
-                    event.overdue ? "bg-red-100 text-red-800" : TYPE_CHIP[event.type]
-                  }`}
-                >
-                  {typeLabel(event.type)}
-                </span>
-                <Link href={event.href} className="text-sm text-gray-900 hover:underline">
-                  {event.label}
-                </Link>
-                {event.note && <span className="text-sm text-gray-500">{event.note}</span>}
-                {event.overdue && <span className="ml-auto text-sm text-red-700">просрочено</span>}
-              </li>
-            ))}
-          </ul>
-        </li>
-      ))}
-    </ul>
-  );
+  return [...days.entries()];
 }
 
 /** В подписи одной записи тип называется в единственном числе. */

@@ -55,11 +55,22 @@ export function readCalendarFilter(params: SearchParams, today: Date): CalendarF
   };
 }
 
-/** Границы периода: месяц целиком, неделя с понедельника, список — тот же месяц. */
+/** Сколько дней показывает лента списка: она смотрит вперёд, а не в один месяц. */
+export const LIST_DAYS = 90;
+
+/**
+ * Границы периода: месяц целиком, неделя с понедельника, список — лента
+ * вперёд от выбранного дня. Список не привязан к месяцу: он отвечает на
+ * вопрос «что впереди», а просроченное показывается отдельным блоком.
+ */
 export function calendarRange(view: CalendarView, day: Date): { start: Date; end: Date } {
   if (view === "week") {
     const start = startOfWeek(day);
     return { start, end: endOfDay(addDays(start, 6)) };
+  }
+  if (view === "list") {
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    return { start, end: endOfDay(addDays(start, LIST_DAYS - 1)) };
   }
   const start = new Date(day.getFullYear(), day.getMonth(), 1);
   const end = new Date(day.getFullYear(), day.getMonth() + 1, 0);
@@ -83,7 +94,7 @@ export function buildWeekDays(day: Date): Date[] {
   return Array.from({ length: 7 }, (_, index) => addDays(start, index));
 }
 
-/** Шаг «назад-вперёд»: месяц в месячном и списочном виде, неделя в недельном. */
+/** Шаг «назад-вперёд»: месяц в месячном виде, неделя в недельном, месяц в списке. */
 export function shiftCalendar(view: CalendarView, day: Date, delta: number): Date {
   if (view === "week") return addDays(day, delta * 7);
   const shifted = new Date(day.getFullYear(), day.getMonth() + delta, 1);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_CALENDAR_TYPES,
+  LIST_DAYS,
+  addDays,
   buildMonthGrid,
   buildWeekDays,
   calendarHref,
@@ -46,6 +48,13 @@ describe("calendarRange", () => {
     const { start, end } = calendarRange("week", TODAY);
     expect(dayKey(start)).toBe("2026-09-21");
     expect(dayKey(end)).toBe("2026-09-27");
+  });
+
+  it("список — лента вперёд от выбранного дня, а не месяц", () => {
+    const { start, end } = calendarRange("list", TODAY);
+    expect(dayKey(start)).toBe("2026-09-23");
+    expect(dayKey(end)).toBe(dayKey(addDays(TODAY, LIST_DAYS - 1)));
+    expect(end.getHours()).toBe(23);
   });
 });
 
