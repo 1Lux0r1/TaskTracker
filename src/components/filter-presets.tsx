@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   type PresetResult,
   deletePreset,
@@ -29,23 +29,51 @@ type Props = {
  */
 export function FilterPresets({ scope, items, appliedId }: Props) {
   const params = useSearchParams();
+  const anchor = useRef<HTMLDivElement>(null);
   const [pending, start] = useTransition();
   const [note, setNote] = useState("");
   const [name, setName] = useState("");
   const [renaming, setRenaming] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
 
+  /**
+   * Условия берём прямо из полей панели, а не из адреса: человек мог выбрать
+   * статус и сразу назвать набор, не нажимая «Показать». В набор должно
+   * уйти то, что он видит на экране.
+   */
+  function currentQuery(): string {
+    const form = anchor.current?.closest("form");
+    if (!form) return params.toString();
+
+    const query = new URLSearchParams();
+    for (const [key, value] of new FormData(form).entries()) {
+      if (typeof value === "string") query.append(key, value);
+    }
+    return query.toString();
+  }
+
+  function save() {
+    if (name.trim() === "" || pending) return;
+    run(async () => {
+      const result = await savePreset(scope, name, currentQuery());
+      if (result.ok) setName("");
+      return result;
+    });
+  }
+
+  // Строка переименования при ошибке не закрывается: имя набрано, и терять
+  // его из-за занятого имени незачем.
   function run(action: () => Promise<PresetResult>) {
     start(async () => {
       const result = await action();
       setNote(result.message);
-      setRenaming(null);
+      if (result.ok) setRenaming(null);
       setRemoving(null);
     });
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-gray-50 p-3">
+    <div ref={anchor} className="space-y-2 rounded-lg bg-gray-50 p-3">
       <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">Мои наборы</p>
 
       {items.length === 0 ? (
@@ -139,23 +167,15 @@ export function FilterPresets({ scope, items, appliedId }: Props) {
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (isEnter(event)) save();
+          }}
           maxLength={PRESET_NAME_LIMIT}
           placeholder="Имя набора: «Мои просроченные»"
           aria-label="Имя набора"
           className="input w-full min-w-0 sm:w-64"
         />
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={pending || name.trim() === ""}
-          onClick={() =>
-            run(async () => {
-              const result = await savePreset(scope, name, params.toString());
-              if (result.ok) setName("");
-              return result;
-            })
-          }
-        >
+        <button type="button" className="btn-secondary" disabled={pending || name.trim() === ""} onClick={save}>
           Сохранить нынешние условия
         </button>
         {note && <span className="text-sm text-gray-600">{note}</span>}
@@ -182,6 +202,9 @@ function RenameRow({
       <input
         value={value}
         onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (isEnter(event) && value.trim() !== "" && !pending) onSave(value);
+        }}
         maxLength={PRESET_NAME_LIMIT}
         aria-label="Новое имя набора"
         className="input w-full min-w-0 sm:w-64"
@@ -200,4 +223,14 @@ function RenameRow({
       </button>
     </>
   );
+}
+
+/**
+ * Enter в поле имени: поле лежит внутри формы отбора, и без перехвата браузер
+ * отправил бы её — страница перезагрузилась бы, а набор не сохранился.
+ */
+function isEnter(event: React.KeyboardEvent<HTMLInputElement>): boolean {
+  if (event.key !== "Enter") return false;
+  event.preventDefault();
+  return true;
 }
