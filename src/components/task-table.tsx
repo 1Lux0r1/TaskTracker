@@ -25,10 +25,17 @@ type Props = {
   tasks: TaskRow[];
   /** Колонка проекта нужна только в сквозном списке задач. */
   showProject?: boolean;
+  /** Отметки для смены видимости сразу пачке: только у администратора. */
+  selectable?: boolean;
   emptyMessage?: string;
 };
 
-export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
+export function TaskTable({
+  tasks,
+  showProject = false,
+  selectable = false,
+  emptyMessage,
+}: Props) {
   if (tasks.length === 0) {
     return (
       <p className="card p-6 text-sm text-gray-500">
@@ -42,6 +49,7 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
       <table className="w-full min-w-3xl border-collapse">
         <thead className="border-b border-gray-200 bg-gray-50">
           <tr>
+            {selectable && <th className="table-head w-10" />}
             <th className="table-head w-20">№</th>
             {showProject && <th className="table-head w-24">Проект</th>}
             <th className="table-head">Задача</th>
@@ -57,6 +65,11 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
             const overdue = isOverdue(task.dueDate, task.status);
             return (
               <tr key={task.id} className="hover:bg-gray-50">
+                {selectable && (
+                  <td className="table-cell">
+                    <input type="checkbox" name="ids" value={task.id} className="size-4" />
+                  </td>
+                )}
                 <td className="table-cell text-gray-400 tabular-nums">{task.number}</td>
                 {showProject && (
                   <td className="table-cell">

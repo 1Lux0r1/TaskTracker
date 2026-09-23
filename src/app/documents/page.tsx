@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DocumentKindBadge, DocumentStatusBadge } from "@/components/letter-badges";
 import { FilterBar } from "@/components/filter-bar";
 import { ProgressBar, VisibilityBadge } from "@/components/badges";
+import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
 import {
   DOCUMENT_KIND_LABELS,
@@ -27,7 +28,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function DocumentsPage(props: PageProps<"/documents">) {
-  await requireUser();
+  const user = await requireUser();
   const params = await props.searchParams;
   const filter = readDocumentFilter(params);
   const activeFilters = countActiveDocumentFilters(filter);
@@ -165,6 +166,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
       {ordered.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
+        <BulkVisibility entity="DOCUMENT" enabled={user.role === "ADMIN"}>
         <ul className="space-y-2">
           {ordered.map((document, index) => {
             const overdue =
@@ -186,9 +188,20 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
                   </h2>
                 )}
 
+                {/* Отметка живёт рядом с карточкой, а не внутри ссылки:
+                    иначе щелчок по ней уводил бы на документ. */}
+                <div className="flex items-start gap-2">
+                {user.role === "ADMIN" && (
+                  <input
+                    type="checkbox"
+                    name="ids"
+                    value={document.id}
+                    className="mt-5 size-4 shrink-0"
+                  />
+                )}
                 <Link
                   href={`/documents/${document.id}`}
-                  className="card block p-4 transition hover:border-gray-300 hover:shadow-sm"
+                  className="card block min-w-0 flex-1 p-4 transition hover:border-gray-300 hover:shadow-sm"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -230,10 +243,12 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
                     </p>
                   )}
                 </Link>
+                </div>
               </li>
             );
           })}
         </ul>
+        </BulkVisibility>
       )}
     </div>
   );

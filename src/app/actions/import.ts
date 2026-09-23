@@ -3,6 +3,14 @@
 import { requireUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { importFromXlsx, type ImportKind, type ImportReport } from "@/lib/excel/import";
+import { VISIBILITY_DEFAULTS, readVisibility, type VisibilityEntity } from "@/lib/visibility";
+
+/** Какой сущности касается загрузка: от неё зависит умолчание видимости. */
+function entityOf(kind: ImportKind): VisibilityEntity {
+  if (kind === "letters") return "LETTER";
+  if (kind === "documents") return "DOCUMENT";
+  return "TASK";
+}
 
 export type ImportState =
   | { status: "idle" }
@@ -15,7 +23,7 @@ export async function importFromExcel(
   _state: ImportState,
   formData: FormData,
 ): Promise<ImportState> {
-  await requireUser();
+  const user = await requireUser();
   const file = formData.get("file");
   const projectId = String(formData.get("projectId") ?? "");
   // «Что загружаем» у реестров подписания несёт ещё и вид документа:
@@ -46,6 +54,9 @@ export async function importFromExcel(
       createMissingMembers: formData.get("createMissingMembers") === "on",
       createMissingCounterparties: formData.get("createMissingCounterparties") === "on",
       dryRun: formData.get("dryRun") === "on",
+      // Видимость выбирается на всю загрузку: реестр вносят пачкой.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS[entityOf(kind)],
+      actor: { id: user.id, isAdmin: user.role === "ADMIN" },
     });
 
     revalidatePath(`/projects/${projectId}`);

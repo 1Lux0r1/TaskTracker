@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
+import type { VisibilityEntity } from "@/lib/visibility";
 import { normalizeHeader } from "@/lib/excel/columns";
 import {
   DOCUMENT_COLUMNS,
@@ -65,7 +66,41 @@ export type ImportOptions = {
   createMissingMembers: boolean;
   createMissingCounterparties: boolean;
   dryRun: boolean;
+  /** Видимость всей загрузки: реестр вносят пачкой, и решение о нём одно. */
+  isPublic: boolean;
+  /**
+   * Кто загружает. Видимость уже заведённой записи меняет только
+   * администратор, поэтому при обновлении строки она трогается лишь у него —
+   * и каждая такая смена попадает в журнал видимости.
+   */
+  actor: { id: string; isAdmin: boolean };
 };
+
+/**
+ * Видимость при обновлении уже заведённой записи. Менять её после создания
+ * может только администратор, поэтому у остальных строка остаётся как была,
+ * а у администратора смена попадает в журнал видимости.
+ */
+async function visibilityOnUpdate(
+  options: ImportOptions,
+  entity: VisibilityEntity,
+  entityId: string,
+  title: string,
+  current: boolean,
+): Promise<{ isPublic?: boolean }> {
+  if (!options.actor.isAdmin || current === options.isPublic) return {};
+
+  await prisma.visibilityChange.create({
+    data: {
+      entity,
+      entityId,
+      title,
+      isPublic: options.isPublic,
+      memberId: options.actor.id,
+    },
+  });
+  return { isPublic: options.isPublic };
+}
 
 /** Сколько первых строк просматриваем в поисках шапки: над таблицей бывает заголовок. */
 const HEADER_SEARCH_DEPTH = 10;
@@ -400,13 +435,31 @@ async function importTasks(
         byTitle.get(title.toLowerCase());
 
       const taskId = existingId
-        ? (await prisma.task.update({ where: { id: existingId }, data: { ...data, searchIndex } }))
-            .id
+        ? (
+            await prisma.task.update({
+              where: { id: existingId },
+              data: {
+                ...data,
+                searchIndex,
+                ...(await visibilityOnUpdate(
+                  options,
+                  "TASK",
+                  existingId,
+                  title,
+                  (await prisma.task.findUniqueOrThrow({
+                    where: { id: existingId },
+                    select: { isPublic: true },
+                  })).isPublic,
+                )),
+              },
+            })
+          ).id
         : (
             await prisma.task.create({
               data: {
                 ...data,
                 searchIndex,
+                isPublic: options.isPublic,
                 projectId: options.projectId,
                 number: nextNumber,
                 sortOrder: nextNumber,
@@ -508,11 +561,27 @@ async function importLetters(
       const existingId = byKey.get(key);
 
       if (existingId) {
-        await prisma.letter.update({ where: { id: existingId }, data: withSearch });
+        const before = await prisma.letter.findUniqueOrThrow({
+          where: { id: existingId },
+          select: { isPublic: true },
+        });
+        await prisma.letter.update({
+          where: { id: existingId },
+          data: {
+            ...withSearch,
+            ...(await visibilityOnUpdate(
+              options,
+              "LETTER",
+              existingId,
+              `№ ${data.number} — ${data.subject}`,
+              before.isPublic,
+            )),
+          },
+        });
         report.updated += 1;
       } else {
         const created = await prisma.letter.create({
-          data: { ...withSearch, projectId: options.projectId },
+          data: { ...withSearch, isPublic: options.isPublic, projectId: options.projectId },
         });
         byKey.set(key, created.id);
         report.created += 1;
@@ -675,7 +744,19 @@ async function importDocuments(
 
       let documentId: string;
       if (existing) {
-        await prisma.document.update({ where: { id: existing.id }, data });
+        await prisma.document.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            ...(await visibilityOnUpdate(
+              options,
+              "DOCUMENT",
+              existing.id,
+              title,
+              existing.isPublic,
+            )),
+          },
+        });
         // Стороны пересобираем целиком: в реестре они и есть источник правды.
         await prisma.documentSignature.deleteMany({ where: { documentId: existing.id } });
         await prisma.documentSignature.createMany({
@@ -687,6 +768,7 @@ async function importDocuments(
         const created = await prisma.document.create({
           data: {
             ...data,
+            isPublic: options.isPublic,
             projectId: options.projectId,
             signatures: { create: signatures },
           },

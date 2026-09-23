@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
 import { TaskTable } from "@/components/task-table";
+import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
 import { TASK_STATUS_LABELS, TASK_STATUSES, startOfToday } from "@/lib/domain";
 import {
@@ -16,7 +17,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage(props: PageProps<"/tasks">) {
-  await requireUser();
+  const user = await requireUser();
   const params = await props.searchParams;
   const filter = readTaskFilter(params);
   const today = startOfToday();
@@ -136,7 +137,18 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         Найдено задач: {tasks.length}
         {tasks.length === 300 && " (показаны первые 300, уточните фильтр)"}
       </p>
-      <TaskTable tasks={tasks} showProject emptyMessage="Под фильтр ничего не подошло." />
+      {user.role === "ADMIN" ? (
+        <BulkVisibility entity="TASK">
+          <TaskTable
+            tasks={tasks}
+            showProject
+            selectable
+            emptyMessage="Под фильтр ничего не подошло."
+          />
+        </BulkVisibility>
+      ) : (
+        <TaskTable tasks={tasks} showProject emptyMessage="Под фильтр ничего не подошло." />
+      )}
     </div>
   );
 }

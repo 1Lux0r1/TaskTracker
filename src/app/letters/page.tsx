@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
 import { VisibilityBadge } from "@/components/badges";
+import { BulkVisibility } from "@/components/bulk-visibility";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { prisma } from "@/lib/db";
 import {
@@ -25,7 +26,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function LettersPage(props: PageProps<"/letters">) {
-  await requireUser();
+  const user = await requireUser();
   const params = await props.searchParams;
   const filter = readLetterFilter(params);
   const today = startOfToday();
@@ -157,10 +158,12 @@ export default async function LettersPage(props: PageProps<"/letters">) {
       {letters.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
+        <BulkVisibility entity="LETTER" enabled={user.role === "ADMIN"}>
         <div className="card overflow-x-auto">
           <table className="w-full min-w-5xl border-collapse">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
+                {user.role === "ADMIN" && <th className="table-head w-10" />}
                 <th className="table-head w-40">Номер</th>
                 <th className="table-head w-28">Дата</th>
                 <th className="table-head w-32">Направление</th>
@@ -176,6 +179,11 @@ export default async function LettersPage(props: PageProps<"/letters">) {
                   letter.dueDate !== null && isLetterOpen(letter.status) && letter.dueDate < today;
                 return (
                   <tr key={letter.id} className="hover:bg-gray-50">
+                    {user.role === "ADMIN" && (
+                      <td className="table-cell">
+                        <input type="checkbox" name="ids" value={letter.id} className="size-4" />
+                      </td>
+                    )}
                     <td className="table-cell">
                       <Link
                         href={`/letters/${letter.id}`}
@@ -222,6 +230,7 @@ export default async function LettersPage(props: PageProps<"/letters">) {
             </tbody>
           </table>
         </div>
+        </BulkVisibility>
       )}
     </div>
   );

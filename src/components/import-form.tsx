@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { importFromExcel, type ImportState } from "@/app/actions/import";
 import { SubmitButton } from "@/components/submit-button";
+import { VISIBILITY_OPTIONS } from "@/lib/visibility";
 
 const INITIAL: ImportState = { status: "idle" };
 
 type Props = {
   projects: { id: string; code: string; name: string }[];
+  /** Видимость уже заведённых записей меняет только администратор. */
+  isAdmin?: boolean;
 };
 
-export function ImportForm({ projects }: Props) {
+export function ImportForm({ projects, isAdmin = false }: Props) {
   const [state, formAction] = useActionState(importFromExcel, INITIAL);
 
   return (
@@ -75,6 +78,23 @@ export function ImportForm({ projects }: Props) {
             className="size-4"
           />
           Заводить организации, которых нет в справочнике
+        </label>
+
+        <label className="field">
+          Видимость загруженного
+          <select name="visibility" defaultValue="INTERNAL" className="input sm:w-96">
+            {VISIBILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.note.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-normal text-gray-500">
+            Одна пометка на всю загрузку.{" "}
+            {isAdmin
+              ? "У записей, которые уже есть в системе, видимость тоже станет такой, и это попадёт в журнал."
+              : "У записей, которые уже есть в системе, видимость не изменится: после создания её меняет администратор."}
+          </span>
         </label>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
