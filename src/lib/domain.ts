@@ -259,21 +259,52 @@ export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
 export const DOCUMENT_STATUSES = [
   "DRAFT",
   "REVIEW",
+  "RETURNED",
   "SENT",
   "SIGNING",
   "SIGNED",
   "DECLINED",
+  "FILED",
 ] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
 export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
   DRAFT: "Черновик",
   REVIEW: "На согласовании",
+  RETURNED: "Возвращён на доработку",
   SENT: "Направлен стороне",
   SIGNING: "На подписании",
   SIGNED: "Подписан",
   DECLINED: "Отказ в подписании",
+  FILED: "Передан в дело",
 };
+
+/**
+ * Стадии, которые ставит человек, а не матрица подписания: документ вернули
+ * на доработку или убрали в дело. Матрица их не перебивает.
+ */
+export const MANUAL_DOCUMENT_STATUSES: DocumentStatus[] = ["RETURNED", "FILED"];
+
+/**
+ * Порядок стадий для списка: сначала то, что требует действий, в конце —
+ * законченное. В базе статус хранится строкой, поэтому по этому порядку
+ * список сортируется в приложении, а не запросом.
+ */
+export const DOCUMENT_STAGE_ORDER: DocumentStatus[] = [
+  "DECLINED",
+  "RETURNED",
+  "DRAFT",
+  "REVIEW",
+  "SENT",
+  "SIGNING",
+  "SIGNED",
+  "FILED",
+];
+
+export function documentStageRank(status: string): number {
+  const index = DOCUMENT_STAGE_ORDER.indexOf(status as DocumentStatus);
+  return index === -1 ? DOCUMENT_STAGE_ORDER.length : index;
+}
 
 export const SIGNATURE_STATUSES = ["PENDING", "SIGNED", "DECLINED", "NOT_REQUIRED"] as const;
 export type SignatureStatus = (typeof SIGNATURE_STATUSES)[number];
@@ -305,6 +336,10 @@ export function deriveDocumentStatus(
   signatures: { status: string }[],
   fallback: string,
 ): string {
+  // «Возвращён на доработку» и «Передан в дело» ставят руками: это стадии
+  // работы с документом, а не итог подписания, и матрица их не отменяет.
+  if (MANUAL_DOCUMENT_STATUSES.includes(fallback as DocumentStatus)) return fallback;
+
   const required = signatures.filter((item) => item.status !== "NOT_REQUIRED");
   if (required.length === 0) return fallback;
   if (required.some((item) => item.status === "DECLINED")) return "DECLINED";

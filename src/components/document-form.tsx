@@ -7,7 +7,9 @@ import {
   DOCUMENT_KINDS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUSES,
+  MANUAL_DOCUMENT_STATUSES,
   toDateInputValue,
+  type DocumentStatus,
 } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
 
@@ -32,7 +34,10 @@ type Props = {
   members: { id: string; fullName: string }[];
   letters: { id: string; number: string; direction: string; subject: string }[];
   defaults?: DocumentFormValues;
-  /** Статус выводится из подписей сторон, поэтому у существующего документа он только для чтения. */
+  /**
+   * Итог подписания выводится из подписей сторон. Стадии работы с документом
+   * — «возвращён на доработку» и «передан в дело» — всё равно ставит человек.
+   */
   statusDerived?: boolean;
   submitLabel: string;
 };
@@ -48,6 +53,12 @@ export function DocumentForm({
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
+  // Пока сторон нет, стадию выбирают целиком руками; когда есть — итог
+  // подписания приходит из матрицы, а человеку остаются его стадии.
+  const currentStatus = (defaults?.status ?? "DRAFT") as DocumentStatus;
+  const stageChoices: DocumentStatus[] = statusDerived
+    ? [currentStatus, ...MANUAL_DOCUMENT_STATUSES.filter((value) => value !== currentStatus)]
+    : [...DOCUMENT_STATUSES];
   const outgoing = letters.filter((item) => item.direction === "OUTGOING");
   const incoming = letters.filter((item) => item.direction === "INCOMING");
 
@@ -129,26 +140,26 @@ export function DocumentForm({
           />
         </label>
         <label className="field">
-          Статус
+          Стадия
+          {/* У документа с матрицей подписания итог считается по сторонам,
+              поэтому выбрать можно только текущий итог и ручные стадии:
+              ими работу с документом и ведут. */}
           <select
             name="status"
             defaultValue={defaults?.status ?? "DRAFT"}
-            disabled={statusDerived}
-            className="input disabled:bg-gray-50 disabled:text-gray-500"
+            className="input"
           >
-            {DOCUMENT_STATUSES.map((status) => (
+            {stageChoices.map((status) => (
               <option key={status} value={status}>
                 {DOCUMENT_STATUS_LABELS[status]}
               </option>
             ))}
           </select>
           {statusDerived && (
-            <>
-              <input type="hidden" name="status" value={defaults?.status ?? "DRAFT"} />
-              <span className="mt-1 block text-xs font-normal text-gray-500">
-                Считается по подписям сторон ниже
-              </span>
-            </>
+            <span className="mt-1 block text-xs font-normal text-gray-500">
+              Итог подписания считается по сторонам ниже. Руками ставятся
+              «возвращён на доработку» и «передан в дело».
+            </span>
           )}
         </label>
       </div>

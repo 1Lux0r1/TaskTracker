@@ -23,10 +23,12 @@ const LETTER_STATUS_CLASS: Record<LetterStatus, string> = {
 const DOCUMENT_STATUS_CLASS: Record<DocumentStatus, string> = {
   DRAFT: "bg-gray-100 text-gray-600",
   REVIEW: "bg-violet-50 text-violet-700",
+  RETURNED: "bg-orange-50 text-orange-700",
   SENT: "bg-blue-50 text-blue-700",
   SIGNING: "bg-amber-50 text-amber-700",
   SIGNED: "bg-emerald-50 text-emerald-700",
   DECLINED: "bg-red-50 text-red-700",
+  FILED: "bg-slate-100 text-slate-600",
 };
 
 const SIGNATURE_STATUS_CLASS: Record<SignatureStatus, string> = {
