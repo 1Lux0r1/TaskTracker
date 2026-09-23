@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyAssignment, notifyDueChange } from "@/lib/notifications-feed";
 import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -32,7 +33,7 @@ export async function createTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -51,7 +52,7 @@ export async function createTask(
   const number = (last?.number ?? 0) + 1;
 
   const artifacts = readArtifacts(formData);
-  await prisma.task.create({
+  const created = await prisma.task.create({
     data: {
       ...input,
       // Видимость сотрудник задаёт один раз — при заведении.
@@ -63,6 +64,8 @@ export async function createTask(
       artifacts: { create: artifacts },
     },
   });
+
+  await notifyAssignment(created.id, created.title, created.assigneeId, user.id);
 
   revalidatePath(`/projects/${input.projectId}`);
   revalidatePath("/tasks");
@@ -114,6 +117,22 @@ export async function updateTask(
       },
     }),
   ]);
+
+  // О назначении и о переносе срока узнаёт тот, кого это касается.
+  if (input.assigneeId !== current.assigneeId) {
+    await notifyAssignment(taskId, input.title, input.assigneeId, user.id);
+  }
+  if (input.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "TASK",
+      taskId,
+      input.title,
+      input.assigneeId,
+      input.projectId,
+      input.dueDate,
+      user.id,
+    );
+  }
 
   revalidatePath(`/projects/${input.projectId}`);
   revalidatePath(`/tasks/${taskId}`);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/submit-button";
 import { getCurrentUser } from "@/lib/auth";
+import { unreadCount } from "@/lib/notifications-feed";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,6 +34,9 @@ const NAV_LINKS = [
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
+  // Значок показывает только уже записанное: пересборку просрочек делает
+  // страница уведомлений, иначе она шла бы на каждой странице системы.
+  const unread = user ? await unreadCount(user.id) : 0;
 
   return (
     <html lang="ru" className={`${inter.variable} h-full antialiased`}>
@@ -58,6 +62,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             )}
             {user && (
               <div className="ml-auto flex items-center gap-3 text-sm">
+                <Link
+                  href="/notifications"
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <BellIcon />
+                  <span className="sr-only">Уведомления</span>
+                  {unread > 0 && (
+                    <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-medium text-white tabular-nums">
+                      {unread}
+                    </span>
+                  )}
+                </Link>
                 <Link href="/profile" className="text-gray-600 hover:text-gray-900">
                   {user.fullName}
                   {user.role === "ADMIN" && (
@@ -103,5 +119,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         )}
       </body>
     </html>
+  );
+}
+
+/** Колокол в шапке: рядом с ним число непрочитанного. */
+function BellIcon() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
   );
 }

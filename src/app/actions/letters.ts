@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyDueChange } from "@/lib/notifications-feed";
 import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -120,6 +121,18 @@ export async function updateLetter(
       searchIndex: await searchIndexFor(input),
     },
   });
+  if (input.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "LETTER",
+      letterId,
+      `№ ${input.number} — ${input.subject}`,
+      input.ownerId,
+      input.projectId,
+      input.dueDate,
+      user.id,
+    );
+  }
+
   revalidatePath("/letters");
   revalidatePath(`/letters/${letterId}`);
   return { ok: true, message: "Письмо сохранено" };

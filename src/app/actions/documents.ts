@@ -2,6 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyDueChange } from "@/lib/notifications-feed";
 import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -53,7 +54,7 @@ export async function updateDocument(
 
   const current = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { isPublic: true },
+    select: { isPublic: true, dueDate: true },
   });
   if (!current) return { ok: false, error: "Документ не найден" };
 
@@ -75,6 +76,18 @@ export async function updateDocument(
       signedAt: parsed.data.status === "SIGNED" ? (await signedAt(documentId)) : null,
     },
   });
+
+  if (parsed.data.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "DOCUMENT",
+      documentId,
+      parsed.data.title,
+      parsed.data.ownerId,
+      parsed.data.projectId,
+      parsed.data.dueDate,
+      user.id,
+    );
+  }
 
   revalidatePath("/documents");
   revalidatePath(`/documents/${documentId}`);

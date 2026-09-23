@@ -43,6 +43,7 @@ model Member {
   referencePages    ReferencePage[]      @relation("ReferenceAuthor")
   meetings          MeetingParticipant[] @relation("MeetingParticipantMember")
   visibilityChanges VisibilityChange[]   @relation("VisibilityChangeAuthor")
+  notifications     Notification[]       @relation("NotificationMember")
 
   @@index([fullName])
 }
@@ -587,5 +588,30 @@ model VisibilityChange {
   member Member? @relation("VisibilityChangeAuthor", fields: [memberId], references: [id], onDelete: SetNull)
 
   @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Уведомление сотруднику: назначение, смена срока, просрочка и запись без
+/// движения. Почты у системы нет, поэтому уведомления живут внутри неё.
+model Notification {
+  id        String    @id @default(cuid())
+  memberId  String
+  /// ASSIGNED, DUE_CHANGED, OVERDUE или STALE.
+  kind      String
+  /// TASK, LETTER или DOCUMENT.
+  entity    String
+  entityId  String
+  /// Название записи на момент события: уведомление читается и после правки.
+  title     String
+  text      String
+  /// Ключ события: одно и то же не повторяется при каждом открытии экрана.
+  dedupKey  String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  member Member @relation("NotificationMember", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, dedupKey])
+  @@index([memberId, readAt])
   @@index([createdAt])
 }
