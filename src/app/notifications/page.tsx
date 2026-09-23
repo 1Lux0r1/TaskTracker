@@ -11,18 +11,18 @@ import {
   notificationKindLabel,
   notificationKindTone,
 } from "@/lib/notifications";
-import { notificationHref, syncDerivedNotifications } from "@/lib/notifications-feed";
+import { ensureFreshNotifications, notificationHref } from "@/lib/notifications-feed";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Что горит: назначения, переносы сроков, просрочки и записи без движения.
- * Просрочка и застой видны только по времени, поэтому список пересобирается
- * при открытии страницы — планировщика в системе нет.
+ * Просрочку и застой пересобирает общий вызов — тот же, что считает число на
+ * колоколе, поэтому счётчик в шапке и заголовок раздела не расходятся.
  */
 export default async function NotificationsPage() {
   const user = await requireUser();
-  await syncDerivedNotifications();
+  await ensureFreshNotifications();
 
   const notifications = await prisma.notification.findMany({
     where: { memberId: user.id },

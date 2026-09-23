@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import {
   CLOSED_LETTER_STATUSES,
@@ -137,7 +138,10 @@ export async function notifyDueChange(
  */
 export async function syncDerivedNotifications(): Promise<number> {
   const today = startOfToday();
-  const staleBefore = new Date(today.getTime() - STALE_DAYS * 86_400_000);
+  // Простой считается от текущего момента: от начала суток «ровно 20 дней»
+  // превращались в «19 дн.».
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - STALE_DAYS * 86_400_000);
   const week = weekStamp(today);
 
   const [tasks, letters, documents] = await Promise.all([
@@ -217,7 +221,7 @@ export async function syncDerivedNotifications(): Promise<number> {
           entity,
           entityId,
           title,
-          text: `Без движения ${daysWithoutMovement(updatedAt, today)} дн.`,
+          text: `Без движения ${daysWithoutMovement(updatedAt, now)} дн.`,
           dedupKey: notificationKey("STALE", entity, entityId, week),
         });
       }
@@ -250,11 +254,110 @@ export async function syncDerivedNotifications(): Promise<number> {
     );
   }
 
-  return put(items);
+  const added = await put(items);
+  await closeSettled(today, staleBefore);
+  lastSync = Date.now();
+  return added;
 }
 
-/** Сколько непрочитанного у сотрудника: число для значка в шапке. */
+/**
+ * Лента и счётчик отвечают на разные вопросы. Строка «Просрочено» остаётся в
+ * ленте навсегда — это то, что было. А счётчик показывает только то, что
+ * горит сейчас, поэтому у снятой просрочки и сдвинувшейся записи отметка
+ * прочтения проставляется сама: строка остаётся, из счётчика уходит.
+ */
+async function closeSettled(today: Date, staleBefore: Date): Promise<void> {
+  const open = await prisma.notification.findMany({
+    where: { readAt: null, kind: { in: ["OVERDUE", "STALE"] } },
+    select: { id: true, kind: true, entity: true, entityId: true },
+  });
+  if (open.length === 0) return;
+
+  const ids = {
+    TASK: open.filter((item) => item.entity === "TASK").map((item) => item.entityId),
+    LETTER: open.filter((item) => item.entity === "LETTER").map((item) => item.entityId),
+    DOCUMENT: open.filter((item) => item.entity === "DOCUMENT").map((item) => item.entityId),
+  };
+
+  const [tasks, letters, documents] = await Promise.all([
+    prisma.task.findMany({
+      where: { id: { in: ids.TASK } },
+      select: { id: true, status: true, dueDate: true, updatedAt: true },
+    }),
+    prisma.letter.findMany({
+      where: { id: { in: ids.LETTER } },
+      select: { id: true, status: true, dueDate: true, updatedAt: true },
+    }),
+    prisma.document.findMany({
+      where: { id: { in: ids.DOCUMENT } },
+      select: { id: true, status: true, dueDate: true, updatedAt: true },
+    }),
+  ]);
+
+  const state = new Map<string, { closed: boolean; dueDate: Date | null; updatedAt: Date }>();
+  for (const task of tasks) {
+    state.set(`TASK:${task.id}`, {
+      closed: CLOSED_TASK_STATUSES.includes(task.status as (typeof CLOSED_TASK_STATUSES)[number]),
+      dueDate: task.dueDate,
+      updatedAt: task.updatedAt,
+    });
+  }
+  for (const letter of letters) {
+    state.set(`LETTER:${letter.id}`, {
+      closed: CLOSED_LETTER_STATUSES.includes(
+        letter.status as (typeof CLOSED_LETTER_STATUSES)[number],
+      ),
+      dueDate: letter.dueDate,
+      updatedAt: letter.updatedAt,
+    });
+  }
+  for (const document of documents) {
+    state.set(`DOCUMENT:${document.id}`, {
+      closed: CLOSED_DOCUMENT_STATUSES.includes(document.status),
+      dueDate: document.dueDate,
+      updatedAt: document.updatedAt,
+    });
+  }
+
+  const settled = open
+    .filter((item) => {
+      const record = state.get(`${item.entity}:${item.entityId}`);
+      // Записи не стало — гореть больше нечему.
+      if (!record) return true;
+      if (record.closed) return true;
+      if (item.kind === "OVERDUE") return !record.dueDate || record.dueDate >= today;
+      return record.updatedAt >= staleBefore;
+    })
+    .map((item) => item.id);
+
+  if (settled.length === 0) return;
+  await prisma.notification.updateMany({
+    where: { id: { in: settled } },
+    data: { readAt: new Date() },
+  });
+}
+
+/** Как часто пересобираются просрочки и застой. */
+const SYNC_INTERVAL_MS = 60_000;
+
+let lastSync = 0;
+
+/**
+ * Пересборка по времени. Планировщика в системе нет, а просрочка и застой
+ * видны только по часам, поэтому пересобирает тот, кто первым спросил, —
+ * шапка на любой странице или сам раздел уведомлений. Кеш React на запрос
+ * важен не меньше срока: в одном рендере шапка и страница должны увидеть
+ * одно и то же, иначе на колоколе одно число, а в заголовке другое.
+ */
+export const ensureFreshNotifications = cache(async (): Promise<void> => {
+  if (Date.now() - lastSync > SYNC_INTERVAL_MS) {
+    await syncDerivedNotifications();
+  }
+});
+
+/** Сколько горит у сотрудника: число для значка в шапке. */
 export async function unreadCount(memberId: string): Promise<number> {
+  await ensureFreshNotifications();
   return prisma.notification.count({ where: { memberId, readAt: null } });
 }
 
@@ -262,4 +365,22 @@ export async function unreadCount(memberId: string): Promise<number> {
 export function notificationHref(entity: string, entityId: string): string | null {
   const found = VISIBILITY_ENTITIES.find((item) => item.value === entity);
   return found ? `${found.href}/${entityId}` : null;
+}
+
+/**
+ * Движение по записи — это не только правка карточки: в системе ход работы
+ * отмечают лентой хроники и вложениями, как раньше колонкой «Статус» в
+ * Excel. Поэтому запись и файл двигают дату правки родителя.
+ */
+export async function touchRecord(
+  taskId: string | null,
+  letterId: string | null,
+  documentId: string | null,
+): Promise<void> {
+  const now = new Date();
+  if (taskId) await prisma.task.update({ where: { id: taskId }, data: { updatedAt: now } });
+  if (letterId) await prisma.letter.update({ where: { id: letterId }, data: { updatedAt: now } });
+  if (documentId) {
+    await prisma.document.update({ where: { id: documentId }, data: { updatedAt: now } });
+  }
 }

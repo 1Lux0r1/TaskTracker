@@ -46,6 +46,13 @@ describe("isStale", () => {
   it("считает дни простоя для текста уведомления", () => {
     expect(daysWithoutMovement(new Date(2026, 8, 9), today)).toBe(14);
   });
+
+  it("ровно двадцать дней — это двадцать, а не девятнадцать", () => {
+    // Счёт идёт от текущего момента: от начала суток ровные двадцать дней
+    // превращались в «19 дн.».
+    const now = new Date(2026, 8, 23, 17, 30);
+    expect(daysWithoutMovement(new Date(2026, 8, 3, 17, 30), now)).toBe(20);
+  });
 });
 
 describe("notificationKindLabel", () => {

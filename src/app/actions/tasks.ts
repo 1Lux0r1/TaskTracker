@@ -2,7 +2,7 @@
 
 import { requireUser } from "@/lib/auth";
 import { applyVisibilityChange } from "@/lib/visibility-log";
-import { notifyAssignment, notifyDueChange } from "@/lib/notifications-feed";
+import { notifyAssignment, notifyDueChange, touchRecord } from "@/lib/notifications-feed";
 import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -205,6 +205,9 @@ export async function addNote(formData: FormData): Promise<void> {
       documentId,
     },
   });
+
+  // Запись в хронике — это движение по записи: ею отмечают ход работы.
+  await touchRecord(taskId, letterId, documentId);
 
   if (taskId) revalidatePath(`/tasks/${taskId}`);
   if (letterId) revalidatePath(`/letters/${letterId}`);

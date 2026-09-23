@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { touchRecord } from "@/lib/notifications-feed";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -72,6 +73,13 @@ export async function uploadAttachment(
       },
     });
   }
+
+  // Приложенный файл — тоже движение по записи, а не только правка карточки.
+  await touchRecord(
+    owner.field === "taskId" ? owner.id : null,
+    owner.field === "letterId" ? owner.id : null,
+    owner.field === "documentId" ? owner.id : null,
+  );
 
   revalidatePath("/tasks");
   revalidatePath("/letters");
