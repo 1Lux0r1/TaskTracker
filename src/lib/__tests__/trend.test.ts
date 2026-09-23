@@ -54,6 +54,13 @@ describe("buildTrend", () => {
     expect(buildTrend(late, [day(21)])[0].overdue).toBe(0);
   });
 
+  it("закрытое сегодня днём попадает в сегодняшнюю точку", () => {
+    // Правый край графика должен совпадать с цифрами вверху страницы, а те
+    // считаются на текущий момент, а не на начало суток.
+    const closedToday = [{ dueDate: day(30), closedAt: new Date(2026, 8, 23, 14, 30) }];
+    expect(buildTrend(closedToday, [today])[0]).toMatchObject({ done: 1, readiness: 100 });
+  });
+
   it("пустой список не делит на ноль", () => {
     expect(buildTrend([], [day(23)])[0]).toMatchObject({ done: 0, readiness: 0 });
   });

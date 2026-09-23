@@ -11,6 +11,8 @@
  * восстановить. График отвечает на вопрос «как двигался нынешний состав
  * работ», и подпись под ним говорит об этом прямо.
  */
+import { addDays, endOfDay } from "@/lib/calendar";
+
 export type TrendRecord = {
   dueDate: Date | null;
   /** Дата, когда запись закрыли: у задачи — закрытия, у письма — исполнения. */
@@ -46,7 +48,7 @@ export function readTrendWeeks(raw: string | undefined): number {
 export function trendDates(today: Date, weeks: number): Date[] {
   const dates: Date[] = [];
   for (let step = weeks; step >= 0; step -= 1) {
-    dates.push(new Date(today.getTime() - step * 7 * 86_400_000));
+    dates.push(addDays(today, -step * 7));
   }
   return dates;
 }
@@ -57,8 +59,13 @@ export function buildTrend(records: TrendRecord[], dates: Date[]): TrendPoint[] 
     let done = 0;
     let overdue = 0;
 
+    // Закрытое считаем по концу суток: иначе задача, закрытая сегодня днём,
+    // в сегодняшнюю точку не попадёт, и правый край графика разойдётся с
+    // цифрами вверху страницы.
+    const until = endOfDay(date);
+
     for (const record of records) {
-      const closed = record.closedAt !== null && record.closedAt <= date;
+      const closed = record.closedAt !== null && record.closedAt <= until;
       if (closed) {
         done += 1;
         continue;
