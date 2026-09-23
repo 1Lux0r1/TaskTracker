@@ -56,6 +56,7 @@ export async function importFromExcel(
       dryRun: formData.get("dryRun") === "on",
       // Видимость выбирается на всю загрузку: реестр вносят пачкой.
       isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS[entityOf(kind)],
+      applyToExisting: formData.get("applyVisibilityToExisting") === "on",
       actor: { id: user.id, isAdmin: user.role === "ADMIN" },
     });
 

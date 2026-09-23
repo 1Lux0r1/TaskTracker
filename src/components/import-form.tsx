@@ -90,12 +90,28 @@ export function ImportForm({ projects, isAdmin = false }: Props) {
             ))}
           </select>
           <span className="text-xs font-normal text-gray-500">
-            Одна пометка на всю загрузку.{" "}
-            {isAdmin
-              ? "У записей, которые уже есть в системе, видимость тоже станет такой, и это попадёт в журнал."
-              : "У записей, которые уже есть в системе, видимость не изменится: после создания её меняет администратор."}
+            Одна пометка на новые записи загрузки. У тех, что уже есть в системе, видимость
+            остаётся прежней: загрузку повторяют ради данных, а не ради смены видимости.
           </span>
         </label>
+
+        {/* Видимость заведённой записи — решение человека, поэтому перекрыть
+            её загрузкой можно только осознанно и только администратору. */}
+        {isAdmin && (
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              name="applyVisibilityToExisting"
+              className="mt-0.5 size-4"
+            />
+            <span>
+              Применить видимость и к записям, которые уже заведены
+              <span className="block text-xs text-gray-500">
+                Каждая такая смена попадёт в журнал видимости
+              </span>
+            </span>
+          </label>
+        )}
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" name="dryRun" className="size-4" />

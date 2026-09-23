@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { setVisibilityForMany } from "@/app/actions/visibility";
 import { SubmitButton } from "@/components/submit-button";
 import { plural } from "@/lib/domain";
@@ -16,49 +16,75 @@ type Props = {
 
 /**
  * Смена видимости сразу пачке записей. Отметки живут прямо в реестре, а
- * панель появляется, когда отмечена хотя бы одна строка: пустая панель над
- * каждым реестром была бы шумом.
+ * «Выбрать все» берёт то, что показано: вместе с фильтрами это и даёт
+ * «все письма проекта» в два действия, ради чего всё и затевалось.
  */
 export function BulkVisibility({ entity, enabled = true, children }: Props) {
+  const form = useRef<HTMLFormElement>(null);
   const [chosen, setChosen] = useState(0);
 
   if (!enabled) return <>{children}</>;
 
-  function recount(event: React.FormEvent<HTMLFormElement>) {
-    const form = event.currentTarget;
-    const boxes = form.querySelectorAll<HTMLInputElement>('input[name="ids"]:checked');
-    setChosen(boxes.length);
+  function boxes(): HTMLInputElement[] {
+    return Array.from(form.current?.querySelectorAll<HTMLInputElement>('input[name="ids"]') ?? []);
+  }
+
+  function recount() {
+    setChosen(boxes().filter((box) => box.checked).length);
+  }
+
+  function toggleAll(event: React.ChangeEvent<HTMLInputElement>) {
+    const checked = event.currentTarget.checked;
+    for (const box of boxes()) box.checked = checked;
+  }
+
+  // Отметки снимает сама React, когда действие отработало; счётчик должен
+  // уйти вместе с ними, иначе панель висит с «Отмечено 2» при нуле.
+  async function submit(formData: FormData) {
+    await setVisibilityForMany(formData);
+    setChosen(0);
   }
 
   return (
-    <form action={setVisibilityForMany} onChange={recount}>
+    <form ref={form} action={submit} onChange={recount}>
       <input type="hidden" name="entity" value={entity} />
 
-      {chosen > 0 && (
-        <div className="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-gray-300 bg-white p-3 shadow-sm">
-          <span className="text-sm text-gray-700">
-            Отмечено {chosen} {plural(chosen, "запись", "записи", "записей")}
+      <div className="sticky top-0 z-10 mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-gray-200 bg-white p-3">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" className="size-4" onChange={toggleAll} />
+          Выбрать все показанные
+        </label>
+
+        {chosen > 0 ? (
+          <>
+            <span className="text-sm text-gray-500">
+              отмечено {chosen} {plural(chosen, "запись", "записи", "записей")}
+            </span>
+            <span className="ml-auto flex flex-wrap gap-2">
+              <SubmitButton
+                className="btn-secondary"
+                pendingLabel="…"
+                name="visibility"
+                value="PUBLIC"
+              >
+                Сделать публичными
+              </SubmitButton>
+              <SubmitButton
+                className="btn-secondary"
+                pendingLabel="…"
+                name="visibility"
+                value="INTERNAL"
+              >
+                Сделать служебными
+              </SubmitButton>
+            </span>
+          </>
+        ) : (
+          <span className="text-sm text-gray-400">
+            отметьте записи, чтобы сменить видимость сразу нескольким
           </span>
-          <span className="ml-auto flex flex-wrap gap-2">
-            <SubmitButton
-              className="btn-secondary"
-              pendingLabel="…"
-              name="visibility"
-              value="PUBLIC"
-            >
-              Сделать публичными
-            </SubmitButton>
-            <SubmitButton
-              className="btn-secondary"
-              pendingLabel="…"
-              name="visibility"
-              value="INTERNAL"
-            >
-              Сделать служебными
-            </SubmitButton>
-          </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {children}
     </form>
