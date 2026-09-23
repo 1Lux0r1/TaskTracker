@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PriorityBadge, ProgressBar, StatusBadge } from "@/components/badges";
+import { PriorityBadge, ProgressBar, StatusBadge, VisibilityBadge } from "@/components/badges";
 import { TrackBadge } from "@/components/letter-badges";
 import { formatDate, isOverdue } from "@/lib/domain";
 
@@ -17,6 +17,8 @@ export type TaskRow = {
   externalTaskKey?: string | null;
   /** Трек работ: запись справочника проекта, цвет её собственный. */
   track?: { name: string; color: string } | null;
+  /** Служебная задача в отчёт руководству не идёт. */
+  isPublic?: boolean;
 };
 
 type Props = {
@@ -76,6 +78,7 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
                   </Link>
                   <span className="mt-1 flex flex-wrap items-center gap-2">
                     {task.track && <TrackBadge track={task.track} />}
+                    <VisibilityBadge isPublic={task.isPublic ?? true} />
                     {task.externalTaskKey && (
                       <span className="font-mono text-xs text-gray-400">{task.externalTaskKey}</span>
                     )}

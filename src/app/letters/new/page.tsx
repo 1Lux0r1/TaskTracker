@@ -4,6 +4,7 @@ import { QuickLetterForm, type StickyLetterValues } from "@/components/quick-let
 import { prisma } from "@/lib/db";
 import { startOfToday, toDateInputValue } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
+import { VISIBILITY_DEFAULTS, visibilityValue } from "@/lib/visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,13 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
     // Следующее письмо чаще всего похоже на предыдущее: подставляем его поля.
     prisma.letter.findFirst({
       orderBy: { createdAt: "desc" },
-      select: { projectId: true, direction: true, counterpartyId: true, ownerId: true },
+      select: {
+        projectId: true,
+        direction: true,
+        counterpartyId: true,
+        ownerId: true,
+        isPublic: true,
+      },
     }),
     // Кандидаты для поля «В ответ на входящее»: форма сама сузит их
     // до выбранного проекта.
@@ -72,6 +79,9 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
     ownerId:
       known?.ownerId && members.some((item) => item.id === known.ownerId) ? known.ownerId : "",
     status: "IN_PROGRESS",
+    // Пачку писем чаще всего заводят с одной видимостью: подставляем ту,
+    // с которой завели предыдущее.
+    visibility: visibilityValue(known?.isPublic ?? VISIBILITY_DEFAULTS.LETTER),
   };
 
   return (

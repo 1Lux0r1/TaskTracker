@@ -1,6 +1,8 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -55,6 +57,8 @@ export async function createLetter(
   const letter = await prisma.letter.create({
     data: {
       ...input,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.LETTER,
       closedAt: closedAtFor(input.status, null),
       searchIndex: await searchIndexFor(input),
     },
@@ -71,7 +75,7 @@ export async function updateLetter(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -98,10 +102,20 @@ export async function updateLetter(
     return { ok: false, error: `Письмо № ${input.number} от этой даты уже заведено` };
   }
 
+  const visibility = await applyVisibilityChange(
+    user,
+    "LETTER",
+    letterId,
+    `№ ${input.number} — ${input.subject}`,
+    current.isPublic,
+    formData,
+  );
+
   await prisma.letter.update({
     where: { id: letterId },
     data: {
       ...input,
+      ...visibility,
       closedAt: closedAtFor(input.status, current),
       searchIndex: await searchIndexFor(input),
     },

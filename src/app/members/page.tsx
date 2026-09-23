@@ -59,6 +59,18 @@ export default async function MembersPage() {
         </p>
       </div>
 
+      {isAdmin && (
+        <p className="text-sm">
+          <Link href="/visibility-log" className="text-gray-700 hover:underline">
+            Журнал видимости
+          </Link>
+          <span className="text-gray-500">
+            {" "}
+            — кто и когда менял, какие записи идут в отчёт
+          </span>
+        </p>
+      )}
+
       {isAdmin && <MemberForm action={createMember} />}
 
       {members.length === 0 ? (

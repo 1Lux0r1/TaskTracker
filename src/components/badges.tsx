@@ -62,3 +62,12 @@ export function ProgressBar({ value }: { value: number }) {
     </div>
   );
 }
+
+/**
+ * Служебная запись: в отчёт руководству она не идёт. Публичность — обычное
+ * состояние, поэтому отметка появляется только у служебных записей.
+ */
+export function VisibilityBadge({ isPublic }: { isPublic: boolean }) {
+  if (isPublic) return null;
+  return <span className="badge bg-gray-100 text-gray-600">Служебная</span>;
+}

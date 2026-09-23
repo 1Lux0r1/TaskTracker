@@ -1,6 +1,8 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -27,6 +29,8 @@ export async function createDocument(
   const document = await prisma.document.create({
     data: {
       ...parsed.data,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.DOCUMENT,
       searchIndex: await documentSearchIndex(parsed.data),
       signatures: {
         create: DEFAULT_PARTIES.map((party, index) => ({ party, sortOrder: index })),
@@ -43,14 +47,30 @@ export async function updateDocument(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = documentInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
+
+  const current = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { isPublic: true },
+  });
+  if (!current) return { ok: false, error: "Документ не найден" };
+
+  const visibility = await applyVisibilityChange(
+    user,
+    "DOCUMENT",
+    documentId,
+    parsed.data.title,
+    current.isPublic,
+    formData,
+  );
 
   await prisma.document.update({
     where: { id: documentId },
     data: {
       ...parsed.data,
+      ...visibility,
       searchIndex: await documentSearchIndex(parsed.data),
       signedAt: parsed.data.status === "SIGNED" ? (await signedAt(documentId)) : null,
     },

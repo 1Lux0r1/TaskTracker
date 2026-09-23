@@ -127,6 +127,18 @@ export function formatDate(value: Date | null | undefined): string {
   }).format(value);
 }
 
+/** Дата со временем: в журналах важно, когда именно случилась правка. */
+export function formatDateTime(value: Date | null | undefined): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+
 /** Значение для <input type="date"> в локальном часовом поясе. */
 export function toDateInputValue(value: Date | null | undefined): string {
   if (!value) return "";

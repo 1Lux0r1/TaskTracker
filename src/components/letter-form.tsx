@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { KeepFormValues } from "@/components/keep-form-values";
+import { VisibilityField } from "@/components/visibility-field";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import { SubmitButton } from "@/components/submit-button";
 import {
   LETTER_DIRECTION_LABELS,
@@ -32,6 +34,7 @@ export type LetterFormValues = {
   responseToId: string | null;
   externalTaskKey: string | null;
   comment: string | null;
+  isPublic: boolean;
 };
 
 type Props = {
@@ -42,6 +45,8 @@ type Props = {
   /** Входящие письма: исходящее часто идёт ответом на одно из них. */
   incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
   defaults?: LetterFormValues;
+  /** Администратор меняет видимость письма и после создания. */
+  canChangeVisibility?: boolean;
   submitLabel: string;
 };
 
@@ -52,6 +57,7 @@ export function LetterForm({
   members,
   incomingLetters = [],
   defaults,
+  canChangeVisibility = false,
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
@@ -274,6 +280,11 @@ export function LetterForm({
           className="input"
         />
       </label>
+
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.LETTER}
+        canChange={canChangeVisibility}
+      />
 
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>

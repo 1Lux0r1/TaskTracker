@@ -1,6 +1,8 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -52,6 +54,8 @@ export async function createTask(
   await prisma.task.create({
     data: {
       ...input,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.TASK,
       number,
       sortOrder: number,
       completedAt: null,
@@ -70,7 +74,7 @@ export async function updateTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -85,6 +89,15 @@ export async function updateTask(
   const current = await prisma.task.findUnique({ where: { id: taskId } });
   if (!current) return { ok: false, error: "Задача не найдена" };
 
+  const visibility = await applyVisibilityChange(
+    user,
+    "TASK",
+    taskId,
+    input.title,
+    current.isPublic,
+    formData,
+  );
+
   // Артефакты приходят списком целиком, поэтому переписываем их заново:
   // так удаление строки в форме доходит до базы без отдельного действия.
   const artifacts = readArtifacts(formData);
@@ -94,6 +107,7 @@ export async function updateTask(
       where: { id: taskId },
       data: {
         ...input,
+        ...visibility,
         completedAt: completedAtFor(input.status, current.status, current.completedAt),
         searchIndex: taskSearchIndex(input),
         artifacts: { create: artifacts },

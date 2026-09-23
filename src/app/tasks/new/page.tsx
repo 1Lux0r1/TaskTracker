@@ -3,6 +3,7 @@ import { createTask } from "@/app/actions/tasks";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import { NEW_TASK_STATUS } from "@/lib/domain";
 import { ensureProjectTracks } from "@/lib/tracks";
 
@@ -87,6 +88,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
         letters={letters}
         documents={documents}
         hideStatus
+        isNew
         defaults={{
           projectId: selected,
           title: "",
@@ -99,6 +101,7 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
           trackId: tracks.find((track) => track.projectId === selected)?.id ?? "",
           progressNote: null,
           artifacts: [],
+          isPublic: VISIBILITY_DEFAULTS.TASK,
           letterId: null,
           parentId: null,
           startDate: null,

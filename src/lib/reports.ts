@@ -27,6 +27,10 @@ function atStartOfDay(value: Date): Date {
 /**
  * Черновик отчёта руководству: закрытое за период, планы на следующий период,
  * блокеры (просрочки и отказы в подписании). Текст потом правится руками.
+ *
+ * В черновик идут только публичные записи: служебные задачи, письма и
+ * документы остаются внутри системы. Признак задаёт автор при заведении,
+ * меняет его потом только администратор.
  */
 export async function buildReportDraft(
   projectId: string,
@@ -36,14 +40,18 @@ export async function buildReportDraft(
   const periodStart = atStartOfDay(from);
   const periodEnd = atStartOfDay(to);
   const nextPeriodEnd = new Date(periodEnd.getTime() + (periodEnd.getTime() - periodStart.getTime()));
+  // Период хранится датами, а закрытие записано временем: без конца суток
+  // задача, закрытая в день сдачи отчёта, в него не попадала.
+  const periodEndTime = new Date(periodEnd.getTime() + 86_399_999);
   const today = startOfToday();
 
   const [closedTasks, plannedTasks, overdueTasks, letters, documents] = await Promise.all([
     prisma.task.findMany({
       where: {
         projectId,
+        isPublic: true,
         status: { in: CLOSED_TASK_STATUSES },
-        completedAt: { gte: periodStart, lte: periodEnd },
+        completedAt: { gte: periodStart, lte: periodEndTime },
       },
       include: { assignee: true, track: true },
       orderBy: [{ track: { sortOrder: "asc" } }, { completedAt: "asc" }],
@@ -51,6 +59,7 @@ export async function buildReportDraft(
     prisma.task.findMany({
       where: {
         projectId,
+        isPublic: true,
         status: { notIn: CLOSED_TASK_STATUSES },
         dueDate: { gte: today, lte: nextPeriodEnd },
       },
@@ -58,24 +67,29 @@ export async function buildReportDraft(
       orderBy: [{ dueDate: "asc" }],
     }),
     prisma.task.findMany({
-      where: { projectId, status: { notIn: CLOSED_TASK_STATUSES }, dueDate: { lt: today } },
+      where: {
+        projectId,
+        isPublic: true,
+        status: { notIn: CLOSED_TASK_STATUSES },
+        dueDate: { lt: today },
+      },
       include: { assignee: true },
       orderBy: { dueDate: "asc" },
     }),
     prisma.letter.findMany({
-      where: { projectId, dueDate: { lt: today } },
+      where: { projectId, isPublic: true, dueDate: { lt: today } },
       include: { counterparty: true },
       orderBy: { dueDate: "asc" },
     }),
     prisma.document.findMany({
-      where: { projectId },
+      where: { projectId, isPublic: true },
       include: { counterparty: true, signatures: true },
       orderBy: { updatedAt: "desc" },
     }),
   ]);
 
   const signedInPeriod = documents.filter(
-    (item) => item.signedAt && item.signedAt >= periodStart && item.signedAt <= periodEnd,
+    (item) => item.signedAt && item.signedAt >= periodStart && item.signedAt <= periodEndTime,
   );
   const declined = documents.filter((item) => item.status === "DECLINED");
   const inSigning = documents.filter((item) =>

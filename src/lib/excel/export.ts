@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { visibilityLabel } from "@/lib/visibility";
 import { prisma } from "@/lib/db";
 import {
   DOCUMENT_COLUMNS,
@@ -52,6 +53,9 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
   for (const column of TASK_COLUMNS) {
     columns.push({ key: column.key, header: column.header, width: column.width } as ExcelJS.Column);
   }
+  // Видимость идёт последней колонкой: выгрузка внутренняя, но перед
+  // отправкой файла наружу видно, что в нём есть служебные строки.
+  columns.push({ key: "visibility", header: "Видимость", width: 14 } as ExcelJS.Column);
   sheet.columns = columns;
 
   const headerRow = sheet.getRow(1);
@@ -79,6 +83,7 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
       resultLink: task.artifacts
         .map((artifact) => (artifact.label ? `${artifact.label}: ${artifact.value}` : artifact.value))
         .join("\n"),
+      visibility: visibilityLabel(task.isPublic),
     });
   }
 
@@ -216,6 +221,7 @@ export async function buildLettersWorkbook(projectId?: string): Promise<ExcelJS.
     { key: "externalTaskKey", header: "Задача в трекере", width: 24 },
     { key: "owner", header: "Ответственный", width: 24 },
     { key: "comment", header: "Комментарий", width: 40 },
+    { key: "visibility", header: "Видимость", width: 14 },
   ] as ExcelJS.Column[];
 
   const today = new Date();
@@ -243,6 +249,7 @@ export async function buildLettersWorkbook(projectId?: string): Promise<ExcelJS.
       externalTaskKey: letter.externalTaskKey ?? "",
       owner: letter.owner?.fullName ?? "",
       comment: letter.comment ?? "",
+      visibility: visibilityLabel(letter.isPublic),
     });
   }
 
@@ -287,6 +294,7 @@ export async function buildDocumentsWorkbook(projectId?: string): Promise<ExcelJ
     { key: "nextAction", header: "Актуальные задачи", width: 40 },
     { key: "outgoing", header: "Письмо из ДИТ", width: 24 },
     { key: "incoming", header: "Письмо с ответом", width: 24 },
+    { key: "visibility", header: "Видимость", width: 14 },
   ] as ExcelJS.Column[];
 
   for (const document of documents) {
@@ -306,6 +314,7 @@ export async function buildDocumentsWorkbook(projectId?: string): Promise<ExcelJ
       nextAction: document.nextAction ?? "",
       outgoing: document.outgoingLetter?.number ?? "",
       incoming: document.incomingLetter?.number ?? "",
+      visibility: visibilityLabel(document.isPublic),
     });
   }
   for (const key of ["dueDate", "signedAt"]) sheet.getColumn(key).numFmt = "dd.mm.yyyy";

@@ -7,6 +7,7 @@ import {
   setSignatureStatus,
   updateDocument,
 } from "@/app/actions/documents";
+import { VisibilityBadge } from "@/components/badges";
 import { DocumentKindBadge, DocumentStatusBadge, SignatureStatusBadge } from "@/components/letter-badges";
 import { DocumentForm } from "@/components/document-form";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
@@ -22,7 +23,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function DocumentPage(props: PageProps<"/documents/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const document = await prisma.document.findUnique({
@@ -73,6 +74,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
           <h1 className="text-2xl font-semibold text-gray-900">{document.title}</h1>
           <DocumentKindBadge kind={document.kind} />
           <DocumentStatusBadge status={document.status} />
+          <VisibilityBadge isPublic={document.isPublic} />
         </div>
         {document.signedAt && (
           <p className="mt-2 text-sm text-emerald-700">
@@ -154,6 +156,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
         members={members}
         letters={letters}
         defaults={document}
+        canChangeVisibility={user.role === "ADMIN"}
         statusDerived={document.signatures.length > 0}
         submitLabel="Сохранить"
       />

@@ -12,6 +12,7 @@ import {
   LETTER_DIRECTION_TEXT,
   toDateInputValue,
 } from "@/lib/domain";
+import { VISIBILITY_OPTIONS } from "@/lib/visibility";
 
 /** Поля, которые повторяются от письма к письму и остаются после сохранения. */
 export type StickyLetterValues = {
@@ -21,6 +22,7 @@ export type StickyLetterValues = {
   counterpartyId: string;
   ownerId: string;
   status: string;
+  visibility: string;
 };
 
 /** Поля самого письма: после сохранения очищаются под следующее. */
@@ -374,6 +376,24 @@ export function QuickLetterForm({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="field">
+            Видимость
+            <select
+              name="visibility"
+              value={values.visibility}
+              onChange={set("visibility")}
+              className="input"
+            >
+              {VISIBILITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} — {option.note.toLowerCase()}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-normal text-gray-500">
+              Задаётся при заведении: дальше её меняет только администратор
+            </span>
           </label>
         </div>
       </div>

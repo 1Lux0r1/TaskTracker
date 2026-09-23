@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
+import { VisibilityBadge } from "@/components/badges";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { prisma } from "@/lib/db";
 import {
@@ -185,7 +186,10 @@ export default async function LettersPage(props: PageProps<"/letters">) {
                     </td>
                     <td className="table-cell tabular-nums">{formatDate(letter.date)}</td>
                     <td className="table-cell">
-                      <DirectionBadge direction={letter.direction} />
+                      <span className="flex flex-wrap gap-1">
+                        <DirectionBadge direction={letter.direction} />
+                        <VisibilityBadge isPublic={letter.isPublic} />
+                      </span>
                     </td>
                     <td className="table-cell">
                       <span className="line-clamp-2">{letter.subject}</span>

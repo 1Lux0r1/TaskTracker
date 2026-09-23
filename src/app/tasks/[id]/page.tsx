@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { VisibilityBadge } from "@/components/badges";
 import { notFound } from "next/navigation";
 import { deleteTask, updateTask } from "@/app/actions/tasks";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
@@ -14,7 +15,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const task = await prisma.task.findUnique({
@@ -77,6 +78,11 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         <h1 className="mt-1 text-2xl font-semibold text-gray-900">
           <span className="text-gray-400">{task.project.code}-{task.number}</span> {task.title}
         </h1>
+        {!task.isPublic && (
+          <p className="mt-1">
+            <VisibilityBadge isPublic={task.isPublic} />
+          </p>
+        )}
         {task.externalTaskKey && (
           <p className="mt-1 font-mono text-sm text-gray-500">
             Во внешнем трекере: {task.externalTaskKey}
@@ -141,6 +147,7 @@ export default async function TaskPage(props: PageProps<"/tasks/[id]">) {
         parentCandidates={parentCandidates}
         letters={letters}
         documents={documents}
+        canChangeVisibility={user.role === "ADMIN"}
         defaults={{
           ...task,
           artifacts: task.artifacts.map((artifact) => ({

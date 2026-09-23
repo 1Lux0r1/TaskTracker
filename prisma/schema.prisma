@@ -31,17 +31,18 @@ model Member {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  ownedProjects  Project[]            @relation("ProjectOwner")
-  assignedTasks  Task[]               @relation("TaskAssignee")
-  notes          Note[]
-  ownedLetters   Letter[]             @relation("LetterOwner")
-  ownedDocuments Document[]           @relation("DocumentOwner")
-  reports        WeeklyReport[]       @relation("ReportAuthor")
-  sessions       Session[]
-  attachments    Attachment[]         @relation("AttachmentAuthor")
-  ownedMeetings  Meeting[]            @relation("MeetingOwner")
-  referencePages ReferencePage[]      @relation("ReferenceAuthor")
-  meetings       MeetingParticipant[] @relation("MeetingParticipantMember")
+  ownedProjects     Project[]            @relation("ProjectOwner")
+  assignedTasks     Task[]               @relation("TaskAssignee")
+  notes             Note[]
+  ownedLetters      Letter[]             @relation("LetterOwner")
+  ownedDocuments    Document[]           @relation("DocumentOwner")
+  reports           WeeklyReport[]       @relation("ReportAuthor")
+  sessions          Session[]
+  attachments       Attachment[]         @relation("AttachmentAuthor")
+  ownedMeetings     Meeting[]            @relation("MeetingOwner")
+  referencePages    ReferencePage[]      @relation("ReferenceAuthor")
+  meetings          MeetingParticipant[] @relation("MeetingParticipantMember")
+  visibilityChanges VisibilityChange[]   @relation("VisibilityChangeAuthor")
 
   @@index([fullName])
 }
@@ -133,6 +134,10 @@ model Task {
   progress         Int       @default(0)
   sortOrder        Int       @default(0)
   externalKey      String?
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic         Boolean   @default(true)
   /// Трек работ — запись справочника проекта.
   trackId          String
   /// Ответственный вне компании — в исходных таблицах это отдельная колонка.
@@ -412,6 +417,10 @@ model Letter {
   signatory       String?
   /// Ключ связанной задачи во внешнем трекере (Jira и подобные).
   externalTaskKey String?
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic        Boolean   @default(false)
   comment         String?
   closedAt        DateTime?
   /// Письмо, ответом на которое является это: реестр ведёт переписку цепочками.
@@ -455,6 +464,10 @@ model Document {
   status           String    @default("DRAFT")
   /// Итоговая формулировка из таблицы — там она развёрнутая, с причинами отказа.
   statusNote       String?
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic         Boolean   @default(true)
   /// Что нужно сделать по документу прямо сейчас.
   nextAction       String?
   dueDate          DateTime?
@@ -556,4 +569,23 @@ model ReferencePage {
   @@index([section])
   @@index([projectId])
   @@index([searchIndex])
+}
+
+/// Журнал смен видимости: после создания признак публичного отображения
+/// меняет только администратор, и каждая правка остаётся в истории.
+model VisibilityChange {
+  id        String   @id @default(cuid())
+  /// TASK, LETTER или DOCUMENT.
+  entity    String
+  entityId  String
+  /// Название записи на момент правки: журнал читается и после удаления.
+  title     String
+  isPublic  Boolean
+  memberId  String?
+  createdAt DateTime @default(now())
+
+  member Member? @relation("VisibilityChangeAuthor", fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
 }

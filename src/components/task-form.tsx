@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { ArtifactFields, type ArtifactValue } from "@/components/artifact-fields";
 import { KeepFormValues } from "@/components/keep-form-values";
+import { VisibilityField } from "@/components/visibility-field";
 import { SubmitButton } from "@/components/submit-button";
 import {
   TASK_PRIORITIES,
@@ -12,6 +13,7 @@ import {
   TASK_STATUSES,
   toDateInputValue,
 } from "@/lib/domain";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import type { ActionResult } from "@/lib/validation";
 
 export type TaskFormValues = {
@@ -26,6 +28,7 @@ export type TaskFormValues = {
   trackId: string;
   progressNote: string | null;
   artifacts: ArtifactValue[];
+  isPublic: boolean;
   letterId: string | null;
   parentId: string | null;
   startDate: Date | null;
@@ -49,6 +52,10 @@ type Props = {
   documents?: { id: string; title: string }[];
   /** Форма создания статус не спрашивает: новая задача всегда «Новая». */
   hideStatus?: boolean;
+  /** Заведение задачи: видимость задаётся один раз, при создании. */
+  isNew?: boolean;
+  /** Администратор меняет видимость и после создания. */
+  canChangeVisibility?: boolean;
   defaults?: TaskFormValues;
   lockProject?: boolean;
   submitLabel: string;
@@ -63,6 +70,8 @@ export function TaskForm({
   letters = [],
   documents = [],
   hideStatus = false,
+  isNew = false,
+  canChangeVisibility = false,
   defaults,
   lockProject = false,
   submitLabel,
@@ -226,6 +235,12 @@ export function TaskForm({
           </select>
         </label>
       </div>
+
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.TASK}
+        isNew={isNew}
+        canChange={canChangeVisibility}
+      />
 
       <label className="field">
         Ход работы

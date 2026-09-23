@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DocumentKindBadge, DocumentStatusBadge } from "@/components/letter-badges";
 import { FilterBar } from "@/components/filter-bar";
-import { ProgressBar } from "@/components/badges";
+import { ProgressBar, VisibilityBadge } from "@/components/badges";
 import { prisma } from "@/lib/db";
 import {
   DOCUMENT_KIND_LABELS,
@@ -201,6 +201,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
                     <div className="flex flex-wrap items-center gap-2">
                       <DocumentKindBadge kind={document.kind} />
                       <DocumentStatusBadge status={document.status} />
+                      <VisibilityBadge isPublic={document.isPublic} />
                     </div>
                   </div>
 

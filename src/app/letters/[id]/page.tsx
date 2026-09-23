@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteLetter, updateLetter } from "@/app/actions/letters";
+import { VisibilityBadge } from "@/components/badges";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { LetterForm } from "@/components/letter-form";
 import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
@@ -15,7 +16,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function LetterPage(props: PageProps<"/letters/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const letter = await prisma.letter.findUnique({
@@ -69,6 +70,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
           <h1 className="text-2xl font-semibold text-gray-900">№ {letter.number}</h1>
           <DirectionBadge direction={letter.direction} />
           <LetterStatusBadge status={letter.status} />
+          <VisibilityBadge isPublic={letter.isPublic} />
         </div>
         <p className="mt-1 text-sm text-gray-600">{letter.subject}</p>
         {overdue && (
@@ -93,6 +95,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
         members={members}
         incomingLetters={incomingLetters}
         defaults={letter}
+        canChangeVisibility={user.role === "ADMIN"}
         submitLabel="Сохранить"
       />
 

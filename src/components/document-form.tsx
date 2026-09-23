@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { KeepFormValues } from "@/components/keep-form-values";
+import { VisibilityField } from "@/components/visibility-field";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import { SubmitButton } from "@/components/submit-button";
 import {
   DOCUMENT_KIND_LABELS,
@@ -26,6 +28,7 @@ export type DocumentFormValues = {
   dueDate: Date | null;
   outgoingLetterId: string | null;
   incomingLetterId: string | null;
+  isPublic: boolean;
 };
 
 type Props = {
@@ -40,6 +43,10 @@ type Props = {
    * — «возвращён на доработку» и «передан в дело» — всё равно ставит человек.
    */
   statusDerived?: boolean;
+  /** Заведение документа: видимость задаётся один раз, при создании. */
+  isNew?: boolean;
+  /** Администратор меняет видимость и после создания. */
+  canChangeVisibility?: boolean;
   submitLabel: string;
 };
 
@@ -51,6 +58,8 @@ export function DocumentForm({
   letters,
   defaults,
   statusDerived = false,
+  isNew = false,
+  canChangeVisibility = false,
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
@@ -218,6 +227,12 @@ export function DocumentForm({
           className="input"
         />
       </label>
+
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.DOCUMENT}
+        isNew={isNew}
+        canChange={canChangeVisibility}
+      />
 
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>
