@@ -13,6 +13,10 @@ type Props = {
   placeholder?: string;
   /** Поля, которые прячутся под кнопкой «Фильтры». */
   children: React.ReactNode;
+  /** Сохранённые наборы: список живёт сверху той же панели. */
+  presets?: React.ReactNode;
+  /** Применённый набор: его видно сразу, и снимается он одной ссылкой. */
+  applied?: { name: string; resetHref: string } | null;
 };
 
 /**
@@ -26,6 +30,8 @@ export function FilterBar({
   query,
   placeholder = "номер, тема, организация",
   children,
+  presets,
+  applied = null,
 }: Props) {
   const [open, setOpen] = useState(activeCount > 0);
 
@@ -86,9 +92,23 @@ export function FilterBar({
         )}
       </div>
 
+      {/* Применённый набор виден рядом с поиском: иначе человек решит, что
+          часть записей пропала. */}
+      {applied && (
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-full bg-gray-900 px-2.5 py-1 text-xs text-white">
+            Набор «{applied.name}»
+          </span>
+          <Link href={applied.resetHref} className="text-gray-600 hover:underline">
+            Показать без набора
+          </Link>
+        </p>
+      )}
+
       {/* Панель скрыта, а не размонтирована: иначе браузер не отправил бы
           заданные в ней значения вместе с поиском. */}
       <div className={open ? "space-y-3 border-t border-gray-100 pt-3" : "hidden"}>
+        {presets}
         {/* Сетка, а не строка: подпись встаёт над полем, как в остальных
             формах, и поля выстраиваются ровными рядами. */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>

@@ -22,12 +22,17 @@ import {
   readLetterFilter,
 } from "@/lib/letter-filters";
 import { requireUser } from "@/lib/auth";
+import { FilterPresets } from "@/components/filter-presets";
+import { presetContext } from "@/lib/filter-presets-db";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function LettersPage(props: PageProps<"/letters">) {
   const user = await requireUser();
   const params = await props.searchParams;
+  const presets = await presetContext(user.id, "LETTER", params);
+  if (presets.redirectTo) redirect(presets.redirectTo);
   const filter = readLetterFilter(params);
   const today = startOfToday();
   const activeFilters = countActiveFilters(filter);
@@ -71,8 +76,12 @@ export default async function LettersPage(props: PageProps<"/letters">) {
       </div>
 
       <FilterBar
-        resetHref="/letters"
+        resetHref={presets.resetHref}
         activeCount={activeFilters}
+        applied={presets.applied}
+        presets={
+          <FilterPresets scope="LETTER" items={presets.items} appliedId={presets.appliedId ?? undefined} />
+        }
         query={filter.query}
         placeholder="номер, тема, организация"
       >

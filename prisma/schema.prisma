@@ -44,6 +44,7 @@ model Member {
   meetings          MeetingParticipant[] @relation("MeetingParticipantMember")
   visibilityChanges VisibilityChange[]   @relation("VisibilityChangeAuthor")
   notifications     Notification[]       @relation("NotificationMember")
+  filterPresets     FilterPreset[]       @relation("FilterPresetOwner")
 
   @@index([fullName])
 }
@@ -614,4 +615,25 @@ model Notification {
   @@unique([memberId, dedupKey])
   @@index([memberId, readAt])
   @@index([createdAt])
+}
+
+/// Сохранённый набор фильтров реестра. Набор личный: у каждого свой срез
+/// работы, а общий набор потребовал бы договорённости, кто его меняет.
+model FilterPreset {
+  id       String @id @default(cuid())
+  memberId String
+  /// Реестр, к которому относится набор: TASK, LETTER, DOCUMENT или MEETING.
+  scope    String
+  name     String
+  /// Условия отбора строкой параметров адреса, без ведущего «?».
+  query    String
+  /// Набор по умолчанию применяется при открытии реестра. Он один на реестр.
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member Member @relation("FilterPresetOwner", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, scope, name])
+  @@index([memberId, scope])
 }
