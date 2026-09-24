@@ -129,6 +129,15 @@ async function main() {
     writeFileSync(path.join(OUT, "media", font), Buffer.from(data));
   }
 
+  // Значок вкладки и метка «не собирать Jekyll» — иначе на Pages витрина
+  // остаётся без значка, а папки со служебными именами могут не попасть в выкладку.
+  const icon = await page.evaluate(async () => {
+    const answer = await fetch("/favicon.ico");
+    return answer.ok ? [...new Uint8Array(await answer.arrayBuffer())] : null;
+  });
+  if (icon) writeFileSync(path.join(OUT, "assets/favicon.ico"), Buffer.from(icon));
+  writeFileSync(path.join(OUT, ".nojekyll"), "");
+
   const known = new Map([...pages.keys()].map((url) => [url, fileFor(url)]));
   const scratch = mkdtempSync(path.join(tmpdir(), "demo-site-"));
 
