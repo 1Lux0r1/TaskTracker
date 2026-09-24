@@ -53,7 +53,14 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
     // направления на письмо противоположного, поэтому берём оба.
     prisma.letter.findMany({
       orderBy: { date: "desc" },
-      select: { id: true, number: true, subject: true, projectId: true, direction: true },
+      select: {
+        id: true,
+        number: true,
+        subject: true,
+        projectId: true,
+        direction: true,
+        responseToId: true,
+      },
       take: 400,
     }),
   ]);

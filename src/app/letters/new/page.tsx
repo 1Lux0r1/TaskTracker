@@ -48,7 +48,14 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
     // сузит список до проекта и нужного направления.
     prisma.letter.findMany({
       orderBy: { date: "desc" },
-      select: { id: true, number: true, subject: true, projectId: true, direction: true },
+      select: {
+        id: true,
+        number: true,
+        subject: true,
+        projectId: true,
+        direction: true,
+        responseToId: true,
+      },
       take: 400,
     }),
   ]);

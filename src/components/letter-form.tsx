@@ -50,6 +50,7 @@ type Props = {
     subject: string;
     projectId: string;
     direction: string;
+    responseToId: string | null;
   }[];
   defaults?: LetterFormValues;
   /** Администратор меняет видимость письма и после создания. */

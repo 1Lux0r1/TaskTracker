@@ -86,7 +86,12 @@ export async function updateLetter(
     answerNotRequired: formData.get("answerNotRequired") === "on",
     selfId: letterId,
   });
-  const answer = await answerIsValid(input.responseToId, input.projectId, input.direction);
+  const answer = await answerIsValid(
+    input.responseToId,
+    input.projectId,
+    input.direction,
+    letterId,
+  );
   if (!answer.ok) return { ok: false, error: answer.error };
   const duplicate = await prisma.letter.findFirst({
     where: {
@@ -153,18 +158,21 @@ export async function deleteLetter(formData: FormData): Promise<void> {
 /**
  * Письмо-основание должно быть из того же проекта и противоположного
  * направления: ответ на наше собственное исходящее письмо — не ответ, а
- * вторая отправка, и связь в реестре от этого перестаёт читаться.
+ * вторая отправка, и связь в реестре от этого перестаёт читаться. И оно не
+ * может само быть ответом на это письмо: кольцо «письмо отвечает на свой же
+ * ответ» нечем прочитать ни с одной стороны.
  */
 async function answerIsValid(
   responseToId: string | null,
   projectId: string,
   direction: string,
+  selfId?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!responseToId) return { ok: true };
 
   const found = await prisma.letter.findFirst({
     where: { id: responseToId, projectId },
-    select: { direction: true },
+    select: { direction: true, responseToId: true },
   });
   if (!found) return { ok: false, error: "Письмо-основание относится к другому проекту" };
   if (found.direction !== oppositeDirection(direction)) {
@@ -175,6 +183,9 @@ async function answerIsValid(
           ? "Входящее письмо может быть ответом только на наше исходящее"
           : "Исходящее письмо может быть ответом только на входящее",
     };
+  }
+  if (selfId !== undefined && found.responseToId === selfId) {
+    return { ok: false, error: "Это письмо уже числится ответом на текущее" };
   }
   return { ok: true };
 }

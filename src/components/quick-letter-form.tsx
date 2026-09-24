@@ -56,6 +56,7 @@ type Props = {
     subject: string;
     projectId: string;
     direction: string;
+    responseToId: string | null;
   }[];
   sticky: StickyLetterValues;
   /** Срок из календаря: «внести письмо со сроком на этот день». */

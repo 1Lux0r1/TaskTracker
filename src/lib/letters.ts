@@ -50,17 +50,19 @@ export function answerFieldLabel(direction: string): string {
 
 /**
  * Письма, которые годятся в основание ответа: тот же проект, противоположное
- * направление и не само письмо.
+ * направление, не само письмо и не ответ на него. Последнее замкнуло бы
+ * кольцо: письмо отвечало бы на собственный ответ, и цепочку переписки стало
+ * бы нечем читать.
  */
-export function answerCandidates<T extends { id: string; projectId: string; direction: string }>(
-  letters: T[],
-  options: { direction: string; projectId: string; selfId?: string },
-): T[] {
+export function answerCandidates<
+  T extends { id: string; projectId: string; direction: string; responseToId?: string | null },
+>(letters: T[], options: { direction: string; projectId: string; selfId?: string }): T[] {
   const wanted = oppositeDirection(options.direction);
   return letters.filter(
     (letter) =>
       letter.projectId === options.projectId &&
       letter.direction === wanted &&
-      letter.id !== options.selfId,
+      letter.id !== options.selfId &&
+      (options.selfId === undefined || letter.responseToId !== options.selfId),
   );
 }

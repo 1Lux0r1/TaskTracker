@@ -77,10 +77,10 @@ describe("normalizeLetterByDirection", () => {
 
 describe("выбор письма-основания", () => {
   const letters = [
-    { id: "in-1", projectId: "p1", direction: "INCOMING" },
-    { id: "in-2", projectId: "p2", direction: "INCOMING" },
-    { id: "out-1", projectId: "p1", direction: "OUTGOING" },
-    { id: "out-2", projectId: "p1", direction: "OUTGOING" },
+    { id: "in-1", projectId: "p1", direction: "INCOMING", responseToId: null },
+    { id: "in-2", projectId: "p2", direction: "INCOMING", responseToId: null },
+    { id: "out-1", projectId: "p1", direction: "OUTGOING", responseToId: null },
+    { id: "out-2", projectId: "p1", direction: "OUTGOING", responseToId: null },
   ];
 
   it("исходящему предлагает входящие того же проекта", () => {
@@ -100,6 +100,20 @@ describe("выбор письма-основания", () => {
       selfId: "out-1",
     });
     expect(result.map((letter) => letter.id)).toEqual(["out-2"]);
+  });
+
+  // Иначе получилось бы кольцо: письмо отвечает на собственный ответ.
+  it("не предлагает письмо, которое уже числится ответом на это", () => {
+    const chain = [
+      { id: "in-answer", projectId: "p1", direction: "INCOMING", responseToId: "out-1" },
+      { id: "in-other", projectId: "p1", direction: "INCOMING", responseToId: null },
+    ];
+    const result = answerCandidates(chain, {
+      direction: "OUTGOING",
+      projectId: "p1",
+      selfId: "out-1",
+    });
+    expect(result.map((letter) => letter.id)).toEqual(["in-other"]);
   });
 
   it("подпись поля называет направление исходного письма", () => {
