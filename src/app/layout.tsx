@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   description: "Проекты, задачи, сроки и ответственные вместо Excel-таблиц",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children, panel }: LayoutProps<"/">) {
   const user = await getCurrentUser();
   // Значок показывает только уже записанное: пересборку просрочек делает
   // страница уведомлений, иначе она шла бы на каждой странице системы.
@@ -100,6 +100,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 </div>
               </header>
               <main className="w-full max-w-[1240px] flex-1 px-4 py-6 lg:px-6">{children}</main>
+              {/* Формы заведения записей: панель справа, из календаря — окно. */}
+              {panel}
             </div>
           </div>
         ) : (

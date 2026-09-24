@@ -259,3 +259,44 @@ h4 {
     @apply ml-auto font-mono text-[11.5px] text-gray-500 tabular-nums;
   }
 }
+
+/* Появление формы поверх экрана: панель выезжает справа, окно всплывает. */
+@keyframes panel-in {
+  from {
+    transform: translateX(18px);
+    opacity: 0;
+  }
+}
+
+@keyframes window-in {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.panel-in {
+  animation: panel-in 0.18s ease-out;
+}
+
+.window-in {
+  animation: window-in 0.18s ease-out;
+}
+
+.scrim-in {
+  animation: scrim-in 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-in,
+  .window-in,
+  .scrim-in {
+    animation: none;
+  }
+}

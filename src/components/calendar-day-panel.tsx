@@ -24,7 +24,9 @@ type Props = {
  * быстрого создания нет, чтобы запись заводилась со всеми реквизитами.
  */
 export function CalendarDayPanel({ title, isToday, day, projectId, events }: Props) {
+  // Из календаря форма открывается окном посередине, а не панелью справа.
   const project = projectId ? `&projectId=${projectId}` : "";
+  const as = `&panel=modal${project}`;
 
   return (
     <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
@@ -57,13 +59,13 @@ export function CalendarDayPanel({ title, isToday, day, projectId, events }: Pro
       <div>
         <p className="text-xs font-semibold text-gray-500">Завести на этот день</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Link href={`/tasks/new?dueDate=${day}${project}`} className="btn-secondary">
+          <Link href={`/tasks/new?dueDate=${day}${as}`} className="btn-secondary">
             Задача
           </Link>
-          <Link href={`/meetings/new?date=${day}${project}`} className="btn-secondary">
+          <Link href={`/meetings/new?date=${day}${as}`} className="btn-secondary">
             Встреча
           </Link>
-          <Link href={`/letters/new?dueDate=${day}${project}`} className="btn-secondary">
+          <Link href={`/letters/new?dueDate=${day}${as}`} className="btn-secondary">
             Письмо
           </Link>
         </div>
