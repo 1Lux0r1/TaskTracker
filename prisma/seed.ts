@@ -180,6 +180,7 @@ async function main() {
   }
 
   await seedLegalTrack(erp.id, ivanov.id, petrova.id);
+  await seedMeetings(erp.id, ivanov.id, [petrova.id, sidorov.id, kuznetsova.id]);
 
   console.log(
     [
@@ -309,6 +310,59 @@ async function seedLegalTrack(
       },
     },
   });
+}
+
+/**
+ * Две встречи: прошедшая с решениями и предстоящая с повесткой. На демо без
+ * них раздел «Встречи» выглядит пустым, хотя он в системе есть.
+ */
+async function seedMeetings(
+  projectId: string,
+  ownerId: string,
+  participantIds: string[],
+): Promise<void> {
+  const MEETINGS = [
+    {
+      subject: "Статус внедрения: итоги месяца",
+      kind: "STATUS",
+      date: shift(-7),
+      startTime: "10:00",
+      endTime: "11:00",
+      place: "Переговорная 4",
+      agenda: "Готовность справочников. Сроки по интеграции. Открытые вопросы бухгалтерии.",
+      decisions:
+        "Справочник номенклатуры принять к 30-му. Интеграцию обсудить отдельной встречей с подрядчиком.",
+    },
+    {
+      subject: "Техническая встреча по обмену данными",
+      kind: "TECHNICAL",
+      date: shift(4),
+      startTime: "15:00",
+      endTime: "16:30",
+      place: "Видеовстреча",
+      agenda: "Состав выгрузки, периодичность обмена, ответственные с обеих сторон.",
+      decisions: null,
+    },
+  ];
+
+  for (const meeting of MEETINGS) {
+    const existing = await prisma.meeting.findFirst({
+      where: { projectId, subject: meeting.subject },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.meeting.create({
+      data: {
+        ...meeting,
+        projectId,
+        ownerId,
+        participants: {
+          create: participantIds.map((memberId) => ({ memberId })),
+        },
+      },
+    });
+  }
 }
 
 async function nextNumber(projectId: string): Promise<number> {
