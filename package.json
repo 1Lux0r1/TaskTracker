@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:lan": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint",
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
@@ -14,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
     "demo": "tsx --env-file-if-exists=.env scripts/demo.ts",
+    "backup": "tsx --env-file-if-exists=.env scripts/backup.ts",
     "auth:admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
@@ -24,6 +26,7 @@
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "better-sqlite3": "^12.11.1",
     "exceljs": "^4.4.0",
     "next": "16.3.5",
     "prisma": "^7.10.0",
@@ -33,6 +36,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
