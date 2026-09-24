@@ -5,13 +5,15 @@ export type DayPanelEvent = {
   href: string;
   label: string;
   note: string;
-  chip: string;
-  type: string;
+  /** Цвет метки: он же различает виды записей в сетке календаря. */
+  dot: string;
+  overdue: boolean;
 };
 
 type Props = {
   title: string;
-  isToday: boolean;
+  /** День недели и насколько этот день далеко от сегодняшнего. */
+  note: string;
   /** День в виде ГГГГ-ММ-ДД: уходит в формы заведения записей. */
   day: string;
   projectId: string;
@@ -23,52 +25,55 @@ type Props = {
  * Кнопки ведут в обычные формы с уже подставленной датой — отдельного
  * быстрого создания нет, чтобы запись заводилась со всеми реквизитами.
  */
-export function CalendarDayPanel({ title, isToday, day, projectId, events }: Props) {
+export function CalendarDayPanel({ title, note, day, projectId, events }: Props) {
   // Из календаря форма открывается окном посередине, а не панелью справа.
   const project = projectId ? `&projectId=${projectId}` : "";
   const as = `&panel=modal${project}`;
 
   return (
-    <aside className="card h-fit space-y-3 p-4 lg:sticky lg:top-4">
-      <div>
-        <h2 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
-          {title}
-          {isToday && <span className="badge bg-gray-900 text-white">сегодня</span>}
-        </h2>
-        <p className="text-sm text-gray-500">
-          {events.length === 0 ? "На этот день ничего не назначено" : `Записей: ${events.length}`}
-        </p>
+    <aside className="card h-fit overflow-hidden lg:sticky lg:top-20">
+      <div className="border-b border-gray-200 px-4.5 py-4">
+        <b className="font-display block text-base font-semibold text-gray-900">{title}</b>
+        <span className="text-xs text-gray-500">{note}</span>
       </div>
 
-      {events.length > 0 && (
-        <ul className="divide-y divide-gray-100">
+      {events.length > 0 ? (
+        <ul>
           {events.map((event) => (
-            <li key={event.id} className="py-2">
-              <Link href={event.href} className="block">
-                <span className={`badge ${event.chip}`}>{event.type}</span>
-                <span className="mt-1 block text-sm text-gray-900 hover:underline">
-                  {event.label}
+            <li key={event.id} className="border-b border-gray-200 last:border-b-0">
+              <Link href={event.href} className="flex items-center gap-3 px-4.5 py-3 hover:bg-gray-50">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] text-gray-900">{event.label}</span>
+                  <span className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                    <span
+                      aria-hidden
+                      className="size-2 flex-none rounded-[2px]"
+                      style={{ background: event.dot }}
+                    />
+                    <span className="truncate">{event.note}</span>
+                  </span>
                 </span>
-                {event.note && <span className="block text-sm text-gray-500">{event.note}</span>}
+                {event.overdue && (
+                  <span className="flex-none text-xs font-medium text-red-600">просрочено</span>
+                )}
               </Link>
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="px-4.5 py-4 text-sm text-gray-500">На этот день ничего не назначено.</p>
       )}
 
-      <div>
-        <p className="text-xs font-semibold text-gray-500">Завести на этот день</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Link href={`/tasks/new?dueDate=${day}${as}`} className="btn-secondary">
-            Задача
-          </Link>
-          <Link href={`/meetings/new?date=${day}${as}`} className="btn-secondary">
-            Встреча
-          </Link>
-          <Link href={`/letters/new?dueDate=${day}${as}`} className="btn-secondary">
-            Письмо
-          </Link>
-        </div>
+      <div className="flex flex-wrap gap-2 border-t border-gray-200 px-4.5 py-3.5">
+        <Link href={`/tasks/new?dueDate=${day}${as}`} className="btn-secondary px-2.5 py-1">
+          Задача
+        </Link>
+        <Link href={`/meetings/new?date=${day}${as}`} className="btn-secondary px-2.5 py-1">
+          Встреча
+        </Link>
+        <Link href={`/letters/new?dueDate=${day}${as}`} className="btn-secondary px-2.5 py-1">
+          Письмо
+        </Link>
       </div>
     </aside>
   );
