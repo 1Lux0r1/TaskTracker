@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CLOSED_LETTER_STATUSES, type LetterStatus } from "@/lib/domain";
-import { normalizeLetterByDirection } from "@/lib/letters";
+import { normalizeLetterByDirection, oppositeDirection } from "@/lib/letters";
 import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
@@ -39,9 +39,8 @@ export async function createLetter(
   const input = normalizeLetterByDirection(parsed.data, {
     answerNotRequired: formData.get("answerNotRequired") === "on",
   });
-  if (!(await answerBelongsToProject(input.responseToId, input.projectId))) {
-    return { ok: false, error: "Письмо-основание относится к другому проекту", saved };
-  }
+  const answer = await answerIsValid(input.responseToId, input.projectId, input.direction);
+  if (!answer.ok) return { ok: false, error: answer.error, saved };
   // Номер письма повторяется в разные годы, поэтому дубль ищем по номеру и дате.
   const duplicate = await prisma.letter.findFirst({
     where: {
@@ -87,9 +86,8 @@ export async function updateLetter(
     answerNotRequired: formData.get("answerNotRequired") === "on",
     selfId: letterId,
   });
-  if (!(await answerBelongsToProject(input.responseToId, input.projectId))) {
-    return { ok: false, error: "Письмо-основание относится к другому проекту" };
-  }
+  const answer = await answerIsValid(input.responseToId, input.projectId, input.direction);
+  if (!answer.ok) return { ok: false, error: answer.error };
   const duplicate = await prisma.letter.findFirst({
     where: {
       projectId: input.projectId,
@@ -152,16 +150,33 @@ export async function deleteLetter(formData: FormData): Promise<void> {
  * Цепочка переписки живёт внутри проекта: ссылка «в ответ на» на письмо
  * другого проекта смешала бы реестры, поэтому её не сохраняем.
  */
-async function answerBelongsToProject(
+/**
+ * Письмо-основание должно быть из того же проекта и противоположного
+ * направления: ответ на наше собственное исходящее письмо — не ответ, а
+ * вторая отправка, и связь в реестре от этого перестаёт читаться.
+ */
+async function answerIsValid(
   responseToId: string | null,
   projectId: string,
-): Promise<boolean> {
-  if (!responseToId) return true;
+  direction: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!responseToId) return { ok: true };
+
   const found = await prisma.letter.findFirst({
     where: { id: responseToId, projectId },
-    select: { id: true },
+    select: { direction: true },
   });
-  return found !== null;
+  if (!found) return { ok: false, error: "Письмо-основание относится к другому проекту" };
+  if (found.direction !== oppositeDirection(direction)) {
+    return {
+      ok: false,
+      error:
+        direction === "INCOMING"
+          ? "Входящее письмо может быть ответом только на наше исходящее"
+          : "Исходящее письмо может быть ответом только на входящее",
+    };
+  }
+  return { ok: true };
 }
 
 /** Поисковая строка собирается из всего, по чему реально ищут письмо. */

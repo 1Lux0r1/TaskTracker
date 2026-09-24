@@ -16,7 +16,7 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
     ? (single(params.dueDate) as string)
     : "";
   const fromCalendar = single(params.projectId) ?? "";
-  const [projects, counterparties, members, last, incomingLetters] = await Promise.all([
+  const [projects, counterparties, members, last, answerLetters] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
       orderBy: { code: "asc" },
@@ -43,13 +43,13 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
         isPublic: true,
       },
     }),
-    // Кандидаты для поля «В ответ на входящее»: форма сама сузит их
-    // до выбранного проекта.
+    // Кандидаты для поля «в ответ на»: ответить можно письмом любого
+    // направления на письмо противоположного, поэтому берём оба. Форма сама
+    // сузит список до проекта и нужного направления.
     prisma.letter.findMany({
-      where: { direction: "INCOMING" },
       orderBy: { date: "desc" },
-      select: { id: true, number: true, subject: true, projectId: true },
-      take: 300,
+      select: { id: true, number: true, subject: true, projectId: true, direction: true },
+      take: 400,
     }),
   ]);
 
@@ -102,7 +102,7 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
         projects={projects}
         counterparties={counterparties}
         members={members}
-        incomingLetters={incomingLetters}
+        answerLetters={answerLetters}
         sticky={sticky}
       />
     </div>

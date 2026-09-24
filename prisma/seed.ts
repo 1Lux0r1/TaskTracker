@@ -324,33 +324,31 @@ async function seedLegalTrack(
     });
   }
 
-  // Цепочка переписки в ту сторону, которую поддерживает система: организация
-  // обратилась к нам, мы ответили исходящим письмом. Связь видна с обеих
-  // сторон карточки — у запроса реквизиты ответа, у ответа ссылка на запрос.
-  const request = await letter("64-01-1940/26", "INCOMING", {
-    date: shift(-35),
-    subject: "О заключении регламента информационного взаимодействия",
-    counterpartyId: ids["АО ОЭК"],
-    ownerId,
-    resolution: "Иванову И. И. — подготовить и направить регламент на подписание.",
-    dueDate: shift(-28),
-    status: "ANSWERED",
-    responseRef: `исх. 64-03-1001/26 от ${formatRu(shift(-30))}`,
-    closedAt: shift(-30),
-    searchIndex: "64-01-1940/26 о заключении регламента информационного взаимодействия ао оэк",
-  });
-
+  // Цепочка переписки: мы направили регламент исходящим письмом, организация
+  // ответила входящим. Связь видна с обеих сторон карточки.
   const outgoing = await letter("64-03-1001/26", "OUTGOING", {
     date: shift(-30),
     subject: "Направление регламента информационного взаимодействия на подписание",
     counterpartyId: ids["АО ОЭК"],
     ownerId,
     signatory: "Иванов И. И., начальник управления",
-    responseToId: request.id,
     dueDate: shift(-10),
-    status: "CLOSED",
+    status: "ANSWERED",
+    responseRef: `вх. 64-01-1940/26 от ${formatRu(shift(-12))}`,
     closedAt: shift(-12),
     searchIndex: "64-03-1001/26 направление регламента информационного взаимодействия ао оэк",
+  });
+
+  await letter("64-01-1940/26", "INCOMING", {
+    date: shift(-12),
+    subject: "О подписании регламента информационного взаимодействия",
+    counterpartyId: ids["АО ОЭК"],
+    ownerId,
+    responseToId: outgoing.id,
+    resolution: "Иванову И. И. — приобщить подписанный экземпляр к делу.",
+    status: "NOTED",
+    closedAt: shift(-11),
+    searchIndex: "64-01-1940/26 о подписании регламента информационного взаимодействия ао оэк",
   });
 
   await letter("64-01-2050/26", "INCOMING", {

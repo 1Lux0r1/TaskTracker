@@ -5,6 +5,7 @@ import { KeepFormValues } from "@/components/keep-form-values";
 import { VisibilityField } from "@/components/visibility-field";
 import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import { SubmitButton } from "@/components/submit-button";
+import { answerCandidates, answerFieldLabel } from "@/lib/letters";
 import {
   LETTER_DIRECTION_LABELS,
   LETTER_DIRECTIONS,
@@ -42,8 +43,14 @@ type Props = {
   projects: { id: string; code: string; name: string }[];
   counterparties: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
-  /** Входящие письма: исходящее часто идёт ответом на одно из них. */
-  incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
+  /** Письма проекта: из них выбирается то, ответом на которое идёт это. */
+  answerLetters?: {
+    id: string;
+    number: string;
+    subject: string;
+    projectId: string;
+    direction: string;
+  }[];
   defaults?: LetterFormValues;
   /** Администратор меняет видимость письма и после создания. */
   canChangeVisibility?: boolean;
@@ -55,7 +62,7 @@ export function LetterForm({
   projects,
   counterparties,
   members,
-  incomingLetters = [],
+  answerLetters = [],
   defaults,
   canChangeVisibility = false,
   submitLabel,
@@ -68,9 +75,11 @@ export function LetterForm({
 
   const incoming = direction === "INCOMING";
   const text = incoming ? LETTER_DIRECTION_TEXT.INCOMING : LETTER_DIRECTION_TEXT.OUTGOING;
-  const answerCandidates = incomingLetters.filter(
-    (letter) => letter.projectId === projectId && letter.id !== defaults?.id,
-  );
+  const candidates = answerCandidates(answerLetters, {
+    direction,
+    projectId,
+    selfId: defaults?.id,
+  });
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
@@ -145,20 +154,20 @@ export function LetterForm({
       </label>
 
       {/* Состав полей меняется по направлению: у входящего резолюция,
-          у исходящего подписант и письмо-основание. */}
-      {incoming ? (
-        <label className="field">
-          Резолюция
-          <textarea
-            name="resolution"
-            rows={2}
-            defaultValue={defaults?.resolution ?? ""}
-            placeholder="Кому расписано и что поручено"
-            className="input"
-          />
-        </label>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+          у исходящего подписант. Письмо-основание есть у обоих. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {incoming ? (
+          <label className="field">
+            Резолюция
+            <textarea
+              name="resolution"
+              rows={2}
+              defaultValue={defaults?.resolution ?? ""}
+              placeholder="Кому расписано и что поручено"
+              className="input"
+            />
+          </label>
+        ) : (
           <label className="field">
             Подписант
             <input
@@ -168,30 +177,30 @@ export function LetterForm({
               className="input"
             />
           </label>
+        )}
           <label className="field">
-            В ответ на входящее
-            {/* key по проекту: при смене проекта выбор не должен остаться
-                на письме другого проекта. */}
+            {answerFieldLabel(direction)}
+            {/* key по проекту и направлению: при их смене выбор не должен
+                остаться на письме, которого в списке больше нет. */}
             <select
-              key={projectId}
+              key={`${projectId}-${direction}`}
               name="responseToId"
               defaultValue={
-                answerCandidates.some((letter) => letter.id === defaults?.responseToId)
+                candidates.some((letter) => letter.id === defaults?.responseToId)
                   ? (defaults?.responseToId ?? "")
                   : ""
               }
               className="input"
             >
               <option value="">— не выбрано —</option>
-              {answerCandidates.map((letter) => (
+              {candidates.map((letter) => (
                 <option key={letter.id} value={letter.id}>
                   № {letter.number} — {letter.subject.slice(0, 60)}
                 </option>
               ))}
             </select>
           </label>
-        </div>
-      )}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
         <label className="field">

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizeLetterByDirection } from "@/lib/letters";
+import {
+  answerCandidates,
+  answerFieldLabel,
+  normalizeLetterByDirection,
+  oppositeDirection,
+} from "@/lib/letters";
 import { letterInputSchema, type LetterInput } from "@/lib/validation";
 
 const base: LetterInput = {
@@ -23,11 +28,17 @@ const base: LetterInput = {
 };
 
 describe("normalizeLetterByDirection", () => {
-  it("у входящего оставляет резолюцию и убирает поля исходящего", () => {
+  it("у входящего оставляет резолюцию и убирает подписанта", () => {
     const result = normalizeLetterByDirection(base, { answerNotRequired: false });
     expect(result.resolution).toBe("Шаганову — подготовить ответ");
     expect(result.signatory).toBeNull();
-    expect(result.responseToId).toBeNull();
+  });
+
+  // Организация отвечает входящим письмом на наше исходящее — в переписке это
+  // такой же обычный случай, как наш ответ на входящее.
+  it("у входящего сохраняет письмо, ответом на которое оно пришло", () => {
+    const result = normalizeLetterByDirection(base, { answerNotRequired: false });
+    expect(result.responseToId).toBe("letter-9");
   });
 
   it("у исходящего оставляет подписанта и письмо-основание", () => {
@@ -61,6 +72,41 @@ describe("normalizeLetterByDirection", () => {
       { answerNotRequired: false, selfId: "letter-9" },
     );
     expect(result.responseToId).toBeNull();
+  });
+});
+
+describe("выбор письма-основания", () => {
+  const letters = [
+    { id: "in-1", projectId: "p1", direction: "INCOMING" },
+    { id: "in-2", projectId: "p2", direction: "INCOMING" },
+    { id: "out-1", projectId: "p1", direction: "OUTGOING" },
+    { id: "out-2", projectId: "p1", direction: "OUTGOING" },
+  ];
+
+  it("исходящему предлагает входящие того же проекта", () => {
+    const result = answerCandidates(letters, { direction: "OUTGOING", projectId: "p1" });
+    expect(result.map((letter) => letter.id)).toEqual(["in-1"]);
+  });
+
+  it("входящему предлагает наши исходящие того же проекта", () => {
+    const result = answerCandidates(letters, { direction: "INCOMING", projectId: "p1" });
+    expect(result.map((letter) => letter.id)).toEqual(["out-1", "out-2"]);
+  });
+
+  it("не предлагает само письмо при правке", () => {
+    const result = answerCandidates(letters, {
+      direction: "INCOMING",
+      projectId: "p1",
+      selfId: "out-1",
+    });
+    expect(result.map((letter) => letter.id)).toEqual(["out-2"]);
+  });
+
+  it("подпись поля называет направление исходного письма", () => {
+    expect(answerFieldLabel("INCOMING")).toBe("В ответ на наше исходящее");
+    expect(answerFieldLabel("OUTGOING")).toBe("В ответ на входящее");
+    expect(oppositeDirection("INCOMING")).toBe("OUTGOING");
+    expect(oppositeDirection("OUTGOING")).toBe("INCOMING");
   });
 });
 

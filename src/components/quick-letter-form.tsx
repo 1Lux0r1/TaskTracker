@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { QuickLetterState } from "@/app/actions/letters";
 import { SubmitButton } from "@/components/submit-button";
+import { answerCandidates, answerFieldLabel } from "@/lib/letters";
 import {
   LETTER_DIRECTION_LABELS,
   LETTER_DIRECTIONS,
@@ -49,7 +50,13 @@ type Props = {
   counterparties: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
   /** Входящие письма: исходящее часто идёт ответом на одно из них. */
-  incomingLetters?: { id: string; number: string; subject: string; projectId: string }[];
+  answerLetters?: {
+    id: string;
+    number: string;
+    subject: string;
+    projectId: string;
+    direction: string;
+  }[];
   sticky: StickyLetterValues;
   /** Срок из календаря: «внести письмо со сроком на этот день». */
   initialDueDate?: string;
@@ -60,7 +67,7 @@ export function QuickLetterForm({
   projects,
   counterparties,
   members,
-  incomingLetters = [],
+  answerLetters = [],
   sticky,
   initialDueDate = "",
 }: Props) {
@@ -89,9 +96,12 @@ export function QuickLetterForm({
 
   const incoming = values.direction === "INCOMING";
   const text = incoming ? LETTER_DIRECTION_TEXT.INCOMING : LETTER_DIRECTION_TEXT.OUTGOING;
-  // Ответ всегда на письмо того же проекта, поэтому список сужается вместе
-  // с выбором проекта в форме.
-  const answerCandidates = incomingLetters.filter((letter) => letter.projectId === values.projectId);
+  // Ответ всегда на письмо того же проекта и противоположного направления,
+  // поэтому список сужается вместе с выбором проекта и направления в форме.
+  const candidates = answerCandidates(answerLetters, {
+    direction: values.direction,
+    projectId: values.projectId,
+  });
 
   const shiftDue = (days: number) => {
     const base = values.date ? new Date(`${values.date}T00:00:00`) : new Date();
@@ -195,20 +205,20 @@ export function QuickLetterForm({
           </label>
         </div>
 
-        {incoming ? (
-          <label className="field">
-            Резолюция
-            <textarea
-              name="resolution"
-              rows={2}
-              value={values.resolution}
-              onChange={set("resolution")}
-              placeholder="Кому расписано и что поручено"
-              className="input"
-            />
-          </label>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {incoming ? (
+            <label className="field">
+              Резолюция
+              <textarea
+                name="resolution"
+                rows={2}
+                value={values.resolution}
+                onChange={set("resolution")}
+                placeholder="Кому расписано и что поручено"
+                className="input"
+              />
+            </label>
+          ) : (
             <label className="field">
               Подписант
               <input
@@ -219,24 +229,24 @@ export function QuickLetterForm({
                 className="input"
               />
             </label>
-            <label className="field">
-              В ответ на входящее
-              <select
-                name="responseToId"
-                value={values.responseToId}
-                onChange={set("responseToId")}
-                className="input"
-              >
-                <option value="">— не выбрано —</option>
-                {answerCandidates.map((letter) => (
-                  <option key={letter.id} value={letter.id}>
-                    № {letter.number} — {letter.subject.slice(0, 60)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
+          )}
+          <label className="field">
+            {answerFieldLabel(values.direction)}
+            <select
+              name="responseToId"
+              value={values.responseToId}
+              onChange={set("responseToId")}
+              className="input"
+            >
+              <option value="">— не выбрано —</option>
+              {candidates.map((letter) => (
+                <option key={letter.id} value={letter.id}>
+                  № {letter.number} — {letter.subject.slice(0, 60)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <details className="rounded-lg border border-gray-200 p-3">
           <summary className="cursor-pointer text-sm text-gray-600">Дополнительные поля</summary>
