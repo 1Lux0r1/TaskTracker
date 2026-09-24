@@ -27,11 +27,12 @@ export type BoardTask = {
  */
 export function KanbanBoard({ tasks }: { tasks: BoardTask[] }) {
   return (
-    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+    // Колонки в один ряд с прокруткой вбок — так доска устроена в макете.
+    <div className="grid grid-flow-col auto-cols-[272px] gap-3 overflow-x-auto pb-2">
       {BOARD_COLUMNS.map((column) => {
         const columnTasks = tasks.filter((task) => task.status === column);
         return (
-          <section key={column} className="card flex flex-col gap-2 bg-gray-50 p-3">
+          <section key={column} className="flex flex-col gap-2 rounded-xl bg-gray-100 p-3">
             <header className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-700">{TASK_STATUS_LABELS[column]}</h3>
               <span className="badge bg-white text-gray-500">{columnTasks.length}</span>

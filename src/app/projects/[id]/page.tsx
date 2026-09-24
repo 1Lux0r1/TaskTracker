@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProjectStatusBadge } from "@/components/badges";
-import { TaskTable } from "@/components/task-table";
+import { TaskList } from "@/components/task-list";
 import { prisma } from "@/lib/db";
 import { CLOSED_TASK_STATUSES, formatDate, isOverdue, projectStatusLabel } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -84,7 +84,7 @@ export default async function ProjectPage(props: PageProps<"/projects/[id]">) {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Задачи</h2>
-        <TaskTable
+        <TaskList
           tasks={project.tasks.map((task) => ({ ...task, project: null }))}
           emptyMessage="В проекте пока нет задач. Добавьте вручную или загрузите из Excel."
         />
