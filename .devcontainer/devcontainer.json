@@ -1,0 +1,30 @@
+{
+  "name": "TaskTracker — демо",
+
+  // Готовый образ с Node 22: собственный Dockerfile для демо не нужен, а
+  // версия та же, что требует приложение.
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22-bookworm",
+
+  // Зависимости ставятся один раз при создании среды.
+  "postCreateCommand": "npm install",
+  "waitFor": "postCreateCommand",
+
+  // Демо поднимается при каждом открытии среды: отдельная база с выдуманными
+  // данными, две готовые учётные записи. Остановить — Ctrl+C в терминале,
+  // запустить снова — npm run demo.
+  "postAttachCommand": "npm run demo",
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "TaskTracker",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "dbaeumer.vscode-eslint"]
+    }
+  }
+}

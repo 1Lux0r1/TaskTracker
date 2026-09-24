@@ -1,17 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
+import { VisibilityField } from "@/components/visibility-field";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import { SubmitButton } from "@/components/submit-button";
+import { answerCandidates, answerFieldLabel } from "@/lib/letters";
 import {
   LETTER_DIRECTION_LABELS,
   LETTER_DIRECTIONS,
   LETTER_STATUS_LABELS,
   LETTER_STATUSES,
+  LETTER_DIRECTION_TEXT,
   toDateInputValue,
 } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
 
 export type LetterFormValues = {
+  id?: string;
   projectId: string;
   number: string;
   direction: string;
@@ -24,8 +30,12 @@ export type LetterFormValues = {
   status: string;
   statusNote: string | null;
   responseRef: string | null;
+  resolution: string | null;
+  signatory: string | null;
+  responseToId: string | null;
   externalTaskKey: string | null;
   comment: string | null;
+  isPublic: boolean;
 };
 
 type Props = {
@@ -33,7 +43,18 @@ type Props = {
   projects: { id: string; code: string; name: string }[];
   counterparties: { id: string; name: string }[];
   members: { id: string; fullName: string }[];
+  /** Письма проекта: из них выбирается то, ответом на которое идёт это. */
+  answerLetters?: {
+    id: string;
+    number: string;
+    subject: string;
+    projectId: string;
+    direction: string;
+    responseToId: string | null;
+  }[];
   defaults?: LetterFormValues;
+  /** Администратор меняет видимость письма и после создания. */
+  canChangeVisibility?: boolean;
   submitLabel: string;
 };
 
@@ -42,13 +63,28 @@ export function LetterForm({
   projects,
   counterparties,
   members,
+  answerLetters = [],
   defaults,
+  canChangeVisibility = false,
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
+  // Направление и проект в состоянии: от них зависят подписи полей, состав
+  // формы и список писем, на которые можно ответить.
+  const [direction, setDirection] = useState(defaults?.direction ?? "INCOMING");
+  const [projectId, setProjectId] = useState(defaults?.projectId ?? projects[0]?.id ?? "");
+
+  const incoming = direction === "INCOMING";
+  const text = incoming ? LETTER_DIRECTION_TEXT.INCOMING : LETTER_DIRECTION_TEXT.OUTGOING;
+  const candidates = answerCandidates(answerLetters, {
+    direction,
+    projectId,
+    selfId: defaults?.id,
+  });
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
+      <KeepFormValues state={state} />
       {state && !state.ok && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}
@@ -61,7 +97,8 @@ export function LetterForm({
           Проект
           <select
             name="projectId"
-            defaultValue={defaults?.projectId ?? projects[0]?.id}
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
             required
             className="input"
           >
@@ -73,21 +110,26 @@ export function LetterForm({
           </select>
         </label>
         <label className="field">
-          Номер письма
-          <input name="number" required defaultValue={defaults?.number} className="input" />
-        </label>
-        <label className="field">
           Направление
-          <select name="direction" defaultValue={defaults?.direction ?? "INCOMING"} className="input">
-            {LETTER_DIRECTIONS.map((direction) => (
-              <option key={direction} value={direction}>
-                {LETTER_DIRECTION_LABELS[direction]}
+          <select
+            name="direction"
+            value={direction}
+            onChange={(event) => setDirection(event.target.value)}
+            className="input"
+          >
+            {LETTER_DIRECTIONS.map((item) => (
+              <option key={item} value={item}>
+                {LETTER_DIRECTION_LABELS[item]}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          Дата письма
+          {text.number}
+          <input name="number" required defaultValue={defaults?.number} className="input" />
+        </label>
+        <label className="field">
+          {text.date}
           <input
             type="date"
             name="date"
@@ -112,15 +154,64 @@ export function LetterForm({
         />
       </label>
 
+      {/* Состав полей меняется по направлению: у входящего резолюция,
+          у исходящего подписант. Письмо-основание есть у обоих. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {incoming ? (
+          <label className="field">
+            Резолюция
+            <textarea
+              name="resolution"
+              rows={2}
+              defaultValue={defaults?.resolution ?? ""}
+              placeholder="Кому расписано и что поручено"
+              className="input"
+            />
+          </label>
+        ) : (
+          <label className="field">
+            Подписант
+            <input
+              name="signatory"
+              defaultValue={defaults?.signatory ?? ""}
+              placeholder="Кто подписал письмо"
+              className="input"
+            />
+          </label>
+        )}
+          <label className="field">
+            {answerFieldLabel(direction)}
+            {/* key по проекту и направлению: при их смене выбор не должен
+                остаться на письме, которого в списке больше нет. */}
+            <select
+              key={`${projectId}-${direction}`}
+              name="responseToId"
+              defaultValue={
+                candidates.some((letter) => letter.id === defaults?.responseToId)
+                  ? (defaults?.responseToId ?? "")
+                  : ""
+              }
+              className="input"
+            >
+              <option value="">— не выбрано —</option>
+              {candidates.map((letter) => (
+                <option key={letter.id} value={letter.id}>
+                  № {letter.number} — {letter.subject.slice(0, 60)}
+                </option>
+              ))}
+            </select>
+          </label>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-4">
         <label className="field">
-          Организация
+          {text.counterparty}
           <select
             name="counterpartyId"
             defaultValue={defaults?.counterpartyId ?? ""}
             className="input"
           >
-            <option value="">— не указан —</option>
+            <option value="">— не указана —</option>
             {counterparties.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -140,7 +231,7 @@ export function LetterForm({
           </select>
         </label>
         <label className="field">
-          Срок исполнения
+          {text.due}
           <input
             type="date"
             name="dueDate"
@@ -199,6 +290,11 @@ export function LetterForm({
           className="input"
         />
       </label>
+
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.LETTER}
+        canChange={canChangeVisibility}
+      />
 
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>

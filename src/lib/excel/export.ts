@@ -1,6 +1,12 @@
 import ExcelJS from "exceljs";
+import { visibilityLabel } from "@/lib/visibility";
 import { prisma } from "@/lib/db";
-import { TASK_COLUMNS } from "@/lib/excel/columns";
+import {
+  DOCUMENT_COLUMNS,
+  LETTER_COLUMNS,
+  TASK_COLUMNS,
+  type TaskColumn,
+} from "@/lib/excel/columns";
 import {
   documentKindLabel,
   documentStatusLabel,
@@ -10,7 +16,6 @@ import {
   signatureStatusLabel,
   taskPriorityLabel,
   taskStatusLabel,
-  taskTrackLabel,
 } from "@/lib/domain";
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -23,7 +28,12 @@ const HEADER_FILL: ExcelJS.Fill = {
 export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Workbook> {
   const tasks = await prisma.task.findMany({
     where: projectId ? { projectId } : undefined,
-    include: { assignee: true, project: true },
+    include: {
+      assignee: true,
+      project: true,
+      track: true,
+      artifacts: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: [{ project: { code: "asc" } }, { number: "asc" }],
   });
 
@@ -43,6 +53,9 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
   for (const column of TASK_COLUMNS) {
     columns.push({ key: column.key, header: column.header, width: column.width } as ExcelJS.Column);
   }
+  // Видимость идёт последней колонкой: выгрузка внутренняя, но перед
+  // отправкой файла наружу видно, что в нём есть служебные строки.
+  columns.push({ key: "visibility", header: "Видимость", width: 14 } as ExcelJS.Column);
   sheet.columns = columns;
 
   const headerRow = sheet.getRow(1);
@@ -53,7 +66,7 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
   for (const task of tasks) {
     sheet.addRow({
       project: task.project.code,
-      track: taskTrackLabel(task.track),
+      track: task.track.name,
       externalKey: task.externalKey ?? `${task.project.code}-${task.number}`,
       title: task.title,
       description: task.description ?? "",
@@ -65,6 +78,12 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
       estimateHours: task.estimateHours ?? "",
       spentHours: task.spentHours ?? "",
       progress: task.progress,
+      // Артефактов у задачи бывает несколько, в Excel они идут одной ячейкой,
+      // как и раньше в колонке «Результат».
+      resultLink: task.artifacts
+        .map((artifact) => (artifact.label ? `${artifact.label}: ${artifact.value}` : artifact.value))
+        .join("\n"),
+      visibility: visibilityLabel(task.isPublic),
     });
   }
 
@@ -82,20 +101,17 @@ export async function buildTasksWorkbook(projectId?: string): Promise<ExcelJS.Wo
 }
 
 /** Пустой файл-образец с правильными заголовками и одной строкой-примером. */
+/**
+ * Образец для импорта: по листу на каждый вид реестра, который умеет
+ * загружать система. Лист подписания один: регламенты и ДС к NDA ведутся
+ * одинаково, а какой это вид, человек выбирает в форме загрузки.
+ */
 export function buildImportTemplate(): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "TaskTracker";
 
-  const sheet = workbook.addWorksheet("Задачи");
-  sheet.columns = TASK_COLUMNS.map(
-    (column) => ({ key: column.key, header: column.header, width: column.width }) as ExcelJS.Column,
-  );
-
-  const headerRow = sheet.getRow(1);
-  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  headerRow.fill = HEADER_FILL;
-
-  sheet.addRow({
+  const tasks = addTemplateSheet(workbook, "Задачи", TASK_COLUMNS);
+  tasks.addRow({
     externalKey: "1",
     title: "Согласовать техническое задание",
     description: "Собрать замечания у заказчика и зафиксировать объём работ",
@@ -108,12 +124,62 @@ export function buildImportTemplate(): ExcelJS.Workbook {
     spentHours: 4,
     progress: 25,
   });
-
   for (const key of ["startDate", "dueDate"]) {
-    sheet.getColumn(key).numFmt = "dd.mm.yyyy";
+    tasks.getColumn(key).numFmt = "dd.mm.yyyy";
   }
 
+  const letters = addTemplateSheet(workbook, "Переписка ЭДО", LETTER_COLUMNS);
+  letters.addRow({
+    number: "64-01-1234/26",
+    date: new Date(),
+    subject: "О согласовании технического задания",
+    direction: "Входящее",
+    counterparty: "ПАО МОЭК",
+    dueDate: new Date(Date.now() + 14 * 86_400_000),
+    status: "В работе",
+  });
+  for (const key of ["date", "dueDate"]) {
+    letters.getColumn(key).numFmt = "dd.mm.yyyy";
+  }
+
+  // Стороны подписания задаются колонками «Статус подписания <сторона>»:
+  // сторон в реестре может быть сколько угодно, и список их не ограничен.
+  const signing = addTemplateSheet(workbook, "Реестр подписания", [
+    ...DOCUMENT_COLUMNS,
+    { key: "partyDit", header: "Статус подписания ДИТ", width: 26, aliases: [] },
+    { key: "partyDjkh", header: "Статус подписания ДЖКХ", width: 26, aliases: [] },
+    { key: "partyRso", header: "Статус подписания РСО", width: 26, aliases: [] },
+  ]);
+  signing.addRow({
+    counterparty: "ПАО МОЭК",
+    title: "Регламент информационного обмена",
+    statusNote: "Направлен на подписание",
+    nextAction: "Дождаться ответа",
+    owner: "Иванов Иван",
+    dueDate: new Date(Date.now() + 30 * 86_400_000),
+    partyDit: "Подписано",
+    partyDjkh: "Ожидает",
+    partyRso: "Ожидает",
+  });
+  signing.getColumn("dueDate").numFmt = "dd.mm.yyyy";
+
   return workbook;
+}
+
+function addTemplateSheet(
+  workbook: ExcelJS.Workbook,
+  name: string,
+  columns: TaskColumn[],
+): ExcelJS.Worksheet {
+  const sheet = workbook.addWorksheet(name);
+  sheet.columns = columns.map(
+    (column) => ({ key: column.key, header: column.header, width: column.width }) as ExcelJS.Column,
+  );
+
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  headerRow.fill = HEADER_FILL;
+  return sheet;
 }
 
 
@@ -155,6 +221,7 @@ export async function buildLettersWorkbook(projectId?: string): Promise<ExcelJS.
     { key: "externalTaskKey", header: "Задача в трекере", width: 24 },
     { key: "owner", header: "Ответственный", width: 24 },
     { key: "comment", header: "Комментарий", width: 40 },
+    { key: "visibility", header: "Видимость", width: 14 },
   ] as ExcelJS.Column[];
 
   const today = new Date();
@@ -182,6 +249,7 @@ export async function buildLettersWorkbook(projectId?: string): Promise<ExcelJS.
       externalTaskKey: letter.externalTaskKey ?? "",
       owner: letter.owner?.fullName ?? "",
       comment: letter.comment ?? "",
+      visibility: visibilityLabel(letter.isPublic),
     });
   }
 
@@ -226,6 +294,7 @@ export async function buildDocumentsWorkbook(projectId?: string): Promise<ExcelJ
     { key: "nextAction", header: "Актуальные задачи", width: 40 },
     { key: "outgoing", header: "Письмо из ДИТ", width: 24 },
     { key: "incoming", header: "Письмо с ответом", width: 24 },
+    { key: "visibility", header: "Видимость", width: 14 },
   ] as ExcelJS.Column[];
 
   for (const document of documents) {
@@ -245,6 +314,7 @@ export async function buildDocumentsWorkbook(projectId?: string): Promise<ExcelJ
       nextAction: document.nextAction ?? "",
       outgoing: document.outgoingLetter?.number ?? "",
       incoming: document.incomingLetter?.number ?? "",
+      visibility: visibilityLabel(document.isPublic),
     });
   }
   for (const key of ["dueDate", "signedAt"]) sheet.getColumn(key).numFmt = "dd.mm.yyyy";

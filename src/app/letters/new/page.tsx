@@ -4,12 +4,19 @@ import { QuickLetterForm, type StickyLetterValues } from "@/components/quick-let
 import { prisma } from "@/lib/db";
 import { startOfToday, toDateInputValue } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
+import { VISIBILITY_DEFAULTS, visibilityValue } from "@/lib/visibility";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewLetterPage() {
+export default async function NewLetterPage(props: PageProps<"/letters/new">) {
   await requireUser();
-  const [projects, counterparties, members, last] = await Promise.all([
+  const params = await props.searchParams;
+  // Срок и проект приходят из панели дня в календаре.
+  const initialDueDate = /^\d{4}-\d{2}-\d{2}$/.test(single(params.dueDate) ?? "")
+    ? (single(params.dueDate) as string)
+    : "";
+  const fromCalendar = single(params.projectId) ?? "";
+  const [projects, counterparties, members, last, answerLetters] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
       orderBy: { code: "asc" },
@@ -28,7 +35,28 @@ export default async function NewLetterPage() {
     // Следующее письмо чаще всего похоже на предыдущее: подставляем его поля.
     prisma.letter.findFirst({
       orderBy: { createdAt: "desc" },
-      select: { projectId: true, direction: true, counterpartyId: true, ownerId: true },
+      select: {
+        projectId: true,
+        direction: true,
+        counterpartyId: true,
+        ownerId: true,
+        isPublic: true,
+      },
+    }),
+    // Кандидаты для поля «в ответ на»: ответить можно письмом любого
+    // направления на письмо противоположного, поэтому берём оба. Форма сама
+    // сузит список до проекта и нужного направления.
+    prisma.letter.findMany({
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        number: true,
+        subject: true,
+        projectId: true,
+        direction: true,
+        responseToId: true,
+      },
+      take: 400,
     }),
   ]);
 
@@ -46,7 +74,9 @@ export default async function NewLetterPage() {
 
   const known = last && projects.some((project) => project.id === last.projectId) ? last : null;
   const sticky: StickyLetterValues = {
-    projectId: known?.projectId ?? projects[0].id,
+    projectId: projects.some((project) => project.id === fromCalendar)
+      ? fromCalendar
+      : (known?.projectId ?? projects[0].id),
     direction: known?.direction ?? "INCOMING",
     date: toDateInputValue(startOfToday()),
     counterpartyId:
@@ -56,6 +86,9 @@ export default async function NewLetterPage() {
     ownerId:
       known?.ownerId && members.some((item) => item.id === known.ownerId) ? known.ownerId : "",
     status: "IN_PROGRESS",
+    // Пачку писем чаще всего заводят с одной видимостью: подставляем ту,
+    // с которой завели предыдущее.
+    visibility: visibilityValue(known?.isPublic ?? VISIBILITY_DEFAULTS.LETTER),
   };
 
   return (
@@ -71,12 +104,18 @@ export default async function NewLetterPage() {
         </p>
       </div>
       <QuickLetterForm
+        initialDueDate={initialDueDate}
         action={createLetter}
         projects={projects}
         counterparties={counterparties}
         members={members}
+        answerLetters={answerLetters}
         sticky={sticky}
       />
     </div>
   );
+}
+
+function single(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }

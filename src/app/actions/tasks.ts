@@ -1,20 +1,49 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyAssignment, notifyDueChange, touchRecord } from "@/lib/notifications-feed";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { TASK_STATUSES, type TaskStatus } from "@/lib/domain";
-import { type ActionResult, formatZodError, taskInputSchema } from "@/lib/validation";
+import { NEW_TASK_STATUS, TASK_STATUSES, type TaskStatus } from "@/lib/domain";
+import { buildSearchIndex } from "@/lib/search";
+import {
+  type ActionResult,
+  type TaskInput,
+  formatZodError,
+  readArtifacts,
+  taskInputSchema,
+} from "@/lib/validation";
+
+/**
+ * Трек принадлежит проекту: в форме проект можно сменить, и трек прошлого
+ * проекта не должен уехать в новый — в его справочнике такого трека нет.
+ */
+async function trackBelongsToProject(trackId: string, projectId: string): Promise<boolean> {
+  const track = await prisma.track.findUnique({
+    where: { id: trackId },
+    select: { projectId: true },
+  });
+  return track?.projectId === projectId;
+}
 
 export async function createTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
-  const input = parsed.data;
+  // Статус новой задачи всегда «Новая»: его ставит сервер, а не форма.
+  // Форма создания статус не спрашивает, и присланное значение не в счёт.
+  const input = { ...parsed.data, status: NEW_TASK_STATUS };
+  if (!(await trackBelongsToProject(input.trackId, input.projectId))) {
+    return { ok: false, error: "Выбранный трек относится к другому проекту" };
+  }
+
   const last = await prisma.task.findFirst({
     where: { projectId: input.projectId },
     orderBy: { number: "desc" },
@@ -22,14 +51,21 @@ export async function createTask(
   });
   const number = (last?.number ?? 0) + 1;
 
-  await prisma.task.create({
+  const artifacts = readArtifacts(formData);
+  const created = await prisma.task.create({
     data: {
       ...input,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.TASK,
       number,
       sortOrder: number,
-      completedAt: input.status === "DONE" ? new Date() : null,
+      completedAt: null,
+      searchIndex: taskSearchIndex(input),
+      artifacts: { create: artifacts },
     },
   });
+
+  await notifyAssignment(created.id, created.title, created.assigneeId, user.id);
 
   revalidatePath(`/projects/${input.projectId}`);
   revalidatePath("/tasks");
@@ -41,7 +77,7 @@ export async function updateTask(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = taskInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
@@ -49,17 +85,54 @@ export async function updateTask(
   if (input.parentId === taskId) {
     return { ok: false, error: "Задача не может быть подзадачей самой себя" };
   }
+  if (!(await trackBelongsToProject(input.trackId, input.projectId))) {
+    return { ok: false, error: "Выбранный трек относится к другому проекту" };
+  }
 
   const current = await prisma.task.findUnique({ where: { id: taskId } });
   if (!current) return { ok: false, error: "Задача не найдена" };
 
-  await prisma.task.update({
-    where: { id: taskId },
-    data: {
-      ...input,
-      completedAt: completedAtFor(input.status, current.status, current.completedAt),
-    },
-  });
+  const visibility = await applyVisibilityChange(
+    user,
+    "TASK",
+    taskId,
+    input.title,
+    current.isPublic,
+    formData,
+  );
+
+  // Артефакты приходят списком целиком, поэтому переписываем их заново:
+  // так удаление строки в форме доходит до базы без отдельного действия.
+  const artifacts = readArtifacts(formData);
+  await prisma.$transaction([
+    prisma.taskArtifact.deleteMany({ where: { taskId } }),
+    prisma.task.update({
+      where: { id: taskId },
+      data: {
+        ...input,
+        ...visibility,
+        completedAt: completedAtFor(input.status, current.status, current.completedAt),
+        searchIndex: taskSearchIndex(input),
+        artifacts: { create: artifacts },
+      },
+    }),
+  ]);
+
+  // О назначении и о переносе срока узнаёт тот, кого это касается.
+  if (input.assigneeId !== current.assigneeId) {
+    await notifyAssignment(taskId, input.title, input.assigneeId, user.id);
+  }
+  if (input.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "TASK",
+      taskId,
+      input.title,
+      input.assigneeId,
+      input.projectId,
+      input.dueDate,
+      user.id,
+    );
+  }
 
   revalidatePath(`/projects/${input.projectId}`);
   revalidatePath(`/tasks/${taskId}`);
@@ -101,6 +174,8 @@ export async function deleteTask(formData: FormData): Promise<void> {
   await prisma.task.delete({ where: { id: taskId } });
   revalidatePath(`/projects/${task.projectId}`);
   revalidatePath("/tasks");
+  // Карточки больше нет: оставлять человека на её адресе — показать ему 404.
+  redirect("/tasks");
 }
 
 /**
@@ -131,6 +206,9 @@ export async function addNote(formData: FormData): Promise<void> {
     },
   });
 
+  // Запись в хронике — это движение по записи: ею отмечают ход работы.
+  await touchRecord(taskId, letterId, documentId);
+
   if (taskId) revalidatePath(`/tasks/${taskId}`);
   if (letterId) revalidatePath(`/letters/${letterId}`);
   if (documentId) revalidatePath(`/documents/${documentId}`);
@@ -148,6 +226,17 @@ export async function deleteNote(formData: FormData): Promise<void> {
   if (note.taskId) revalidatePath(`/tasks/${note.taskId}`);
   if (note.letterId) revalidatePath(`/letters/${note.letterId}`);
   if (note.documentId) revalidatePath(`/documents/${note.documentId}`);
+}
+
+/** Поисковая строка задачи: всё, по чему её реально ищут, кроме номера. */
+function taskSearchIndex(input: TaskInput): string {
+  return buildSearchIndex([
+    input.title,
+    input.description,
+    input.progressNote,
+    input.externalTaskKey,
+    input.externalAssignee,
+  ]);
 }
 
 /** Дата закрытия ставится при переходе в «Готово» и снимается при возврате в работу. */

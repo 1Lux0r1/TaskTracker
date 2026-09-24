@@ -15,10 +15,25 @@ export type Role = "ADMIN" | "MEMBER";
 export type CurrentUser = {
   id: string;
   fullName: string;
+  /** Имя для обращения; пусто — берётся из ФИО. */
+  displayName: string | null;
   email: string | null;
   position: string | null;
   role: Role;
 };
+
+/**
+ * Флаг Secure у cookie входа. В продакшене он включён, и тогда вход работает
+ * только по HTTPS. Установка во внутренней сети по обычному http возможна:
+ * SESSION_COOKIE_SECURE=false, иначе браузер cookie отбросит и войти будет
+ * нельзя. По сети тогда открыто идут и пароли, так что HTTPS предпочтительнее.
+ */
+function secureCookieEnabled(): boolean {
+  const configured = process.env.SESSION_COOKIE_SECURE;
+  if (configured === "false" || configured === "0") return false;
+  if (configured === "true" || configured === "1") return true;
+  return process.env.NODE_ENV === "production";
+}
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -48,7 +63,7 @@ export async function createSession(memberId: string, userAgent?: string | null)
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieEnabled(),
     expires: expiresAt,
     path: "/",
   });
@@ -86,6 +101,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: session.member.id,
     fullName: session.member.fullName,
+    displayName: session.member.displayName,
     email: session.member.email,
     position: session.member.position,
     role: normalizeRole(session.member.role),

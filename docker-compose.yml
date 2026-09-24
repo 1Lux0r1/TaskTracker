@@ -1,0 +1,45 @@
+# Облачный вариант: приложение и Caddy, который сам получает сертификат и
+# держит HTTPS. По HTTPS cookie входа работает с флагом Secure, поэтому
+# SESSION_COOKIE_SECURE здесь не нужен.
+#
+# Перед запуском задайте домен:  echo "TASKTRACKER_DOMAIN=tracker.example.ru" > .env
+# Поднять:      docker compose up -d
+# Обновить:     docker compose build && docker compose up -d
+# Резервная копия: docker compose exec app npm run backup
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Внутри сети compose приложение доступно только Caddy, наружу не торчит.
+      DATABASE_URL: file:/data/tasktracker.db
+      ATTACHMENTS_DIR: /data/attachments
+      BACKUP_DIR: /backups
+    volumes:
+      - data:/data
+      - backups:/backups
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TASKTRACKER_DOMAIN: ${TASKTRACKER_DOMAIN:?укажите домен в .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  # Данные живут в томах, а не в образе: пересборка образа их не трогает.
+  data:
+  backups:
+  caddy-data:
+  caddy-config:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
 import { SubmitButton } from "@/components/submit-button";
 import { toDateInputValue } from "@/lib/domain";
 import type { ActionResult } from "@/lib/validation";
@@ -39,6 +40,7 @@ export function ReportForm({
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
+      <KeepFormValues state={state} />
       {state && !state.ok && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}

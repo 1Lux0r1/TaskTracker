@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PriorityBadge, ProgressBar, StatusBadge } from "@/components/badges";
+import { PriorityBadge, ProgressBar, StatusBadge, VisibilityBadge } from "@/components/badges";
+import { TrackBadge } from "@/components/letter-badges";
 import { formatDate, isOverdue } from "@/lib/domain";
 
 export type TaskRow = {
@@ -14,16 +15,27 @@ export type TaskRow = {
   project: { id: string; code: string } | null;
   /** Ключ задачи во внешнем трекере: показываем под названием. */
   externalTaskKey?: string | null;
+  /** Трек работ: запись справочника проекта, цвет её собственный. */
+  track?: { name: string; color: string } | null;
+  /** Служебная задача в отчёт руководству не идёт. */
+  isPublic?: boolean;
 };
 
 type Props = {
   tasks: TaskRow[];
   /** Колонка проекта нужна только в сквозном списке задач. */
   showProject?: boolean;
+  /** Отметки для смены видимости сразу пачке: только у администратора. */
+  selectable?: boolean;
   emptyMessage?: string;
 };
 
-export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
+export function TaskTable({
+  tasks,
+  showProject = false,
+  selectable = false,
+  emptyMessage,
+}: Props) {
   if (tasks.length === 0) {
     return (
       <p className="card p-6 text-sm text-gray-500">
@@ -37,6 +49,7 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
       <table className="w-full min-w-3xl border-collapse">
         <thead className="border-b border-gray-200 bg-gray-50">
           <tr>
+            {selectable && <th className="table-head w-10" />}
             <th className="table-head w-20">№</th>
             {showProject && <th className="table-head w-24">Проект</th>}
             <th className="table-head">Задача</th>
@@ -52,6 +65,11 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
             const overdue = isOverdue(task.dueDate, task.status);
             return (
               <tr key={task.id} className="hover:bg-gray-50">
+                {selectable && (
+                  <td className="table-cell">
+                    <input type="checkbox" name="ids" value={task.id} className="size-4" />
+                  </td>
+                )}
                 <td className="table-cell text-gray-400 tabular-nums">{task.number}</td>
                 {showProject && (
                   <td className="table-cell">
@@ -71,11 +89,13 @@ export function TaskTable({ tasks, showProject = false, emptyMessage }: Props) {
                   <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 hover:underline">
                     {task.title}
                   </Link>
-                  {task.externalTaskKey && (
-                    <span className="mt-0.5 block font-mono text-xs text-gray-400">
-                      {task.externalTaskKey}
-                    </span>
-                  )}
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    {task.track && <TrackBadge track={task.track} />}
+                    <VisibilityBadge isPublic={task.isPublic ?? true} />
+                    {task.externalTaskKey && (
+                      <span className="font-mono text-xs text-gray-400">{task.externalTaskKey}</span>
+                    )}
+                  </span>
                 </td>
                 <td className="table-cell">
                   <StatusBadge status={task.status} />

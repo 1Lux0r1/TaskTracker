@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function ImportPage() {
-  await requireUser();
+  const user = await requireUser();
   const [projects, history] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null },
@@ -37,7 +37,7 @@ export default async function ImportPage() {
           .
         </p>
       ) : (
-        <ImportForm projects={projects} />
+        <ImportForm projects={projects} isAdmin={user.role === "ADMIN"} />
       )}
 
       <section className="card space-y-3 p-5">

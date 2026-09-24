@@ -1,10 +1,14 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyDueChange } from "@/lib/notifications-feed";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { deriveDocumentStatus } from "@/lib/domain";
+import { buildSearchIndex } from "@/lib/search";
 import {
   type ActionResult,
   documentInputSchema,
@@ -26,6 +30,9 @@ export async function createDocument(
   const document = await prisma.document.create({
     data: {
       ...parsed.data,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.DOCUMENT,
+      searchIndex: await documentSearchIndex(parsed.data),
       signatures: {
         create: DEFAULT_PARTIES.map((party, index) => ({ party, sortOrder: index })),
       },
@@ -41,17 +48,46 @@ export async function updateDocument(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = documentInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
+
+  const current = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { isPublic: true, dueDate: true },
+  });
+  if (!current) return { ok: false, error: "Документ не найден" };
+
+  const visibility = await applyVisibilityChange(
+    user,
+    "DOCUMENT",
+    documentId,
+    parsed.data.title,
+    current.isPublic,
+    formData,
+  );
 
   await prisma.document.update({
     where: { id: documentId },
     data: {
       ...parsed.data,
+      ...visibility,
+      searchIndex: await documentSearchIndex(parsed.data),
       signedAt: parsed.data.status === "SIGNED" ? (await signedAt(documentId)) : null,
     },
   });
+
+  if (parsed.data.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "DOCUMENT",
+      documentId,
+      parsed.data.title,
+      parsed.data.ownerId,
+      parsed.data.projectId,
+      parsed.data.dueDate,
+      user.id,
+    );
+  }
 
   revalidatePath("/documents");
   revalidatePath(`/documents/${documentId}`);
@@ -151,6 +187,29 @@ async function syncDocumentStatus(documentId: string): Promise<void> {
     where: { id: documentId },
     data: { status, signedAt: status === "SIGNED" ? (document.signedAt ?? new Date()) : null },
   });
+}
+
+/** Поисковая строка документа: название, организация и формулировка статуса. */
+async function documentSearchIndex(input: {
+  title: string;
+  counterpartyId: string | null;
+  statusNote: string | null;
+  nextAction: string | null;
+}): Promise<string> {
+  const counterparty = input.counterpartyId
+    ? await prisma.counterparty.findUnique({
+        where: { id: input.counterpartyId },
+        select: { name: true, shortName: true },
+      })
+    : null;
+
+  return buildSearchIndex([
+    input.title,
+    counterparty?.name,
+    counterparty?.shortName,
+    input.statusNote,
+    input.nextAction,
+  ]);
 }
 
 async function signedAt(documentId: string): Promise<Date> {

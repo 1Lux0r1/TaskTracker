@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# образец настроек нужен в репозитории: с него начинается установка
+!.env.example
 
 # vercel
 .vercel
@@ -42,8 +44,9 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# рабочие файлы агента и локальная база
+# рабочие файлы агента, локальная база и загруженные вложения
 /.scratch
+/var
 *.db
 *.db-journal
 

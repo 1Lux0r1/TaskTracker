@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteLetter, updateLetter } from "@/app/actions/letters";
+import { VisibilityBadge } from "@/components/badges";
 import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
 import { LetterForm } from "@/components/letter-form";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
+import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { formatDate, isLetterOpen, startOfToday } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -12,22 +16,25 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function LetterPage(props: PageProps<"/letters/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const letter = await prisma.letter.findUnique({
     where: { id },
     include: {
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
+      attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       tasks: { include: { assignee: true }, orderBy: { number: "asc" } },
-      responses: true,
+      // Связь «письмо — ответ» показывается с обеих сторон: у ответа видно,
+      // на что он дан, у исходного письма — чем его закрыли.
+      responses: { orderBy: { date: "asc" }, select: { id: true, number: true, date: true } },
       responseTo: true,
     },
   });
 
   if (!letter) notFound();
 
-  const [projects, counterparties, members] = await Promise.all([
+  const [projects, counterparties, members, answerLetters] = await Promise.all([
     prisma.project.findMany({
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true },
@@ -41,6 +48,20 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
       where: { isActive: true },
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
+    }),
+    // Кандидаты для поля «в ответ на»: ответить можно письмом любого
+    // направления на письмо противоположного, поэтому берём оба.
+    prisma.letter.findMany({
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        number: true,
+        subject: true,
+        projectId: true,
+        direction: true,
+        responseToId: true,
+      },
+      take: 400,
     }),
   ]);
 
@@ -58,6 +79,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
           <h1 className="text-2xl font-semibold text-gray-900">№ {letter.number}</h1>
           <DirectionBadge direction={letter.direction} />
           <LetterStatusBadge status={letter.status} />
+          <VisibilityBadge isPublic={letter.isPublic} />
         </div>
         <p className="mt-1 text-sm text-gray-600">{letter.subject}</p>
         {overdue && (
@@ -73,6 +95,20 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
             </Link>
           </p>
         )}
+        {letter.responses.length > 0 && (
+          <p className="mt-2 text-sm text-gray-500">
+            {letter.responses.length === 1 ? "Ответ дан письмом" : "Ответы даны письмами"}{" "}
+            {letter.responses.map((response, index) => (
+              <span key={response.id}>
+                {index > 0 && ", "}
+                <Link href={`/letters/${response.id}`} className="text-gray-900 hover:underline">
+                  № {response.number}
+                </Link>
+                {response.date && ` от ${formatDate(response.date)}`}
+              </span>
+            ))}
+          </p>
+        )}
       </div>
 
       <LetterForm
@@ -80,7 +116,9 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
         projects={projects}
         counterparties={counterparties}
         members={members}
+        answerLetters={answerLetters}
         defaults={letter}
+        canChangeVisibility={user.role === "ADMIN"}
         submitLabel="Сохранить"
       />
 
@@ -100,6 +138,19 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
         </section>
       )}
 
+      <AttachmentPanel
+        attachments={letter.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          size: formatFileSize(attachment.size),
+          uploadedBy: attachment.uploadedBy?.fullName ?? null,
+          createdAt: formatDate(attachment.createdAt),
+        }))}
+        owner={{ field: "letterId", id: letter.id }}
+        upload={uploadAttachment}
+        remove={deleteAttachment}
+      />
+
       <NoteFeed notes={letter.notes} members={members} letterId={letter.id} />
 
       <form action={deleteLetter} className="card space-y-2 p-5">
@@ -108,9 +159,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
           Хроника по письму удалится вместе с ним, задачи останутся. Действие необратимо.
         </p>
         <input type="hidden" name="letterId" value={letter.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить письмо
-        </SubmitButton>
+        <ConfirmSubmit>Удалить письмо</ConfirmSubmit>
       </form>
     </div>
   );

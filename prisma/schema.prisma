@@ -14,27 +14,37 @@ datasource db {
 /// Сотрудник: исполнитель задач и руководитель проектов.
 /// Он же пользователь системы, если ему заведён пароль.
 model Member {
-  id        String   @id @default(cuid())
-  fullName  String
-  email     String?  @unique
-  position  String?
-  isActive  Boolean  @default(true)
+  id           String    @id @default(cuid())
+  fullName     String
+  /// Имя для обращения: в справочнике «Сидоров Алексей», в приветствии
+  /// «Алексей». Пусто — имя берётся из ФИО.
+  displayName  String?
+  email        String?   @unique
+  position     String?
+  isActive     Boolean   @default(true)
   /// Роль в системе: ADMIN или MEMBER. Права на данные одинаковые,
   /// администратор дополнительно ведёт пользователей и доступы.
-  role      String   @default("MEMBER")
+  role         String    @default("MEMBER")
   /// Пароль для входа: scrypt-хеш. Пусто — сотрудник в справочнике, но не входит.
   passwordHash String?
   lastLoginAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  ownedProjects  Project[]      @relation("ProjectOwner")
-  assignedTasks  Task[]         @relation("TaskAssignee")
-  notes          Note[]
-  ownedLetters   Letter[]       @relation("LetterOwner")
-  ownedDocuments Document[]     @relation("DocumentOwner")
-  reports        WeeklyReport[] @relation("ReportAuthor")
-  sessions       Session[]
+  ownedProjects     Project[]            @relation("ProjectOwner")
+  assignedTasks     Task[]               @relation("TaskAssignee")
+  notes             Note[]
+  ownedLetters      Letter[]             @relation("LetterOwner")
+  ownedDocuments    Document[]           @relation("DocumentOwner")
+  reports           WeeklyReport[]       @relation("ReportAuthor")
+  sessions          Session[]
+  attachments       Attachment[]         @relation("AttachmentAuthor")
+  ownedMeetings     Meeting[]            @relation("MeetingOwner")
+  referencePages    ReferencePage[]      @relation("ReferenceAuthor")
+  meetings          MeetingParticipant[] @relation("MeetingParticipantMember")
+  visibilityChanges VisibilityChange[]   @relation("VisibilityChangeAuthor")
+  notifications     Notification[]       @relation("NotificationMember")
+  filterPresets     FilterPreset[]       @relation("FilterPresetOwner")
 
   @@index([fullName])
 }
@@ -71,13 +81,40 @@ model Project {
 
   owner      Member?                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   tasks      Task[]
+  tracks     Track[]
   letters    Letter[]
   documents  Document[]
+  meetings   Meeting[]
+  references ReferencePage[]
   reports    WeeklyReport[]
   milestones CounterpartyMilestone[]
 
   @@index([status])
   @@index([dueDate])
+}
+
+/// Трек работ — справочник проекта. Пользователь заводит свои треки:
+/// четыре из Excel (производственный, внутренний, внешний, юридический)
+/// создаются вместе с проектом как обычные записи и так же правятся.
+model Track {
+  id         String   @id @default(cuid())
+  projectId  String
+  /// Код базового трека из Excel: по нему раскладывается импорт.
+  /// У треков, заведённых руками, пусто.
+  key        String?
+  name       String
+  /// Цвет в интерфейсе: blue, orange, red, green, purple, gray.
+  color      String   @default("blue")
+  sortOrder  Int      @default(0)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([projectId, name])
+  @@index([projectId, sortOrder])
 }
 
 /// Задача — строка таблицы. Поддерживает вложенность (подзадачи).
@@ -99,33 +136,174 @@ model Task {
   progress         Int       @default(0)
   sortOrder        Int       @default(0)
   externalKey      String?
-  /// Трек работ: производственный, внутренний, внешний или юридический.
-  track            String    @default("PRODUCTION")
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic         Boolean   @default(true)
+  /// Трек работ — запись справочника проекта.
+  trackId          String
   /// Ответственный вне компании — в исходных таблицах это отдельная колонка.
   externalAssignee String?
   /// Ключ задачи во внешнем трекере (Jira и подобные): проставляется руками.
   externalTaskKey  String?
   /// Ход работы: в исходных таблицах статус ведётся свободным текстом с датами.
   progressNote     String?
-  /// Ссылки на результат: ЭДО, документы, дашборды.
-  resultLink       String?
   letterId         String?
+  /// Встреча, из решения которой заведена задача.
+  meetingId        String?
+  /// Строчными буквами: название, описание, ход работы и ключи одной строкой.
+  /// SQLite не умеет регистронезависимый поиск по кириллице, поэтому
+  /// поисковая строка готовится при записи — как у письма.
+  searchIndex      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
-  assignee Member? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  children Task[]  @relation("Subtasks")
-  notes    Note[]
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  track       Track          @relation(fields: [trackId], references: [id])
+  letter      Letter?        @relation(fields: [letterId], references: [id], onDelete: SetNull)
+  meeting     Meeting?       @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  assignee    Member?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  parent      Task?          @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Task[]         @relation("Subtasks")
+  notes       Note[]
+  artifacts   TaskArtifact[]
+  attachments Attachment[]
 
   @@unique([projectId, number])
   @@unique([projectId, externalKey])
   @@index([status])
   @@index([dueDate])
   @@index([assigneeId])
-  @@index([track])
+  @@index([trackId])
+  @@index([searchIndex])
+}
+
+/// Артефакт задачи — то, чем работа подтверждается: карточка в ЭДО, задача в
+/// Jira, документ системы, своя ссылка или просто значение. Пришёл на смену
+/// одному полю «Результат»: артефактов у задачи бывает несколько.
+model TaskArtifact {
+  id        String   @id @default(cuid())
+  taskId    String
+  /// Вид: EDO_LINK, JIRA_LINK, SYSTEM_DOC, CUSTOM_LINK, CUSTOM_VALUE.
+  kind      String   @default("CUSTOM_LINK")
+  /// Подпись артефакта: чем он является в работе.
+  label     String?
+  /// Ссылка, идентификатор документа или произвольный текст — по виду.
+  value     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, sortOrder])
+}
+
+/// Вложение — файл рядом с задачей, письмом или документом. Сам файл лежит на
+/// диске (каталог задаётся переменной ATTACHMENTS_DIR), в базе только карточка.
+model Attachment {
+  id           String   @id @default(cuid())
+  fileName     String
+  mimeType     String?
+  size         Int
+  /// Имя файла в каталоге хранения.
+  storageKey   String   @unique
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  taskId     String?
+  letterId   String?
+  documentId String?
+  meetingId  String?
+
+  uploadedBy Member?   @relation("AttachmentAuthor", fields: [uploadedById], references: [id], onDelete: SetNull)
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  letter     Letter?   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  meeting    Meeting?  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([letterId])
+  @@index([documentId])
+  @@index([meetingId])
+}
+
+/// Встреча: повестка, участники, решения и материалы. Место под почтовое
+/// приглашение заложено полями `invitationSentAt` и `materialsSentAt`,
+/// сама отправка письмом — в бэклоге.
+model Meeting {
+  id               String    @id @default(cuid())
+  projectId        String
+  /// День встречи. Время хранится отдельно строкой «ЧЧ:ММ»: во встречах
+  /// важен день, а часовые пояса в одном ведомстве не нужны.
+  date             DateTime
+  startTime        String?
+  endTime          String?
+  /// Место или ссылка на видеовстречу.
+  place            String?
+  kind             String    @default("WORKING")
+  subject          String
+  agenda           String?
+  decisions        String?
+  /// Кто вёл запись: обычно тот, кто оформляет решения.
+  ownerId          String?
+  /// Отметки о почте: заложены под приглашение и рассылку материалов.
+  invitationSentAt DateTime?
+  materialsSentAt  DateTime?
+  /// Строчными буквами: тема, место, повестка и решения одной строкой.
+  searchIndex      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner        Member?              @relation("MeetingOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  participants MeetingParticipant[]
+  attachments  Attachment[]
+  /// Задачи, заведённые из решений встречи.
+  tasks        Task[]
+
+  @@index([projectId, date])
+  @@index([date])
+  @@index([searchIndex])
+}
+
+/// Участник встречи: свой сотрудник или представитель организации.
+/// Заполнено ровно одно из полей, либо имя текстом — когда человека
+/// в справочниках ещё нет.
+model MeetingParticipant {
+  id           String  @id @default(cuid())
+  meetingId    String
+  memberId     String?
+  orgContactId String?
+  /// Имя, если человека нет ни в сотрудниках, ни в представителях.
+  externalName String?
+  /// Отметка присутствия: приглашён и пришёл — разные вещи.
+  attended     Boolean @default(true)
+
+  meeting    Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  member     Member?     @relation("MeetingParticipantMember", fields: [memberId], references: [id], onDelete: Cascade)
+  orgContact OrgContact? @relation(fields: [orgContactId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+/// Ответственный представитель организации: реестр из требований.
+model OrgContact {
+  id             String   @id @default(cuid())
+  counterpartyId String
+  fullName       String
+  position       String?
+  email          String?
+  phone          String?
+  /// За что закреплён представитель: «подписание НДА», «сверка данных».
+  comment        String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  counterparty Counterparty         @relation(fields: [counterpartyId], references: [id], onDelete: Cascade)
+  meetings     MeetingParticipant[]
+
+  @@index([counterpartyId])
+  @@index([fullName])
 }
 
 /// Датированная запись хроники. В исходных таблицах колонка «Статус» содержит
@@ -181,6 +359,7 @@ model Counterparty {
   signatures DocumentSignature[]
   aliases    CounterpartyAlias[]
   milestones CounterpartyMilestone[]
+  contacts   OrgContact[]
 
   @@index([name])
 }
@@ -234,8 +413,16 @@ model Letter {
   statusNote      String?
   /// Реквизиты ответа: номер и дата письма, которым закрыли это.
   responseRef     String?
+  /// Резолюция по входящему письму: кому расписано и что поручено.
+  resolution      String?
+  /// Подписант исходящего письма.
+  signatory       String?
   /// Ключ связанной задачи во внешнем трекере (Jira и подобные).
   externalTaskKey String?
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic        Boolean   @default(false)
   comment         String?
   closedAt        DateTime?
   /// Письмо, ответом на которое является это: реестр ведёт переписку цепочками.
@@ -253,11 +440,14 @@ model Letter {
   responseTo        Letter?       @relation("LetterThread", fields: [responseToId], references: [id], onDelete: SetNull)
   responses         Letter[]      @relation("LetterThread")
   tasks             Task[]
+  attachments       Attachment[]
   sentDocuments     Document[]    @relation("DocumentOutgoingLetter")
   receivedDocuments Document[]    @relation("DocumentIncomingLetter")
   notes             Note[]
 
-  @@unique([projectId, number, direction])
+  /// Номер письма повторяется в разные годы, поэтому дубль определяется
+  /// парой «номер + дата», а не одним номером.
+  @@unique([projectId, number, direction, date])
   @@index([status])
   @@index([dueDate])
   @@index([direction])
@@ -276,12 +466,19 @@ model Document {
   status           String    @default("DRAFT")
   /// Итоговая формулировка из таблицы — там она развёрнутая, с причинами отказа.
   statusNote       String?
+  /// Признак публичного отображения: публичная запись попадает в отчёт
+  /// руководству, служебная остаётся внутри системы. После создания признак
+  /// меняет только администратор, и смена пишется в VisibilityChange.
+  isPublic         Boolean   @default(true)
   /// Что нужно сделать по документу прямо сейчас.
   nextAction       String?
   dueDate          DateTime?
   signedAt         DateTime?
   outgoingLetterId String?
   incomingLetterId String?
+  /// Строчными буквами: название, организация и формулировка статуса одной
+  /// строкой — SQLite не ищет по кириллице без учёта регистра.
+  searchIndex      String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -292,10 +489,12 @@ model Document {
   incomingLetter Letter?             @relation("DocumentIncomingLetter", fields: [incomingLetterId], references: [id], onDelete: SetNull)
   signatures     DocumentSignature[]
   notes          Note[]
+  attachments    Attachment[]
 
   @@index([status])
   @@index([dueDate])
   @@index([kind])
+  @@index([searchIndex])
 }
 
 /// Подпись одной стороны под документом. Документ согласуют несколько сторон,
@@ -349,4 +548,92 @@ model WeeklyReport {
 
   @@unique([projectId, periodStart, periodEnd])
   @@index([periodEnd])
+}
+
+/// Справочная информация команды: архитектура системы, паспорт проекта,
+/// матрица подписания. Страница может быть общей или привязанной к проекту.
+model ReferencePage {
+  id          String   @id @default(cuid())
+  projectId   String?
+  section     String   @default("OTHER")
+  title       String
+  content     String
+  authorId    String?
+  sortOrder   Int      @default(0)
+  /// Строчными буквами: заголовок и содержание одной строкой.
+  searchIndex String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  author  Member?  @relation("ReferenceAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([section])
+  @@index([projectId])
+  @@index([searchIndex])
+}
+
+/// Журнал смен видимости: после создания признак публичного отображения
+/// меняет только администратор, и каждая правка остаётся в истории.
+model VisibilityChange {
+  id        String   @id @default(cuid())
+  /// TASK, LETTER или DOCUMENT.
+  entity    String
+  entityId  String
+  /// Название записи на момент правки: журнал читается и после удаления.
+  title     String
+  isPublic  Boolean
+  memberId  String?
+  createdAt DateTime @default(now())
+
+  member Member? @relation("VisibilityChangeAuthor", fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Уведомление сотруднику: назначение, смена срока, просрочка и запись без
+/// движения. Почты у системы нет, поэтому уведомления живут внутри неё.
+model Notification {
+  id        String    @id @default(cuid())
+  memberId  String
+  /// ASSIGNED, DUE_CHANGED, OVERDUE или STALE.
+  kind      String
+  /// TASK, LETTER или DOCUMENT.
+  entity    String
+  entityId  String
+  /// Название записи на момент события: уведомление читается и после правки.
+  title     String
+  text      String
+  /// Ключ события: одно и то же не повторяется при каждом открытии экрана.
+  dedupKey  String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  member Member @relation("NotificationMember", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, dedupKey])
+  @@index([memberId, readAt])
+  @@index([createdAt])
+}
+
+/// Сохранённый набор фильтров реестра. Набор личный: у каждого свой срез
+/// работы, а общий набор потребовал бы договорённости, кто его меняет.
+model FilterPreset {
+  id       String @id @default(cuid())
+  memberId String
+  /// Реестр, к которому относится набор: TASK, LETTER, DOCUMENT или MEETING.
+  scope    String
+  name     String
+  /// Условия отбора строкой параметров адреса, без ведущего «?».
+  query    String
+  /// Набор по умолчанию применяется при открытии реестра. Он один на реестр.
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member Member @relation("FilterPresetOwner", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, scope, name])
+  @@index([memberId, scope])
 }

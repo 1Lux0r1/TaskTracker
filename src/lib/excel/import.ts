@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
+import type { VisibilityEntity } from "@/lib/visibility";
 import { normalizeHeader } from "@/lib/excel/columns";
 import {
   DOCUMENT_COLUMNS,
@@ -21,7 +22,8 @@ import {
   parseChronicle,
 } from "@/lib/excel/chronicle";
 import { deriveDocumentStatus, documentKindLabel } from "@/lib/domain";
-import { buildLetterSearchIndex } from "@/lib/search";
+import { buildSearchIndex } from "@/lib/search";
+import { ensureProjectTracks } from "@/lib/tracks";
 import { cellDate, cellNumber, cellText } from "@/lib/excel/parse-cell";
 
 export type ImportRowError = { row: number; message: string };
@@ -64,7 +66,48 @@ export type ImportOptions = {
   createMissingMembers: boolean;
   createMissingCounterparties: boolean;
   dryRun: boolean;
+  /** Видимость новых записей: реестр вносят пачкой, и решение о нём одно. */
+  isPublic: boolean;
+  /**
+   * Применить видимость и к записям, которые уже заведены. По умолчанию нет:
+   * видимость — решение человека, а загрузку повторяют ради данных, и молча
+   * откатывать ею открытые письма нельзя.
+   */
+  applyToExisting: boolean;
+  /**
+   * Кто загружает. Видимость уже заведённой записи меняет только
+   * администратор, и каждая такая смена попадает в журнал видимости.
+   */
+  actor: { id: string; isAdmin: boolean };
 };
+
+/**
+ * Видимость при обновлении уже заведённой записи. По умолчанию не меняется:
+ * загрузку повторяют ради данных, а не ради того, чтобы откатить чужое
+ * решение. Меняет её только администратор и только по явной просьбе — и
+ * такая смена попадает в журнал видимости.
+ */
+async function visibilityOnUpdate(
+  options: ImportOptions,
+  entity: VisibilityEntity,
+  entityId: string,
+  title: string,
+  current: boolean,
+): Promise<{ isPublic?: boolean }> {
+  if (!options.applyToExisting) return {};
+  if (!options.actor.isAdmin || current === options.isPublic) return {};
+
+  await prisma.visibilityChange.create({
+    data: {
+      entity,
+      entityId,
+      title,
+      isPublic: options.isPublic,
+      memberId: options.actor.id,
+    },
+  });
+  return { isPublic: options.isPublic };
+}
 
 /** Сколько первых строк просматриваем в поисках шапки: над таблицей бывает заголовок. */
 const HEADER_SEARCH_DEPTH = 10;
@@ -335,6 +378,7 @@ async function importTasks(
   report: ImportReport,
 ): Promise<void> {
   const members = await loadMemberIndex();
+  const tracks = await loadTrackIndex(options.projectId);
   const existing = await prisma.task.findMany({
     where: { projectId: options.projectId },
     select: { id: true, externalKey: true, title: true },
@@ -370,12 +414,11 @@ async function importTasks(
             .join("\n\n") || null,
         status,
         priority: parsePriority(cellText(row.cells.get("priority") ?? null)) ?? "MEDIUM",
-        track: parseTrack(cellText(row.cells.get("track") ?? null)),
+        trackId: await resolveTrack(cellText(row.cells.get("track") ?? null), tracks, options),
         assigneeId: await resolveMember(assigneeName, members, options, report),
         externalAssignee: cellText(row.cells.get("externalAssignee") ?? null),
         // Журнал остаётся целиком: лента ниже его разбирает, но текст не теряем.
         progressNote: rawStatus.length > 0 ? rawStatus : null,
-        resultLink: cellText(row.cells.get("resultLink") ?? null),
         startDate: cellDate(row.cells.get("startDate") ?? null),
         dueDate: cellDate(row.cells.get("dueDate") ?? null),
         estimateHours: cellNumber(row.cells.get("estimateHours") ?? null),
@@ -385,16 +428,45 @@ async function importTasks(
       };
 
       const externalKey = cellText(row.cells.get("externalKey") ?? null);
+      // Поисковая строка готовится при записи: без неё перенесённые задачи
+      // не находились бы поиском по реестру.
+      const searchIndex = buildSearchIndex([
+        data.title,
+        data.description,
+        data.progressNote,
+        data.externalAssignee,
+        externalKey,
+      ]);
       const existingId =
         (externalKey ? byExternalKey.get(externalKey) : undefined) ??
         byTitle.get(title.toLowerCase());
 
       const taskId = existingId
-        ? (await prisma.task.update({ where: { id: existingId }, data })).id
+        ? (
+            await prisma.task.update({
+              where: { id: existingId },
+              data: {
+                ...data,
+                searchIndex,
+                ...(await visibilityOnUpdate(
+                  options,
+                  "TASK",
+                  existingId,
+                  title,
+                  (await prisma.task.findUniqueOrThrow({
+                    where: { id: existingId },
+                    select: { isPublic: true },
+                  })).isPublic,
+                )),
+              },
+            })
+          ).id
         : (
             await prisma.task.create({
               data: {
                 ...data,
+                searchIndex,
+                isPublic: options.isPublic,
                 projectId: options.projectId,
                 number: nextNumber,
                 sortOrder: nextNumber,
@@ -412,6 +484,7 @@ async function importTasks(
         report.created += 1;
       }
 
+      await syncResultArtifact(taskId, cellText(row.cells.get("resultLink") ?? null));
       report.notesCreated += await syncChronicle({ taskId }, chronicle);
     } catch (error) {
       report.skipped += 1;
@@ -479,7 +552,7 @@ async function importLetters(
 
       const withSearch = {
         ...data,
-        searchIndex: buildLetterSearchIndex([
+        searchIndex: buildSearchIndex([
           data.number,
           data.subject,
           counterpartyName,
@@ -495,11 +568,27 @@ async function importLetters(
       const existingId = byKey.get(key);
 
       if (existingId) {
-        await prisma.letter.update({ where: { id: existingId }, data: withSearch });
+        const before = await prisma.letter.findUniqueOrThrow({
+          where: { id: existingId },
+          select: { isPublic: true },
+        });
+        await prisma.letter.update({
+          where: { id: existingId },
+          data: {
+            ...withSearch,
+            ...(await visibilityOnUpdate(
+              options,
+              "LETTER",
+              existingId,
+              `№ ${data.number} — ${data.subject}`,
+              before.isPublic,
+            )),
+          },
+        });
         report.updated += 1;
       } else {
         const created = await prisma.letter.create({
-          data: { ...withSearch, projectId: options.projectId },
+          data: { ...withSearch, isPublic: options.isPublic, projectId: options.projectId },
         });
         byKey.set(key, created.id);
         report.created += 1;
@@ -646,6 +735,14 @@ async function importDocuments(
         statusNote,
         nextAction: cellText(row.cells.get("nextAction") ?? null),
         dueDate: cellDate(row.cells.get("dueDate") ?? null),
+        // Поисковая строка готовится при записи: без неё перенесённые
+        // документы не находились бы поиском по юридическому треку.
+        searchIndex: buildSearchIndex([
+          title,
+          counterpartyName,
+          statusNote,
+          cellText(row.cells.get("nextAction") ?? null),
+        ]),
       };
 
       const existing = await prisma.document.findFirst({
@@ -654,7 +751,19 @@ async function importDocuments(
 
       let documentId: string;
       if (existing) {
-        await prisma.document.update({ where: { id: existing.id }, data });
+        await prisma.document.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            ...(await visibilityOnUpdate(
+              options,
+              "DOCUMENT",
+              existing.id,
+              title,
+              existing.isPublic,
+            )),
+          },
+        });
         // Стороны пересобираем целиком: в реестре они и есть источник правды.
         await prisma.documentSignature.deleteMany({ where: { documentId: existing.id } });
         await prisma.documentSignature.createMany({
@@ -666,6 +775,7 @@ async function importDocuments(
         const created = await prisma.document.create({
           data: {
             ...data,
+            isPublic: options.isPublic,
             projectId: options.projectId,
             signatures: { create: signatures },
           },
@@ -817,13 +927,92 @@ async function nextTaskNumber(projectId: string): Promise<number> {
   return (last?.number ?? 0) + 1;
 }
 
-function parseTrack(value: string | null): string {
+/**
+ * Колонка «Результат» из файла становится артефактом задачи. Повторный импорт
+ * той же строки не плодит дубли: артефакт с таким значением уже есть.
+ */
+async function syncResultArtifact(taskId: string, value: string | null): Promise<void> {
+  const text = value?.trim();
+  if (!text) return;
+
+  const existing = await prisma.taskArtifact.findFirst({ where: { taskId, value: text } });
+  if (existing) return;
+
+  const kind = text.includes("mosedo")
+    ? "EDO_LINK"
+    : text.startsWith("http")
+      ? "CUSTOM_LINK"
+      : "CUSTOM_VALUE";
+  const last = await prisma.taskArtifact.findFirst({
+    where: { taskId },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+
+  await prisma.taskArtifact.create({
+    data: { taskId, kind, label: "Результат", value: text, sortOrder: (last?.sortOrder ?? -1) + 1 },
+  });
+}
+
+/** Код базового трека по тексту ячейки. Незнакомое название кодом не считаем. */
+function parseTrackKey(value: string | null): string | null {
   const normalized = normalizeHeader(value);
+  if (!normalized) return null;
   if (normalized.includes("производ")) return "PRODUCTION";
   if (normalized.includes("внутрен")) return "INTERNAL";
   if (normalized.includes("внеш")) return "EXTERNAL";
   if (normalized.includes("юрид") || normalized.includes("официал")) return "LEGAL";
-  return "PRODUCTION";
+  return null;
+}
+
+type TrackIndex = {
+  byKey: Map<string, string>;
+  byName: Map<string, string>;
+  count: number;
+};
+
+/** Справочник треков проекта: по коду и по названию. */
+async function loadTrackIndex(projectId: string): Promise<TrackIndex> {
+  await ensureProjectTracks(projectId);
+  const tracks = await prisma.track.findMany({ where: { projectId } });
+  return {
+    byKey: new Map(tracks.filter((item) => item.key).map((item) => [item.key!, item.id])),
+    byName: new Map(tracks.map((item) => [item.name.trim().toLowerCase(), item.id])),
+    count: tracks.length,
+  };
+}
+
+/**
+ * Трек строки импорта. Свой трек из файла заводится в справочник: перечень
+ * треков ведёт команда, и файл — такой же источник, как форма.
+ */
+async function resolveTrack(
+  value: string | null,
+  tracks: TrackIndex,
+  options: ImportOptions,
+): Promise<string> {
+  const name = value?.trim();
+  if (name) {
+    const byName = tracks.byName.get(name.toLowerCase());
+    if (byName) return byName;
+
+    const key = parseTrackKey(name);
+    const byKey = key ? tracks.byKey.get(key) : undefined;
+    if (byKey) return byKey;
+
+    if (!options.dryRun) {
+      const created = await prisma.track.create({
+        data: { projectId: options.projectId, name, color: "gray", sortOrder: tracks.count },
+      });
+      tracks.byName.set(name.toLowerCase(), created.id);
+      tracks.count += 1;
+      return created.id;
+    }
+  }
+
+  const production = tracks.byKey.get("PRODUCTION");
+  if (production) return production;
+  return [...tracks.byName.values()][0];
 }
 
 /** В Excel проценты хранятся долей единицы, поэтому 0.35 — это 35 %. */

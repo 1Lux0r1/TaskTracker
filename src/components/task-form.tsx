@@ -1,16 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { ArtifactFields, type ArtifactValue } from "@/components/artifact-fields";
+import { KeepFormValues } from "@/components/keep-form-values";
+import { VisibilityField } from "@/components/visibility-field";
 import { SubmitButton } from "@/components/submit-button";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
+  NEW_TASK_STATUS,
   TASK_STATUS_LABELS,
   TASK_STATUSES,
-  TASK_TRACK_LABELS,
-  TASK_TRACKS,
   toDateInputValue,
 } from "@/lib/domain";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
 import type { ActionResult } from "@/lib/validation";
 
 export type TaskFormValues = {
@@ -22,9 +25,10 @@ export type TaskFormValues = {
   assigneeId: string | null;
   externalAssignee: string | null;
   externalTaskKey: string | null;
-  track: string;
+  trackId: string;
   progressNote: string | null;
-  resultLink: string | null;
+  artifacts: ArtifactValue[];
+  isPublic: boolean;
   letterId: string | null;
   parentId: string | null;
   startDate: Date | null;
@@ -38,10 +42,20 @@ type Props = {
   action: (state: ActionResult | null, formData: FormData) => Promise<ActionResult>;
   projects: { id: string; code: string; name: string }[];
   members: { id: string; fullName: string }[];
+  /** Треки всех проектов: список свой у каждого, форма показывает нужные. */
+  tracks: { id: string; name: string; projectId: string }[];
   /** Задачи того же проекта — кандидаты в родительские. */
   parentCandidates?: { id: string; number: number; title: string }[];
   /** Письма проекта: задача часто заводится по конкретному письму. */
   letters?: { id: string; number: string; subject: string }[];
+  /** Документы проекта: на них ссылается артефакт «Документ системы». */
+  documents?: { id: string; title: string }[];
+  /** Форма создания статус не спрашивает: новая задача всегда «Новая». */
+  hideStatus?: boolean;
+  /** Заведение задачи: видимость задаётся один раз, при создании. */
+  isNew?: boolean;
+  /** Администратор меняет видимость и после создания. */
+  canChangeVisibility?: boolean;
   defaults?: TaskFormValues;
   lockProject?: boolean;
   submitLabel: string;
@@ -51,17 +65,26 @@ export function TaskForm({
   action,
   projects,
   members,
+  tracks,
   parentCandidates = [],
   letters = [],
+  documents = [],
+  hideStatus = false,
+  isNew = false,
+  canChangeVisibility = false,
   defaults,
   lockProject = false,
   submitLabel,
 }: Props) {
   const [state, formAction] = useActionState(action, null);
-  const projectId = defaults?.projectId ?? projects[0]?.id ?? "";
+  // Проект в состоянии: при его смене список треков должен смениться тоже,
+  // иначе задача уедет в один проект с треком другого.
+  const [projectId, setProjectId] = useState(defaults?.projectId ?? projects[0]?.id ?? "");
+  const projectTracks = tracks.filter((track) => track.projectId === projectId);
 
   return (
     <form action={formAction} className="card space-y-4 p-5">
+      <KeepFormValues state={state} />
       {state && !state.ok && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}
@@ -74,7 +97,13 @@ export function TaskForm({
       ) : (
         <label className="field">
           Проект
-          <select name="projectId" defaultValue={projectId} required className="input">
+          <select
+            name="projectId"
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
+            required
+            className="input"
+          >
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.code} — {project.name}
@@ -91,10 +120,23 @@ export function TaskForm({
         </label>
         <label className="field">
           Трек
-          <select name="track" defaultValue={defaults?.track ?? "PRODUCTION"} className="input">
-            {TASK_TRACKS.map((track) => (
-              <option key={track} value={track}>
-                {TASK_TRACK_LABELS[track]}
+          {/* key по проекту: при смене проекта выбор сбрасывается на его
+              первый трек, а не остаётся на треке прошлого проекта. */}
+          <select
+            key={projectId}
+            name="trackId"
+            defaultValue={
+              projectTracks.some((track) => track.id === defaults?.trackId)
+                ? defaults?.trackId
+                : projectTracks[0]?.id
+            }
+            required
+            className="input"
+          >
+            {projectTracks.length === 0 && <option value="">Треков нет</option>}
+            {projectTracks.map((track) => (
+              <option key={track.id} value={track.id}>
+                {track.name}
               </option>
             ))}
           </select>
@@ -112,16 +154,22 @@ export function TaskForm({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <label className="field">
-          Статус
-          <select name="status" defaultValue={defaults?.status ?? "TODO"} className="input">
-            {TASK_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {TASK_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Новая задача заводится со статусом «Новая», поэтому при создании
+            статус не спрашиваем: его выставляют потом, по ходу работы. */}
+        {hideStatus ? (
+          <input type="hidden" name="status" value={NEW_TASK_STATUS} />
+        ) : (
+          <label className="field">
+            Статус
+            <select name="status" defaultValue={defaults?.status ?? NEW_TASK_STATUS} className="input">
+              {TASK_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {TASK_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field">
           Приоритет
           <select name="priority" defaultValue={defaults?.priority ?? "MEDIUM"} className="input">
@@ -188,6 +236,12 @@ export function TaskForm({
         </label>
       </div>
 
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.TASK}
+        isNew={isNew}
+        canChange={canChangeVisibility}
+      />
+
       <label className="field">
         Ход работы
         <textarea
@@ -199,15 +253,7 @@ export function TaskForm({
         />
       </label>
 
-      <label className="field">
-        Ссылка на результат
-        <input
-          name="resultLink"
-          defaultValue={defaults?.resultLink ?? ""}
-          placeholder="https://…"
-          className="input"
-        />
-      </label>
+      <ArtifactFields defaults={defaults?.artifacts} documents={documents} />
 
       <div className="grid gap-4 sm:grid-cols-5">
         <label className="field">

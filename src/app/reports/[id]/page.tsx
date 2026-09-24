@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteReport, submitReport, updateReport } from "@/app/actions/reports";
 import { ReportForm } from "@/components/report-form";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { formatDate, formatPeriod } from "@/lib/domain";
@@ -82,9 +83,7 @@ export default async function ReportPage(props: PageProps<"/reports/[id]">) {
         <h2 className="text-sm font-semibold text-gray-900">Удалить отчёт</h2>
         <p className="text-sm text-gray-500">Действие необратимо.</p>
         <input type="hidden" name="reportId" value={report.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить отчёт
-        </SubmitButton>
+        <ConfirmSubmit>Удалить отчёт</ConfirmSubmit>
       </form>
     </div>
   );

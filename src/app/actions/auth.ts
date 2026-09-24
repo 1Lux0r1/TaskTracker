@@ -15,19 +15,22 @@ import { prisma } from "@/lib/db";
 import { checkPasswordRules, hashPassword, verifyPassword } from "@/lib/password";
 import type { ActionResult } from "@/lib/validation";
 
+/** Почта возвращается в состоянии: после ошибки её не должно приходить вводить заново. */
+export type LoginState = { ok: boolean; error?: string; email: string };
+
 export async function login(
-  _state: ActionResult | null,
+  _state: LoginState | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!email || !password) {
-    return { ok: false, error: "Введите почту и пароль" };
+    return { ok: false, error: "Введите почту и пароль", email };
   }
 
   const member = await authenticate(email, password);
   if (!member) {
-    return { ok: false, error: "Не подходит почта или пароль" };
+    return { ok: false, error: "Не подходит почта или пароль", email };
   }
 
   await purgeExpiredSessions();

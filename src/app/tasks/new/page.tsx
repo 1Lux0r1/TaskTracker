@@ -3,6 +3,9 @@ import { createTask } from "@/app/actions/tasks";
 import { TaskForm } from "@/components/task-form";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { VISIBILITY_DEFAULTS } from "@/lib/visibility";
+import { NEW_TASK_STATUS } from "@/lib/domain";
+import { ensureProjectTracks } from "@/lib/tracks";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +13,8 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   await requireUser();
   const params = await props.searchParams;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
+  // Дата приходит из панели дня в календаре: «завести задачу на этот день».
+  const dueDate = parseDay(Array.isArray(params.dueDate) ? params.dueDate[0] : params.dueDate);
 
   const [projects, members] = await Promise.all([
     prisma.project.findMany({
@@ -37,7 +42,8 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
   }
 
   const selected = projectId && projects.some((p) => p.id === projectId) ? projectId : projects[0].id;
-  const [parentCandidates, letters] = await Promise.all([
+  await ensureProjectTracks(selected);
+  const [parentCandidates, letters, documents, tracks] = await Promise.all([
     prisma.task.findMany({
       where: { projectId: selected, parentId: null },
       orderBy: { number: "asc" },
@@ -49,6 +55,19 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
       orderBy: { date: "desc" },
       select: { id: true, number: true, subject: true },
       take: 200,
+    }),
+    // Треки всех проектов: в форме можно сменить проект, и список треков
+    // должен смениться вместе с ним.
+    prisma.document.findMany({
+      where: { projectId: selected },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true },
+      take: 200,
+    }),
+    prisma.track.findMany({
+      where: { isArchived: false },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, projectId: true },
     }),
   ]);
 
@@ -64,24 +83,29 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
         action={createTask}
         projects={projects}
         members={members}
+        tracks={tracks}
         parentCandidates={parentCandidates}
         letters={letters}
+        documents={documents}
+        hideStatus
+        isNew
         defaults={{
           projectId: selected,
           title: "",
           description: null,
-          status: "TODO",
+          status: NEW_TASK_STATUS,
           priority: "MEDIUM",
           assigneeId: null,
           externalAssignee: null,
           externalTaskKey: null,
-          track: "PRODUCTION",
+          trackId: tracks.find((track) => track.projectId === selected)?.id ?? "",
           progressNote: null,
-          resultLink: null,
+          artifacts: [],
+          isPublic: VISIBILITY_DEFAULTS.TASK,
           letterId: null,
           parentId: null,
           startDate: null,
-          dueDate: null,
+          dueDate,
           estimateHours: null,
           spentHours: null,
           progress: 0,
@@ -90,4 +114,10 @@ export default async function NewTaskPage(props: PageProps<"/tasks/new">) {
       />
     </div>
   );
+}
+
+function parseDay(value: string | undefined): Date | null {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }

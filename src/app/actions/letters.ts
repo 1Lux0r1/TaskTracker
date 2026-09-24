@@ -1,12 +1,20 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { applyVisibilityChange } from "@/lib/visibility-log";
+import { notifyDueChange } from "@/lib/notifications-feed";
+import { VISIBILITY_DEFAULTS, readVisibility } from "@/lib/visibility";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { CLOSED_LETTER_STATUSES, type LetterStatus } from "@/lib/domain";
-import { buildLetterSearchIndex } from "@/lib/search";
-import { type ActionResult, formatZodError, letterInputSchema } from "@/lib/validation";
+import { normalizeLetterByDirection, oppositeDirection } from "@/lib/letters";
+import { buildSearchIndex } from "@/lib/search";
+import {
+  type ActionResult,
+  formatZodError,
+  letterInputSchema,
+} from "@/lib/validation";
 
 /**
  * Форма быстрого внесения не уходит со страницы: реестр переписки заполняют
@@ -28,17 +36,29 @@ export async function createLetter(
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error), saved };
 
-  const input = parsed.data;
+  const input = normalizeLetterByDirection(parsed.data, {
+    answerNotRequired: formData.get("answerNotRequired") === "on",
+  });
+  const answer = await answerIsValid(input.responseToId, input.projectId, input.direction);
+  if (!answer.ok) return { ok: false, error: answer.error, saved };
+  // Номер письма повторяется в разные годы, поэтому дубль ищем по номеру и дате.
   const duplicate = await prisma.letter.findFirst({
-    where: { projectId: input.projectId, number: input.number, direction: input.direction },
+    where: {
+      projectId: input.projectId,
+      number: input.number,
+      direction: input.direction,
+      date: input.date,
+    },
   });
   if (duplicate) {
-    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте`, saved };
+    return { ok: false, error: `Письмо № ${input.number} от этой даты уже заведено`, saved };
   }
 
   const letter = await prisma.letter.create({
     data: {
       ...input,
+      // Видимость сотрудник задаёт один раз — при заведении.
+      isPublic: readVisibility(formData) ?? VISIBILITY_DEFAULTS.LETTER,
       closedAt: closedAtFor(input.status, null),
       searchIndex: await searchIndexFor(input),
     },
@@ -55,34 +75,67 @@ export async function updateLetter(
   _state: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = letterInputSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   const current = await prisma.letter.findUnique({ where: { id: letterId } });
   if (!current) return { ok: false, error: "Письмо не найдено" };
 
-  const input = parsed.data;
+  const input = normalizeLetterByDirection(parsed.data, {
+    answerNotRequired: formData.get("answerNotRequired") === "on",
+    selfId: letterId,
+  });
+  const answer = await answerIsValid(
+    input.responseToId,
+    input.projectId,
+    input.direction,
+    letterId,
+  );
+  if (!answer.ok) return { ok: false, error: answer.error };
   const duplicate = await prisma.letter.findFirst({
     where: {
       projectId: input.projectId,
       number: input.number,
       direction: input.direction,
+      date: input.date,
       id: { not: letterId },
     },
   });
   if (duplicate) {
-    return { ok: false, error: `Письмо № ${input.number} уже заведено в этом проекте` };
+    return { ok: false, error: `Письмо № ${input.number} от этой даты уже заведено` };
   }
+
+  const visibility = await applyVisibilityChange(
+    user,
+    "LETTER",
+    letterId,
+    `№ ${input.number} — ${input.subject}`,
+    current.isPublic,
+    formData,
+  );
 
   await prisma.letter.update({
     where: { id: letterId },
     data: {
       ...input,
+      ...visibility,
       closedAt: closedAtFor(input.status, current),
       searchIndex: await searchIndexFor(input),
     },
   });
+  if (input.dueDate?.getTime() !== current.dueDate?.getTime()) {
+    await notifyDueChange(
+      "LETTER",
+      letterId,
+      `№ ${input.number} — ${input.subject}`,
+      input.ownerId,
+      input.projectId,
+      input.dueDate,
+      user.id,
+    );
+  }
+
   revalidatePath("/letters");
   revalidatePath(`/letters/${letterId}`);
   return { ok: true, message: "Письмо сохранено" };
@@ -96,6 +149,45 @@ export async function deleteLetter(formData: FormData): Promise<void> {
   await prisma.letter.delete({ where: { id: letterId } });
   revalidatePath("/letters");
   redirect("/letters");
+}
+
+/**
+ * Цепочка переписки живёт внутри проекта: ссылка «в ответ на» на письмо
+ * другого проекта смешала бы реестры, поэтому её не сохраняем.
+ */
+/**
+ * Письмо-основание должно быть из того же проекта и противоположного
+ * направления: ответ на наше собственное исходящее письмо — не ответ, а
+ * вторая отправка, и связь в реестре от этого перестаёт читаться. И оно не
+ * может само быть ответом на это письмо: кольцо «письмо отвечает на свой же
+ * ответ» нечем прочитать ни с одной стороны.
+ */
+async function answerIsValid(
+  responseToId: string | null,
+  projectId: string,
+  direction: string,
+  selfId?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!responseToId) return { ok: true };
+
+  const found = await prisma.letter.findFirst({
+    where: { id: responseToId, projectId },
+    select: { direction: true, responseToId: true },
+  });
+  if (!found) return { ok: false, error: "Письмо-основание относится к другому проекту" };
+  if (found.direction !== oppositeDirection(direction)) {
+    return {
+      ok: false,
+      error:
+        direction === "INCOMING"
+          ? "Входящее письмо может быть ответом только на наше исходящее"
+          : "Исходящее письмо может быть ответом только на входящее",
+    };
+  }
+  if (selfId !== undefined && found.responseToId === selfId) {
+    return { ok: false, error: "Это письмо уже числится ответом на текущее" };
+  }
+  return { ok: true };
 }
 
 /** Поисковая строка собирается из всего, по чему реально ищут письмо. */
@@ -115,7 +207,7 @@ async function searchIndexFor(input: {
       })
     : null;
 
-  return buildLetterSearchIndex([
+  return buildSearchIndex([
     input.number,
     input.subject,
     counterparty?.name,

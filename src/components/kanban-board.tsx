@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { changeTaskStatus } from "@/app/actions/tasks";
 import { PriorityBadge } from "@/components/badges";
+import { TrackBadge } from "@/components/letter-badges";
 import {
   BOARD_COLUMNS,
   formatDate,
@@ -17,6 +18,7 @@ export type BoardTask = {
   priority: string;
   dueDate: Date | null;
   assignee: { fullName: string } | null;
+  track?: { name: string; color: string } | null;
 };
 
 /**
@@ -51,6 +53,7 @@ export function KanbanBoard({ tasks }: { tasks: BoardTask[] }) {
                   {task.assignee?.fullName ?? "Без ответственного"}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {task.track && <TrackBadge track={task.track} />}
                   <PriorityBadge priority={task.priority} />
                   {task.dueDate && (
                     <span

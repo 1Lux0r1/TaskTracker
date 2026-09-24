@@ -1,64 +1,52 @@
 import Link from "next/link";
 import { DocumentKindBadge, DocumentStatusBadge } from "@/components/letter-badges";
-import { ProgressBar } from "@/components/badges";
+import { FilterBar } from "@/components/filter-bar";
+import { ProgressBar, VisibilityBadge } from "@/components/badges";
+import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
 import {
   DOCUMENT_KIND_LABELS,
   DOCUMENT_KINDS,
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUSES,
+  documentStageRank,
+  documentStatusLabel,
   formatDate,
   signatureProgress,
-  type DocumentKind,
-  type DocumentStatus,
+  startOfToday,
 } from "@/lib/domain";
-import type { Prisma } from "@/generated/prisma/client";
+import {
+  DOCUMENT_SORTS,
+  DOCUMENT_WAITING,
+  buildDocumentOrderBy,
+  buildDocumentWhere,
+  countActiveDocumentFilters,
+  readDocumentFilter,
+} from "@/lib/document-filters";
 import { requireUser } from "@/lib/auth";
+import { FilterPresets } from "@/components/filter-presets";
+import { presetContext } from "@/lib/filter-presets-db";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const WAITING = [
-  { value: "", label: "Все" },
-  { value: "us", label: "Ждут нашей подписи" },
-  { value: "them", label: "Ждём другую сторону" },
-] as const;
-
 export default async function DocumentsPage(props: PageProps<"/documents">) {
-  await requireUser();
+  const user = await requireUser();
   const params = await props.searchParams;
-  const kind = single(params.kind) ?? "";
-  const status = single(params.status) ?? "";
-  const counterpartyId = single(params.counterpartyId) ?? "";
-  const waiting = single(params.waiting) ?? "";
-
-  const where: Prisma.DocumentWhereInput = {};
-  if (kind && DOCUMENT_KINDS.includes(kind as DocumentKind)) where.kind = kind;
-  if (status && DOCUMENT_STATUSES.includes(status as DocumentStatus)) where.status = status;
-  if (counterpartyId) where.counterpartyId = counterpartyId;
-  // Чьей подписи ждём. Наша сторона — организация с флагом «наша» в
-  // справочнике: соседний департамент в матрице подписания такая же внешняя
-  // сторона, как контрагент, и записывать его в «нас» нельзя.
-  if (waiting === "us") {
-    where.signatures = { some: { status: "PENDING", counterparty: { isInternal: true } } };
-  }
-  if (waiting === "them") {
-    where.signatures = {
-      some: {
-        status: "PENDING",
-        OR: [{ counterpartyId: null }, { counterparty: { isInternal: false } }],
-      },
-    };
-  }
+  const presets = await presetContext(user.id, "DOCUMENT", params);
+  if (presets.redirectTo) redirect(presets.redirectTo);
+  const filter = readDocumentFilter(params);
+  const activeFilters = countActiveDocumentFilters(filter);
 
   const [documents, counterparties, internalCount] = await Promise.all([
     prisma.document.findMany({
-      where,
+      where: buildDocumentWhere(filter),
       include: {
         counterparty: true,
         owner: true,
         signatures: { include: { counterparty: { select: { isInternal: true } } } },
       },
-      orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+      orderBy: buildDocumentOrderBy(filter.sort),
     }),
     prisma.counterparty.findMany({
       where: { isActive: true },
@@ -68,13 +56,24 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
     prisma.counterparty.count({ where: { isInternal: true } }),
   ]);
 
+  // По стадиям список сортируется здесь: в базе статус хранится строкой,
+  // и запрос выстроил бы стадии по алфавиту, а не по ходу работы.
+  const ordered =
+    filter.sort === "statusAsc"
+      ? [...documents].sort((a, b) => documentStageRank(a.status) - documentStageRank(b.status))
+      : documents;
+
   const declined = documents.filter((item) => item.status === "DECLINED").length;
+  const today = startOfToday();
+  // Заголовок стадии ставится перед первым документом этой стадии: список
+  // читается сверху вниз, от того, что горит, к законченному.
+  const grouped = filter.sort === "statusAsc";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Юридические документы</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Юридический трек</h1>
           <p className="text-sm text-gray-500">
             Регламенты, допсоглашения и контракты с подписанием по сторонам
           </p>
@@ -106,10 +105,19 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </p>
       )}
 
-      <form className="card flex flex-wrap items-end gap-3 p-4">
+      <FilterBar
+        resetHref={presets.resetHref}
+        activeCount={activeFilters}
+        applied={presets.applied}
+        presets={
+          <FilterPresets scope="DOCUMENT" items={presets.items} appliedId={presets.appliedId ?? undefined} />
+        }
+        query={filter.query}
+        placeholder="название, организация, стадия"
+      >
         <label className="field">
           Вид
-          <select name="kind" defaultValue={kind} className="input w-48">
+          <select name="kind" defaultValue={filter.kind} className="input">
             <option value="">Любой</option>
             {DOCUMENT_KINDS.map((value) => (
               <option key={value} value={value}>
@@ -119,9 +127,9 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
           </select>
         </label>
         <label className="field">
-          Статус
-          <select name="status" defaultValue={status} className="input w-52">
-            <option value="">Любой</option>
+          Стадия
+          <select name="status" defaultValue={filter.status} className="input">
+            <option value="">Любая</option>
             {DOCUMENT_STATUSES.map((value) => (
               <option key={value} value={value}>
                 {DOCUMENT_STATUS_LABELS[value]}
@@ -131,8 +139,8 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </label>
         <label className="field">
           Ждём
-          <select name="waiting" defaultValue={waiting} className="input w-56">
-            {WAITING.map((item) => (
+          <select name="waiting" defaultValue={filter.waiting} className="input">
+            {DOCUMENT_WAITING.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
@@ -141,7 +149,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </label>
         <label className="field">
           Организация
-          <select name="counterpartyId" defaultValue={counterpartyId} className="input w-56">
+          <select name="counterpartyId" defaultValue={filter.counterpartyId} className="input">
             <option value="">Все</option>
             {counterparties.map((item) => (
               <option key={item.id} value={item.id}>
@@ -150,64 +158,106 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
             ))}
           </select>
         </label>
-        <button type="submit" className="btn-secondary">
-          Показать
-        </button>
-      </form>
+        <label className="field">
+          Порядок
+          <select name="sort" defaultValue={filter.sort} className="input">
+            {DOCUMENT_SORTS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </FilterBar>
 
-      {documents.length === 0 ? (
-        <p className="card p-6 text-sm text-gray-500">Документов пока нет.</p>
+      <p className="text-sm text-gray-500">Документов: {ordered.length}</p>
+
+      {ordered.length === 0 ? (
+        <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full min-w-4xl border-collapse">
-            <thead className="border-b border-gray-200 bg-gray-50">
-              <tr>
-                <th className="table-head w-32">Вид</th>
-                <th className="table-head">Документ</th>
-                <th className="table-head w-48">Организация</th>
-                <th className="table-head w-44">Статус</th>
-                <th className="table-head w-40">Подписано сторон</th>
-                <th className="table-head w-28">Срок</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {documents.map((document) => (
-                <tr key={document.id} className="hover:bg-gray-50">
-                  <td className="table-cell">
-                    <DocumentKindBadge kind={document.kind} />
-                  </td>
-                  <td className="table-cell">
-                    <Link
-                      href={`/documents/${document.id}`}
-                      className="font-medium text-gray-900 hover:underline"
-                    >
-                      {document.title}
-                    </Link>
-                    {document.nextAction && (
-                      <p className="mt-0.5 text-xs text-gray-500">{document.nextAction}</p>
-                    )}
-                  </td>
-                  <td className="table-cell">{document.counterparty?.name ?? "—"}</td>
-                  <td className="table-cell">
-                    <DocumentStatusBadge status={document.status} />
-                    {document.statusNote && (
-                      <p className="mt-0.5 text-xs text-gray-500">{document.statusNote}</p>
-                    )}
-                  </td>
-                  <td className="table-cell">
-                    <ProgressBar value={signatureProgress(document.signatures)} />
-                    {pendingParties(document.signatures).length > 0 && (
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        ждём: {pendingParties(document.signatures).join(", ")}
+        <BulkVisibility entity="DOCUMENT" enabled={user.role === "ADMIN"}>
+        <ul className="space-y-2">
+          {ordered.map((document, index) => {
+            const overdue =
+              document.dueDate !== null &&
+              document.status !== "SIGNED" &&
+              document.status !== "FILED" &&
+              document.dueDate < today;
+            const waiting = pendingParties(document.signatures);
+            const newStage = grouped && ordered[index - 1]?.status !== document.status;
+
+            return (
+              <li key={document.id}>
+                {newStage && (
+                  <h2 className="mt-4 mb-2 text-sm font-semibold text-gray-500 first:mt-0">
+                    {documentStatusLabel(document.status)}
+                    <span className="ml-2 font-normal text-gray-400 tabular-nums">
+                      {ordered.filter((item) => item.status === document.status).length}
+                    </span>
+                  </h2>
+                )}
+
+                {/* Отметка живёт рядом с карточкой, а не внутри ссылки:
+                    иначе щелчок по ней уводил бы на документ. */}
+                <div className="flex items-start gap-2">
+                {user.role === "ADMIN" && (
+                  <input
+                    type="checkbox"
+                    name="ids"
+                    value={document.id}
+                    className="mt-5 size-4 shrink-0"
+                  />
+                )}
+                <Link
+                  href={`/documents/${document.id}`}
+                  className="card block min-w-0 flex-1 p-4 transition hover:border-gray-300 hover:shadow-sm"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900">{document.title}</p>
+                      <p className="mt-0.5 text-sm text-gray-500">
+                        {document.counterparty?.name ?? "Без организации"}
+                        {document.owner && ` · ${document.owner.fullName}`}
                       </p>
-                    )}
-                  </td>
-                  <td className="table-cell tabular-nums">{formatDate(document.dueDate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DocumentKindBadge kind={document.kind} />
+                      <DocumentStatusBadge status={document.status} />
+                      <VisibilityBadge isPublic={document.isPublic} />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <ProgressBar value={signatureProgress(document.signatures)} />
+                      <p className="mt-1 text-xs text-gray-500">
+                        {waiting.length > 0 ? `Ждём: ${waiting.join(", ")}` : "Все стороны отметились"}
+                      </p>
+                    </div>
+                    <div className="text-sm sm:text-right">
+                      {document.dueDate && (
+                        <p className={overdue ? "font-medium text-red-600" : "text-gray-600"}>
+                          Срок {formatDate(document.dueDate)}
+                          {overdue && " — просрочен"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Формулировки из таблицы бывают в абзац длиной: показываем
+                      начало, целиком читается в карточке документа. */}
+                  {(document.nextAction || document.statusNote) && (
+                    <p className="mt-2 line-clamp-2 text-xs text-gray-500">
+                      {[document.nextAction, document.statusNote].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </Link>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        </BulkVisibility>
       )}
     </div>
   );
@@ -223,8 +273,4 @@ function pendingParties(
   return signatures
     .filter((item) => item.status === "PENDING")
     .map((item) => (item.counterparty?.isInternal ? `${item.party} (мы)` : item.party));
-}
-
-function single(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }

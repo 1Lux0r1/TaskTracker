@@ -1,6 +1,7 @@
 import { addNote, deleteNote } from "@/app/actions/tasks";
 import { SubmitButton } from "@/components/submit-button";
 import { formatDate, toDateInputValue } from "@/lib/domain";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 
 export type NoteItem = {
   id: string;
@@ -84,13 +85,14 @@ export function NoteFeed({
                 </p>
                 <form action={deleteNote}>
                   <input type="hidden" name="noteId" value={note.id} />
-                  <button
-                    type="submit"
+                  <ConfirmSubmit
                     className="text-xs text-gray-400 hover:text-red-600"
-                    title="Удалить запись"
+                    question="Удалить запись?"
+                    confirmLabel="да"
+                    pendingLabel="…"
                   >
                     удалить
-                  </button>
+                  </ConfirmSubmit>
                 </form>
               </div>
               <p className="mt-0.5 text-sm whitespace-pre-line text-gray-800">{note.body}</p>

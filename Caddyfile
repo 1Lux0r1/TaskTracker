@@ -1,0 +1,12 @@
+# Caddy сам получает и продлевает сертификат для домена из TASKTRACKER_DOMAIN,
+# поэтому система работает по HTTPS без ручной возни с сертификатами.
+{$TASKTRACKER_DOMAIN} {
+	encode zstd gzip
+
+	# Вложение может весить до 20 МБ, а запрос с ним — чуть больше самого файла.
+	request_body {
+		max_size 21MB
+	}
+
+	reverse_proxy app:3000
+}

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { ensureProjectTracks } from "@/lib/tracks";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -19,6 +20,8 @@ export async function createProject(
   if (duplicate) return { ok: false, error: `Проект с кодом ${input.code} уже существует` };
 
   const project = await prisma.project.create({ data: input });
+  // Базовые треки заводятся вместе с проектом: иначе задачу некуда положить.
+  await ensureProjectTracks(project.id);
   revalidatePath("/projects");
   redirect(`/projects/${project.id}`);
 }

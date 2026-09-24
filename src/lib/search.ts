@@ -1,8 +1,8 @@
 /**
- * Поисковая строка письма. SQLite не приводит кириллицу к нижнему регистру
+ * Поисковая строка записи. SQLite не приводит кириллицу к нижнему регистру
  * в LIKE, поэтому строку готовим заранее и ищем по ней подстрокой.
  */
-export function buildLetterSearchIndex(parts: (string | null | undefined)[]): string {
+export function buildSearchIndex(parts: (string | null | undefined)[]): string {
   return parts
     .filter((part): part is string => Boolean(part && part.trim()))
     .join(" ")

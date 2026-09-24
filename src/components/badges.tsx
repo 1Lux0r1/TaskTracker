@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain";
 
 const TASK_STATUS_CLASS: Record<TaskStatus, string> = {
+  NEW: "bg-blue-50 text-blue-700",
   BACKLOG: "bg-gray-100 text-gray-600",
   TODO: "bg-blue-50 text-blue-700",
   IN_PROGRESS: "bg-amber-50 text-amber-700",
@@ -60,4 +61,13 @@ export function ProgressBar({ value }: { value: number }) {
       <span className="text-xs text-gray-500 tabular-nums">{percent}%</span>
     </div>
   );
+}
+
+/**
+ * Служебная запись: в отчёт руководству она не идёт. Публичность — обычное
+ * состояние, поэтому отметка появляется только у служебных записей.
+ */
+export function VisibilityBadge({ isPublic }: { isPublic: boolean }) {
+  if (isPublic) return null;
+  return <span className="badge bg-gray-100 text-gray-600">Служебная</span>;
 }

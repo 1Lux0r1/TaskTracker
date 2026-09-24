@@ -7,11 +7,15 @@ import {
   setSignatureStatus,
   updateDocument,
 } from "@/app/actions/documents";
+import { VisibilityBadge } from "@/components/badges";
 import { DocumentKindBadge, DocumentStatusBadge, SignatureStatusBadge } from "@/components/letter-badges";
 import { DocumentForm } from "@/components/document-form";
+import { deleteAttachment, uploadAttachment } from "@/app/actions/attachments";
+import { AttachmentPanel } from "@/components/attachment-panel";
 import { NoteFeed } from "@/components/note-feed";
 import { SignatureForm } from "@/components/signature-form";
-import { SubmitButton } from "@/components/submit-button";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { formatFileSize } from "@/lib/attachments";
 import { prisma } from "@/lib/db";
 import { SIGNATURE_STATUS_LABELS, SIGNATURE_STATUSES, formatDate } from "@/lib/domain";
 import { requireUser } from "@/lib/auth";
@@ -19,7 +23,7 @@ import { requireUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function DocumentPage(props: PageProps<"/documents/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const document = await prisma.document.findUnique({
@@ -27,6 +31,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
     include: {
       signatures: { include: { counterparty: true }, orderBy: { sortOrder: "asc" } },
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
+      attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       outgoingLetter: true,
       incomingLetter: true,
     },
@@ -69,6 +74,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
           <h1 className="text-2xl font-semibold text-gray-900">{document.title}</h1>
           <DocumentKindBadge kind={document.kind} />
           <DocumentStatusBadge status={document.status} />
+          <VisibilityBadge isPublic={document.isPublic} />
         </div>
         {document.signedAt && (
           <p className="mt-2 text-sm text-emerald-700">
@@ -120,13 +126,14 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
                     ))}
                     <form action={deleteSignature}>
                       <input type="hidden" name="signatureId" value={signature.id} />
-                      <button
-                        type="submit"
+                      <ConfirmSubmit
                         className="text-xs text-gray-400 hover:text-red-600"
-                        title="Убрать сторону"
+                        question="Убрать сторону?"
+                        confirmLabel="да"
+                        pendingLabel="…"
                       >
                         убрать
-                      </button>
+                      </ConfirmSubmit>
                     </form>
                   </div>
                 </div>
@@ -149,6 +156,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
         members={members}
         letters={letters}
         defaults={document}
+        canChangeVisibility={user.role === "ADMIN"}
         statusDerived={document.signatures.length > 0}
         submitLabel="Сохранить"
       />
@@ -183,6 +191,19 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
         </section>
       )}
 
+      <AttachmentPanel
+        attachments={document.attachments.map((attachment) => ({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          size: formatFileSize(attachment.size),
+          uploadedBy: attachment.uploadedBy?.fullName ?? null,
+          createdAt: formatDate(attachment.createdAt),
+        }))}
+        owner={{ field: "documentId", id: document.id }}
+        upload={uploadAttachment}
+        remove={deleteAttachment}
+      />
+
       <NoteFeed notes={document.notes} members={members} documentId={document.id} />
 
       <form action={deleteDocument} className="card space-y-2 p-5">
@@ -191,9 +212,7 @@ export default async function DocumentPage(props: PageProps<"/documents/[id]">) 
           Стороны подписания и хроника удалятся вместе с ним. Действие необратимо.
         </p>
         <input type="hidden" name="documentId" value={document.id} />
-        <SubmitButton className="btn-danger" pendingLabel="Удаляем…">
-          Удалить документ
-        </SubmitButton>
+        <ConfirmSubmit>Удалить документ</ConfirmSubmit>
       </form>
     </div>
   );

@@ -60,6 +60,7 @@ export default async function NewDocumentPage() {
         counterparties={counterparties}
         members={members}
         letters={letters}
+        isNew
         submitLabel="Создать документ"
       />
     </div>

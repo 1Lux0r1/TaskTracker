@@ -10,7 +10,7 @@ import {
   partyFromHeader,
 } from "@/lib/excel/columns";
 import { deriveDocumentStatus, signatureProgress } from "@/lib/domain";
-import { buildLetterSearchIndex, normalizeQuery } from "@/lib/search";
+import { buildSearchIndex, normalizeQuery } from "@/lib/search";
 
 describe("реестр переписки", () => {
   it("распознаёт шапку реального реестра ЭДО", () => {
@@ -134,12 +134,35 @@ describe("статус документа по сторонам", () => {
 
 describe("поиск по переписке", () => {
   it("складывает поисковую строку в нижнем регистре без ё", () => {
-    const index = buildLetterSearchIndex(["64-01-16906/26", "Согласование ТЗ", "ДЖКХ", null]);
+    const index = buildSearchIndex(["64-01-16906/26", "Согласование ТЗ", "ДЖКХ", null]);
     expect(index).toBe("64-01-16906/26 согласование тз джкх");
   });
 
   it("запрос приводится к тому же виду, что и индекс", () => {
     expect(normalizeQuery("  Согласование   ТЗ ")).toBe("согласование тз");
     expect(normalizeQuery("Ёлка")).toBe("елка");
+  });
+});
+
+describe("поисковая строка при переносе", () => {
+  /**
+   * Перенос пишет в базу напрямую, минуя формы, поэтому поисковую строку
+   * он обязан собрать сам: иначе после переезда поиск ничего не найдёт.
+   */
+  it("собирается из полей задачи строчными буквами", () => {
+    const index = buildSearchIndex([
+      "Настроить выгрузку проводок",
+      "Выгрузка в 1С",
+      null,
+      "AISRKII-9837",
+    ]);
+    expect(index).toBe("настроить выгрузку проводок выгрузка в 1с aisrkii-9837");
+    expect(index).toContain(normalizeQuery("Выгрузку"));
+  });
+
+  it("собирается из полей документа вместе с организацией", () => {
+    const index = buildSearchIndex(["Регламент — ПАО Россети", "ПАО Россети", "Не согласован РСО"]);
+    expect(index).toContain("россети");
+    expect(index).toContain("не согласован рсо");
   });
 });

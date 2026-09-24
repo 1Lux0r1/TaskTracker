@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { importFromExcel, type ImportState } from "@/app/actions/import";
 import { SubmitButton } from "@/components/submit-button";
+import { VISIBILITY_OPTIONS } from "@/lib/visibility";
 
 const INITIAL: ImportState = { status: "idle" };
 
 type Props = {
   projects: { id: string; code: string; name: string }[];
+  /** Видимость уже заведённых записей меняет только администратор. */
+  isAdmin?: boolean;
 };
 
-export function ImportForm({ projects }: Props) {
+export function ImportForm({ projects, isAdmin = false }: Props) {
   const [state, formAction] = useActionState(importFromExcel, INITIAL);
 
   return (
@@ -33,6 +36,8 @@ export function ImportForm({ projects }: Props) {
             <select name="kind" defaultValue="tasks" className="input">
               <option value="tasks">Реестр задач</option>
               <option value="letters">Реестр переписки ЭДО</option>
+              <option value="documents:REGULATION">Реестр подписания регламентов</option>
+              <option value="documents:NDA_ANNEX">Реестр подписания ДС к NDA</option>
             </select>
           </label>
         </div>
@@ -74,6 +79,39 @@ export function ImportForm({ projects }: Props) {
           />
           Заводить организации, которых нет в справочнике
         </label>
+
+        <label className="field">
+          Видимость загруженного
+          <select name="visibility" defaultValue="INTERNAL" className="input sm:w-96">
+            {VISIBILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.note.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-normal text-gray-500">
+            Одна пометка на новые записи загрузки. У тех, что уже есть в системе, видимость
+            остаётся прежней: загрузку повторяют ради данных, а не ради смены видимости.
+          </span>
+        </label>
+
+        {/* Видимость заведённой записи — решение человека, поэтому перекрыть
+            её загрузкой можно только осознанно и только администратору. */}
+        {isAdmin && (
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              name="applyVisibilityToExisting"
+              className="mt-0.5 size-4"
+            />
+            <span>
+              Применить видимость и к записям, которые уже заведены
+              <span className="block text-xs text-gray-500">
+                Каждая такая смена попадёт в журнал видимости
+              </span>
+            </span>
+          </label>
+        )}
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" name="dryRun" className="size-4" />
@@ -174,8 +212,8 @@ function ImportReportView({ state }: { state: Extract<ImportState, { status: "do
       )}
 
       {!isDryRun && (
-        <Link href={report.kind === "letters" ? "/letters" : "/tasks"} className="btn-secondary w-fit">
-          {report.kind === "letters" ? "Открыть переписку" : "Открыть задачи"}
+        <Link href={reportHref(report.kind)} className="btn-secondary w-fit">
+          {reportLinkLabel(report.kind)}
         </Link>
       )}
     </div>
@@ -189,4 +227,17 @@ function Stat({ label, value }: { label: string; value: number }) {
       <dd className="mt-0.5 text-xl font-semibold tabular-nums text-gray-900">{value}</dd>
     </div>
   );
+}
+
+/** Куда вести после загрузки: реестр того же вида, что и загруженный. */
+function reportHref(kind: string): string {
+  if (kind === "letters") return "/letters";
+  if (kind === "documents") return "/documents";
+  return "/tasks";
+}
+
+function reportLinkLabel(kind: string): string {
+  if (kind === "letters") return "Открыть переписку";
+  if (kind === "documents") return "Открыть юридический трек";
+  return "Открыть задачи";
 }

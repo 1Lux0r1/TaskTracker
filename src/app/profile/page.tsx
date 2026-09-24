@@ -1,8 +1,11 @@
 import { changeOwnPassword } from "@/app/actions/auth";
+import { updateOwnDisplayName } from "@/app/actions/members";
+import { DisplayNameForm } from "@/components/display-name-form";
 import { PasswordForm } from "@/components/password-form";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/domain";
+import { greetingName } from "@/lib/today";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,18 @@ export default async function ProfilePage() {
         <p className="text-gray-500">
           Активных входов: {sessions} · сегодня {formatDate(new Date())}
         </p>
+      </div>
+
+      <div className="card space-y-3 p-6">
+        <h2 className="text-lg font-medium text-gray-900">Как к вам обращаться</h2>
+        <p className="text-sm text-gray-500">
+          Этим именем вас встречает раздел «Сегодня». Если поле пустое, имя берётся из ФИО.
+        </p>
+        <DisplayNameForm
+          action={updateOwnDisplayName}
+          value={user.displayName}
+          placeholder={greetingName(user.fullName)}
+        />
       </div>
 
       <div className="card space-y-3 p-6">

@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { revokeMemberAccess, setMemberPassword, toggleMemberRole } from "@/app/actions/auth";
-import { createMember, toggleMemberActive } from "@/app/actions/members";
+import { createMember, toggleMemberActive, updateMember } from "@/app/actions/members";
 import { MemberAccess } from "@/components/member-access";
+import { MemberEditForm } from "@/components/member-edit-form";
 import { MemberForm } from "@/components/member-form";
 import { SubmitButton } from "@/components/submit-button";
 import { requireUser } from "@/lib/auth";
@@ -28,18 +30,48 @@ export default async function MembersPage() {
     openCounts.map((row) => [row.assigneeId as string, row._count._all]),
   );
 
+  const activeAdmins = members.filter((item) => item.role === "ADMIN" && item.isActive).length;
+
+  /**
+   * Архив закрывает вход, поэтому кнопка есть только у администратора и никогда
+   * не появляется на себе и на последнем администраторе: систему нельзя
+   * оставить без того, кто вернёт доступ.
+   */
+  function canArchive(member: { id: string; role: string; isActive: boolean }): boolean {
+    if (!isAdmin) return false;
+    if (!member.isActive) return true;
+    if (member.id === user.id) return false;
+    if (member.role === "ADMIN" && activeAdmins <= 1) return false;
+    return true;
+  }
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Сотрудники</h1>
+        <Link href="/directory" className="text-sm text-gray-500 hover:underline">
+          ← Справочники
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold text-gray-900">Сотрудники</h1>
         <p className="text-sm text-gray-500">
           {isAdmin
-            ? "Пароль и роль сотрудника заводит администратор. Роли различаются только правом вести пользователей: работать с задачами, письмами и документами могут все."
-            : "Пароли и роли ведёт администратор."}
+            ? "Карточки, пароли и роли сотрудников ведёт администратор. Роли различаются только этим: работать с задачами, письмами и документами могут все."
+            : "Карточки, пароли и роли сотрудников ведёт администратор."}
         </p>
       </div>
 
-      <MemberForm action={createMember} />
+      {isAdmin && (
+        <p className="text-sm">
+          <Link href="/visibility-log" className="text-gray-700 hover:underline">
+            Журнал видимости
+          </Link>
+          <span className="text-gray-500">
+            {" "}
+            — кто и когда менял, какие записи идут в отчёт
+          </span>
+        </p>
+      )}
+
+      {isAdmin && <MemberForm action={createMember} />}
 
       {members.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">
@@ -63,18 +95,39 @@ export default async function MembersPage() {
             <tbody className="divide-y divide-gray-100">
               {members.map((member) => (
                 <tr key={member.id} className={member.isActive ? "" : "text-gray-400"}>
-                  <td className="table-cell font-medium text-gray-900">{member.fullName}</td>
+                  <td className="table-cell font-medium text-gray-900">
+                    {isAdmin ? (
+                      <MemberEditForm
+                        member={{
+                          id: member.id,
+                          fullName: member.fullName,
+                          displayName: member.displayName,
+                          position: member.position,
+                          email: member.email,
+                        }}
+                        action={updateMember}
+                      />
+                    ) : (
+                      member.fullName
+                    )}
+                  </td>
                   <td className="table-cell">{member.position ?? "—"}</td>
                   <td className="table-cell">{member.email ?? "—"}</td>
                   <td className="table-cell tabular-nums">{openByMember.get(member.id) ?? 0}</td>
                   <td className="table-cell tabular-nums">{member._count.ownedProjects}</td>
                   <td className="table-cell">
-                    <form action={toggleMemberActive}>
-                      <input type="hidden" name="memberId" value={member.id} />
-                      <SubmitButton className="btn-secondary" pendingLabel="…">
-                        {member.isActive ? "В архив" : "Вернуть"}
-                      </SubmitButton>
-                    </form>
+                    {canArchive(member) ? (
+                      <form action={toggleMemberActive}>
+                        <input type="hidden" name="memberId" value={member.id} />
+                        <SubmitButton className="btn-secondary" pendingLabel="…">
+                          {member.isActive ? "В архив" : "Вернуть"}
+                        </SubmitButton>
+                      </form>
+                    ) : (
+                      <span className="text-xs text-gray-400">
+                        {member.isActive ? "Активен" : "В архиве"}
+                      </span>
+                    )}
                   </td>
                   {isAdmin && (
                     <td className="table-cell">

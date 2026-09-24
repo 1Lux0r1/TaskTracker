@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { KeepFormValues } from "@/components/keep-form-values";
 import { SubmitButton } from "@/components/submit-button";
 import type { ActionResult } from "@/lib/validation";
 
@@ -13,6 +14,7 @@ export function MemberForm({ action }: Props) {
 
   return (
     <form action={formAction} className="card flex flex-wrap items-end gap-3 p-4">
+      <KeepFormValues state={state} />
       {state && !state.ok && (
         <p className="w-full rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}
@@ -24,6 +26,10 @@ export function MemberForm({ action }: Props) {
       <label className="field">
         ФИО
         <input name="fullName" required className="input w-64" />
+      </label>
+      <label className="field">
+        Имя для обращения
+        <input name="displayName" placeholder="Алексей" className="input w-44" />
       </label>
       <label className="field">
         Должность

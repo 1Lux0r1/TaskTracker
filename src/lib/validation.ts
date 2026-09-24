@@ -1,14 +1,17 @@
 import { z } from "zod";
 import {
+  ARTIFACT_KINDS,
   DOCUMENT_KINDS,
   DOCUMENT_STATUSES,
   LETTER_DIRECTIONS,
   LETTER_STATUSES,
+  MEETING_KINDS,
   PROJECT_STATUSES,
   SIGNATURE_STATUSES,
   TASK_PRIORITIES,
   TASK_STATUSES,
-  TASK_TRACKS,
+  REFERENCE_SECTIONS,
+  TRACK_COLORS,
 } from "@/lib/domain";
 
 /** Пустая строка из формы означает «значение не задано», а не пустой текст. */
@@ -18,6 +21,12 @@ const optionalText = z
   .transform((value) => (value.length === 0 ? null : value))
   .nullable();
 
+/**
+ * Поле, которого в форме может не быть вовсе: состав полей зависит от
+ * направления письма, поэтому отсутствующий ключ — это «не задано».
+ */
+const conditionalText = optionalText.optional().transform((value) => value ?? null);
+
 const optionalDate = z
   .string()
   .trim()
@@ -26,6 +35,12 @@ const optionalDate = z
   .refine((value) => value === null || !Number.isNaN(value.getTime()), {
     message: "Некорректная дата",
   });
+
+/**
+ * Срок письма: при отметке «ответ не требуется» поле выключено и браузер
+ * его не отправляет, поэтому отсутствующий ключ — это «срока нет».
+ */
+const conditionalDate = optionalDate.optional().transform((value) => value ?? null);
 
 const optionalNumber = z
   .string()
@@ -52,6 +67,32 @@ export const projectInputSchema = z.object({
   ownerId: optionalText,
 });
 
+/**
+ * Артефакты приходят повторяющимися полями формы: собираем их в список,
+ * пустые строки отбрасываем — пользователь мог нажать «ещё артефакт» и
+ * передумать.
+ */
+export function readArtifacts(formData: FormData) {
+  const kinds = formData.getAll("artifactKind").map(String);
+  const labels = formData.getAll("artifactLabel").map(String);
+  const values = formData.getAll("artifactValue").map(String);
+
+  return kinds
+    .map((kind, index) => ({
+      kind: ARTIFACT_KINDS.some((item) => item.value === kind) ? kind : "CUSTOM_VALUE",
+      label: labels[index]?.trim() || null,
+      value: values[index]?.trim() ?? "",
+      sortOrder: index,
+    }))
+    .filter((artifact) => artifact.value.length > 0);
+}
+
+export const trackInputSchema = z.object({
+  projectId: z.string().trim().min(1, "Выберите проект"),
+  name: z.string().trim().min(1, "Укажите название трека").max(80),
+  color: z.enum(TRACK_COLORS.map((item) => item.value) as [string, ...string[]]),
+});
+
 export const taskInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),
   title: z.string().trim().min(1, "Укажите название задачи").max(300),
@@ -61,9 +102,8 @@ export const taskInputSchema = z.object({
   assigneeId: optionalText,
   externalAssignee: optionalText,
   externalTaskKey: optionalText,
-  track: z.enum(TASK_TRACKS),
+  trackId: z.string().trim().min(1, "Выберите трек"),
   progressNote: optionalText,
-  resultLink: optionalText,
   letterId: optionalText,
   parentId: optionalText,
   startDate: optionalDate,
@@ -81,6 +121,8 @@ export const taskInputSchema = z.object({
 
 export const memberInputSchema = z.object({
   fullName: z.string().trim().min(1, "Укажите ФИО").max(200),
+  // Поле есть не во всех формах: в быстром заведении сотрудника его нет.
+  displayName: optionalText.optional().transform((value) => value ?? null),
   email: z
     .string()
     .trim()
@@ -116,13 +158,71 @@ export const letterInputSchema = z.object({
   url: optionalUrl,
   counterpartyId: optionalText,
   ownerId: optionalText,
-  dueDate: optionalDate,
+  dueDate: conditionalDate,
   status: z.enum(LETTER_STATUSES),
   statusNote: optionalText,
   responseRef: optionalText,
+  /// Резолюция — только у входящего, подписант и письмо-основание — только
+  /// у исходящего, поэтому в форме есть лишь часть этих полей.
+  resolution: conditionalText,
+  signatory: conditionalText,
+  responseToId: conditionalText,
   externalTaskKey: optionalText,
   comment: optionalText,
 });
+
+/** Время встречи: «ЧЧ:ММ» или пусто. */
+const optionalTime = z
+  .string()
+  .trim()
+  .transform((value) => (value.length === 0 ? null : value))
+  .nullable()
+  .refine((value) => value === null || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), {
+    message: "Время указывается как ЧЧ:ММ",
+  });
+
+export const meetingInputSchema = z
+  .object({
+    projectId: z.string().trim().min(1, "Выберите проект"),
+    date: z
+      .string()
+      .trim()
+      .min(1, "Укажите дату встречи")
+      .transform((value) => new Date(`${value}T00:00:00`))
+      .refine((value) => !Number.isNaN(value.getTime()), { message: "Некорректная дата" }),
+    startTime: optionalTime,
+    endTime: optionalTime,
+    place: optionalText,
+    kind: z.enum(MEETING_KINDS),
+    subject: z.string().trim().min(1, "Укажите тему встречи").max(500),
+    agenda: optionalText,
+    decisions: optionalText,
+    ownerId: optionalText,
+  })
+  .refine(
+    (value) => !value.startTime || !value.endTime || value.startTime <= value.endTime,
+    { message: "Встреча заканчивается раньше, чем начинается", path: ["endTime"] },
+  );
+
+export const orgContactInputSchema = z.object({
+  counterpartyId: z.string().trim().min(1, "Выберите организацию"),
+  fullName: z.string().trim().min(1, "Укажите ФИО").max(200),
+  position: optionalText,
+  email: optionalText,
+  phone: optionalText,
+  comment: optionalText,
+});
+
+export const referencePageInputSchema = z.object({
+  // Страница может быть общей: раздел справочника живёт не только у проекта.
+  projectId: optionalText,
+  section: z.enum(REFERENCE_SECTIONS.map((item) => item.value) as [string, ...string[]]),
+  title: z.string().trim().min(1, "Укажите заголовок").max(200),
+  content: z.string().trim().min(1, "Страница без содержания не нужна"),
+  authorId: optionalText,
+});
+
+export type ReferencePageInput = z.infer<typeof referencePageInputSchema>;
 
 export const documentInputSchema = z.object({
   projectId: z.string().trim().min(1, "Выберите проект"),
@@ -174,6 +274,8 @@ export const weeklyReportInputSchema = z
 export type CounterpartyInput = z.infer<typeof counterpartyInputSchema>;
 export type LetterInput = z.infer<typeof letterInputSchema>;
 export type DocumentInput = z.infer<typeof documentInputSchema>;
+export type MeetingInput = z.infer<typeof meetingInputSchema>;
+export type OrgContactInput = z.infer<typeof orgContactInputSchema>;
 export type SignatureInput = z.infer<typeof signatureInputSchema>;
 export type WeeklyReportInput = z.infer<typeof weeklyReportInputSchema>;
 
