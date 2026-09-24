@@ -1,0 +1,45 @@
+# Публикация витрины на GitHub Pages.
+#
+# Витрина — заранее снятые статические страницы в папке demo-site: рабочая
+# система на Pages жить не может, там нет сервера. Пересобирается она
+# командой `npm run demo:site` при поднятом демо, поэтому здесь только
+# публикация уже готовых файлов.
+#
+# Режим публикации: Settings → Pages → Source → GitHub Actions. Тогда корнем
+# сайта становится папка demo-site и витрина открывается по короткому адресу.
+# Если режим переключат на Deploy from a branch, этот процесс выкладывать
+# перестанет, но короткий адрес всё равно приведёт на витрину: в корне
+# репозитория лежит index.html, который уводит на demo-site.
+
+name: Витрина на Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["demo-site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Публикуем по одной за раз, начатую не обрываем.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo-site
+      - id: deployment
+        uses: actions/deploy-pages@v4
