@@ -6,8 +6,9 @@
  * трогает вовсе, поэтому демо можно показывать, ничего не опасаясь.
  *
  * По умолчанию демо-база переиспользуется: что наменяли в прошлый раз, то и
- * осталось. Начать с чистого листа — `npm run demo -- --fresh`; только эта
- * команда удаляет демо-базу, и больше ничего.
+ * осталось, и демо-данные заново не раскладываются. Начать с чистого листа —
+ * `npm run demo -- --fresh`; только эта команда удаляет демо-базу, и больше
+ * ничего.
  */
 import { execSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
@@ -22,15 +23,15 @@ const PORT = process.env.PORT ?? "3000";
 
 const ADMIN = {
   email: "admin@demo.local",
-  fullName: "Администратор демо",
-  displayName: "Администратор",
+  fullName: "Королёв Сергей",
+  displayName: "Сергей",
   password: "demo-2026",
 };
 
 const PARTICIPANT = {
   email: "user@demo.local",
-  fullName: "Участников Участник",
-  displayName: "Участник",
+  fullName: "Шаганова Елена",
+  displayName: "Елена",
   password: "demo-2026",
 };
 
@@ -46,10 +47,26 @@ function run(command: string): void {
   execSync(command, { stdio: "inherit", env });
 }
 
-async function seedAccounts(): Promise<void> {
-  const prisma = new PrismaClient({
+function client(): PrismaClient {
+  return new PrismaClient({
     adapter: new PrismaBetterSqlite3({ url: path.join(process.cwd(), DEMO_DB) }),
   });
+}
+
+/**
+ * Демо-данные раскладываются только в пустую базу. Иначе повторный запуск
+ * вернул бы задачу, которую на показе удалили или переименовали, — сид ищет
+ * записи по названию и считает их пропавшими.
+ */
+async function isEmpty(): Promise<boolean> {
+  const prisma = client();
+  const projects = await prisma.project.count();
+  await prisma.$disconnect();
+  return projects === 0;
+}
+
+async function seedAccounts(): Promise<void> {
+  const prisma = client();
 
   for (const [person, role] of [
     [ADMIN, "ADMIN"],
@@ -85,11 +102,22 @@ async function main(): Promise<void> {
 
   console.log("Готовлю демо-базу…");
   run("npx prisma migrate deploy");
-  run("npm run db:seed");
+
+  if (await isEmpty()) {
+    run("npm run db:seed");
+    // Поиск по-русски живёт в отдельном поле: данные легли в базу мимо форм,
+    // поэтому индекс надо собрать, иначе поиск будет молча пустым.
+    run("npm run search:reindex");
+  } else {
+    console.log("Демо-база уже наполнена, оставляю как есть (начать заново — npm run demo -- --fresh).");
+  }
+
   await seedAccounts();
-  // Поиск по-русски живёт в отдельном поле: данные легли в базу мимо форм,
-  // поэтому индекс надо собрать, иначе поиск будет молча пустым.
-  run("npm run search:reindex");
+
+  // Показываем собранное приложение, а не режим разработки: в нём страницы
+  // открываются сразу и нет значка разработчика в углу.
+  console.log("Собираю приложение…");
+  run("npx next build");
 
   console.log(
     [
@@ -108,7 +136,7 @@ async function main(): Promise<void> {
   );
 
   // Слушаем на всех адресах: с демо часто заходят с соседнего компьютера.
-  run(`npx next dev -H 0.0.0.0 -p ${PORT}`);
+  run(`npx next start -H 0.0.0.0 -p ${PORT}`);
 }
 
 main().catch((error) => {
