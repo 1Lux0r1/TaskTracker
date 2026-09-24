@@ -95,7 +95,7 @@ export default async function NewLetterPage(props: PageProps<"/letters/new">) {
     <div className="mx-auto max-w-4xl space-y-4">
       <div>
         <Link href="/letters" className="text-sm text-gray-500 hover:underline">
-          ← Переписка
+          ← Реестр писем ЭДО
         </Link>
         <h1 className="mt-1 text-2xl font-semibold text-gray-900">Внести письмо</h1>
         <p className="text-sm text-gray-500">

@@ -73,7 +73,7 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <Link href="/letters" className="text-sm text-gray-500 hover:underline">
-          ← Переписка
+          ← Реестр писем ЭДО
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold text-gray-900">№ {letter.number}</h1>

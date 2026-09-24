@@ -9,7 +9,7 @@
 
 export const FILTER_SCOPES = [
   { value: "TASK", label: "Задачи", href: "/tasks" },
-  { value: "LETTER", label: "Переписка", href: "/letters" },
+  { value: "LETTER", label: "Реестр писем ЭДО", href: "/letters" },
   { value: "DOCUMENT", label: "Документы", href: "/documents" },
   { value: "MEETING", label: "Встречи", href: "/meetings" },
 ] as const;
