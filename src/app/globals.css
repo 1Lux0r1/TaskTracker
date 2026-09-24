@@ -1,17 +1,180 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-inter);
+/*
+ * Палитра и шрифты взяты из утверждённых макетов. Значения объявлены через
+ * обычный `@theme` (не `inline`): тогда Tailwind оставляет их переменными,
+ * и тёмную тему можно получить переопределением тех же переменных ниже,
+ * не трогая разметку страниц.
+ *
+ * Серая шкала переопределена намеренно: страницы написаны утилитами
+ * `bg-white`, `border-gray-200`, `text-gray-600`, и подмена значений
+ * переводит на макетные тона весь интерфейс разом.
+ */
+@theme {
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono-code);
+
+  --color-white: #ffffff;
+  --color-gray-50: #f5f8fe;
+  --color-gray-100: #eaf1fc;
+  --color-gray-200: #dfe7f3;
+  --color-gray-300: #c6d3e6;
+  --color-gray-400: #a7b5c8;
+  --color-gray-500: #8b98a5;
+  --color-gray-600: #556472;
+  --color-gray-700: #3d4b59;
+  --color-gray-800: #222d39;
+  --color-gray-900: #0e141b;
+  --color-gray-950: #070b10;
+
+  /* Акценты макета: синий — фирменный, остальные обозначают состояние. */
+  --color-brand: #2b5fe8;
+  --color-brand-soft: #e4ecff;
+  --color-copper: #e8730f;
+  --color-copper-soft: #ffeeda;
+
+  --color-blue-50: #e4ecff;
+  --color-blue-100: #d4e0fe;
+  --color-blue-500: #3b6fd6;
+  --color-blue-600: #2b5fe8;
+  --color-blue-700: #2350c9;
+  --color-blue-800: #1c3f9e;
+
+  --color-green-50: #dcf6ec;
+  --color-green-100: #c7efe0;
+  --color-green-500: #0ea377;
+  --color-green-600: #0b8f66;
+  --color-green-700: #097553;
+  --color-emerald-50: #dcf6ec;
+  --color-emerald-100: #c7efe0;
+  --color-emerald-600: #0b8f66;
+  --color-emerald-700: #097553;
+
+  --color-amber-50: #fdf0d8;
+  --color-amber-100: #fbe6be;
+  --color-amber-500: #cf8410;
+  --color-amber-600: #b8740c;
+  --color-amber-700: #96600a;
+  --color-yellow-50: #fdf0d8;
+  --color-yellow-100: #fbe6be;
+  --color-yellow-600: #b8740c;
+  --color-orange-50: #ffeeda;
+  --color-orange-100: #ffe0bd;
+  --color-orange-500: #e8730f;
+  --color-orange-600: #cf650b;
+
+  --color-red-50: #ffe6e3;
+  --color-red-100: #ffd6d1;
+  --color-red-200: #ffc0b9;
+  --color-red-500: #e04b41;
+  --color-red-600: #cf3f36;
+  --color-red-700: #ad3129;
+
+  --color-purple-50: #f7e6f5;
+  --color-purple-100: #f0d5ed;
+  --color-purple-600: #a8449f;
+  --color-violet-50: #f7e6f5;
+  --color-violet-100: #f0d5ed;
+  --color-violet-600: #a8449f;
 }
 
 :root {
-  --background: #f6f7f9;
-  --foreground: #111827;
+  --ground: #eff4fd;
+  --rail: #ffffff;
+  --hair: #dfe7f3;
+  --shadow-card: 0 1px 2px rgba(14, 20, 27, 0.05);
+  color-scheme: light;
+}
+
+/*
+ * Тёмная тема из макета. Переопределяем те же переменные, что и светлая:
+ * `bg-white` становится тёмной поверхностью, `text-gray-900` — светлым
+ * текстом, и весь интерфейс переворачивается без правок в разметке.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0f1318;
+    --rail: #181d24;
+    --hair: #28303a;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+
+    --color-white: #181d24;
+    --color-gray-50: #1f262e;
+    --color-gray-100: #1f262e;
+    --color-gray-200: #28303a;
+    --color-gray-300: #38424e;
+    --color-gray-400: #5b6773;
+    --color-gray-500: #77838f;
+    --color-gray-600: #a3b0bd;
+    --color-gray-700: #bcc7d2;
+    --color-gray-800: #d5dde5;
+    --color-gray-900: #e9eef3;
+    --color-gray-950: #f4f7fa;
+
+    --color-brand: #7fa9ff;
+    --color-brand-soft: #1b2a49;
+    --color-copper: #ff9d4d;
+    --color-copper-soft: #3a2617;
+
+    --color-blue-50: #1b2a49;
+    --color-blue-100: #22365c;
+    --color-blue-500: #5b8ae8;
+    --color-blue-600: #7fa9ff;
+    --color-blue-700: #9dbdff;
+    --color-blue-800: #b8ceff;
+
+    --color-green-50: #12302a;
+    --color-green-100: #174036;
+    --color-green-500: #3fb392;
+    --color-green-600: #4fc09c;
+    --color-green-700: #6bcfaf;
+    --color-emerald-50: #12302a;
+    --color-emerald-100: #174036;
+    --color-emerald-600: #4fc09c;
+    --color-emerald-700: #6bcfaf;
+
+    --color-amber-50: #31271a;
+    --color-amber-100: #3f3222;
+    --color-amber-500: #c99143;
+    --color-amber-600: #d7a04a;
+    --color-amber-700: #e2b467;
+    --color-yellow-50: #31271a;
+    --color-yellow-100: #3f3222;
+    --color-yellow-600: #d7a04a;
+    --color-orange-50: #3a2617;
+    --color-orange-100: #4a301c;
+    --color-orange-500: #ff9d4d;
+    --color-orange-600: #ffae6b;
+
+    --color-red-50: #35201d;
+    --color-red-100: #442824;
+    --color-red-200: #55322c;
+    --color-red-500: #d4776a;
+    --color-red-600: #e08272;
+    --color-red-700: #eb9c8e;
+
+    --color-purple-50: #33203a;
+    --color-purple-100: #412a4a;
+    --color-purple-600: #c05cb8;
+    --color-violet-50: #33203a;
+    --color-violet-100: #412a4a;
+    --color-violet-600: #c05cb8;
+  }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--ground);
+  color: var(--color-gray-900);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  letter-spacing: -0.015em;
 }
 
 /*
@@ -25,11 +188,28 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-xl border border-gray-200 bg-white shadow-sm;
+    @apply rounded-xl border border-gray-200 bg-white;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Карточка с цветной полосой сверху — так они выглядят в макете. */
+  .card-accent {
+    @apply relative overflow-hidden;
+  }
+
+  .card-accent::after {
+    content: "";
+    @apply absolute inset-x-0 top-0 h-[3px];
+    background: var(--accent, var(--color-brand));
   }
 
   .btn-primary {
-    @apply btn bg-gray-900 text-white hover:bg-gray-700;
+    @apply btn text-white;
+    background: linear-gradient(135deg, var(--color-brand) 0%, #4f7ef5 100%);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.06);
   }
 
   .btn-secondary {
@@ -45,7 +225,8 @@ body {
   }
 
   .input {
-    @apply mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900;
+    @apply mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none;
+    @apply focus:border-brand focus:ring-1 focus:ring-brand;
   }
 
   .badge {
@@ -58,5 +239,23 @@ body {
 
   .table-cell {
     @apply px-3 py-2 align-top text-sm text-gray-700;
+  }
+
+  /* Пункт бокового меню. */
+  .rail-link {
+    @apply flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-gray-600;
+    @apply hover:bg-gray-100 hover:text-gray-900;
+  }
+
+  .rail-link[aria-current="page"] {
+    @apply bg-brand-soft font-semibold text-brand;
+  }
+
+  .rail-cap {
+    @apply px-2 pb-1.5 text-[10.5px] font-semibold tracking-[0.1em] text-gray-500 uppercase;
+  }
+
+  .rail-count {
+    @apply ml-auto font-mono text-[11.5px] text-gray-500 tabular-nums;
   }
 }
