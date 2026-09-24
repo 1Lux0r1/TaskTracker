@@ -25,7 +25,9 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
       notes: { include: { author: true }, orderBy: { occurredOn: "desc" } },
       attachments: { include: { uploadedBy: true }, orderBy: { createdAt: "desc" } },
       tasks: { include: { assignee: true }, orderBy: { number: "asc" } },
-      responses: true,
+      // Связь «письмо — ответ» показывается с обеих сторон: у ответа видно,
+      // на что он дан, у исходного письма — чем его закрыли.
+      responses: { orderBy: { date: "asc" }, select: { id: true, number: true, date: true } },
       responseTo: true,
     },
   });
@@ -84,6 +86,20 @@ export default async function LetterPage(props: PageProps<"/letters/[id]">) {
             <Link href={`/letters/${letter.responseTo.id}`} className="text-gray-900 hover:underline">
               № {letter.responseTo.number}
             </Link>
+          </p>
+        )}
+        {letter.responses.length > 0 && (
+          <p className="mt-2 text-sm text-gray-500">
+            {letter.responses.length === 1 ? "Ответ дан письмом" : "Ответы даны письмами"}{" "}
+            {letter.responses.map((response, index) => (
+              <span key={response.id}>
+                {index > 0 && ", "}
+                <Link href={`/letters/${response.id}`} className="text-gray-900 hover:underline">
+                  № {response.number}
+                </Link>
+                {response.date && ` от ${formatDate(response.date)}`}
+              </span>
+            ))}
           </p>
         )}
       </div>
