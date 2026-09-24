@@ -1,8 +1,11 @@
-# Установка TaskTracker на компьютере с Windows.
+﻿# Установка TaskTracker на компьютере с Windows.
 # Запуск из папки проекта:  powershell -ExecutionPolicy Bypass -File scripts\install.ps1
 #
 # Скрипт ничего не удаляет: уже существующий .env и уже созданную базу он
 # оставляет как есть и только доводит установку до рабочего состояния.
+#
+# Файл сохранён в UTF-8 с BOM: Windows PowerShell 5.1 без BOM читает его как
+# cp1251, кириллица превращается в кракозябры, и скрипт падает на разборе.
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -10,6 +13,17 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 function Step($text) {
     Write-Host ""
     Write-Host "== $text" -ForegroundColor Cyan
+}
+
+# $ErrorActionPreference не останавливает скрипт на ошибке внешней команды:
+# без этой проверки упавший npm ci не помешал бы дойти до слова «Готово».
+function Check($text) {
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
+        Write-Host "Не удалось: $text (код $LASTEXITCODE). Установка прервана." -ForegroundColor Red
+        Write-Host "Что делать: покажите последние строки выше тому, кто ведёт систему."
+        exit 1
+    }
 }
 
 Step "Проверяю Node.js"
@@ -27,6 +41,7 @@ Write-Host "Node.js $version — подходит."
 
 Step "Ставлю зависимости"
 npm ci
+Check "установка зависимостей"
 
 Step "Готовлю настройки"
 if (Test-Path ".env") {
@@ -41,13 +56,16 @@ if (Test-Path ".env") {
 
 Step "Создаю базу"
 npm run db:deploy
+Check "создание базы"
 
 Step "Собираю приложение"
 npm run build
+Check "сборка приложения"
 
 Step "Завожу администратора"
 Write-Host "Сейчас скрипт спросит почту, ФИО и пароль. Под ними вы войдёте первым."
 npm run auth:admin
+Check "создание администратора"
 
 $address = (Get-NetIPAddress -AddressFamily IPv4 |
     Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
