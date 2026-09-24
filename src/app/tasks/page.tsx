@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
-import { TaskTable } from "@/components/task-table";
+import { KanbanBoard } from "@/components/kanban-board";
+import { TaskList } from "@/components/task-list";
 import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
 import { TASK_STATUS_LABELS, TASK_STATUSES, startOfToday } from "@/lib/domain";
@@ -52,11 +53,42 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   // для пользователя один трек, поэтому названия схлопываем.
   const trackNames = [...new Set(trackRows.map((row) => row.name))];
 
+  const cancelled = tasks.filter((task) => task.status === "CANCELLED").length;
+
+  // По макету задачи открываются доской; список — второй вид того же набора.
+  const view = params.view === "list" ? "list" : "board";
+  const viewHref = (next: "board" | "list") => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (key === "view" || value === undefined) continue;
+      if (Array.isArray(value)) value.forEach((item) => query.append(key, item));
+      else query.set(key, value);
+    }
+    query.set("view", next);
+    return `/tasks?${query.toString()}`;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-gray-900">Задачи</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex gap-0.5 rounded-lg bg-gray-100 p-0.5">
+            <Link
+              href={viewHref("board")}
+              aria-pressed={view === "board"}
+              className={viewTab(view === "board")}
+            >
+              Доска
+            </Link>
+            <Link
+              href={viewHref("list")}
+              aria-pressed={view === "list"}
+              className={viewTab(view === "list")}
+            >
+              Список
+            </Link>
+          </div>
           <Link href="/api/export" className="btn-secondary">
             Выгрузить в Excel
           </Link>
@@ -146,9 +178,23 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         Найдено задач: {tasks.length}
         {tasks.length === 300 && " (показаны первые 300, уточните фильтр)"}
       </p>
-      {user.role === "ADMIN" ? (
+      {view === "board" ? (
+        <>
+          <KanbanBoard tasks={tasks} />
+          {/* На доске нет колонки «Отменена»: такие задачи видны в списке. */}
+          {cancelled > 0 && (
+            <p className="text-sm text-gray-500">
+              Отменённых задач под фильтром: {cancelled}. Их видно{" "}
+              <Link href={viewHref("list")} className="font-medium text-brand hover:underline">
+                списком
+              </Link>
+              .
+            </p>
+          )}
+        </>
+      ) : user.role === "ADMIN" ? (
         <BulkVisibility entity="TASK">
-          <TaskTable
+          <TaskList
             tasks={tasks}
             showProject
             selectable
@@ -156,8 +202,15 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
           />
         </BulkVisibility>
       ) : (
-        <TaskTable tasks={tasks} showProject emptyMessage="Под фильтр ничего не подошло." />
+        <TaskList tasks={tasks} showProject emptyMessage="Под фильтр ничего не подошло." />
       )}
     </div>
   );
+}
+
+/** Переключатель вида: выбранная вкладка белая, как в макете. */
+function viewTab(active: boolean): string {
+  return active
+    ? "rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm"
+    : "rounded-md px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900";
 }

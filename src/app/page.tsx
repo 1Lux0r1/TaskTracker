@@ -38,6 +38,10 @@ type CounterBlock = {
   totalLabel: string;
   pill: string;
   segments: CountSegment[];
+  /** Цвет раздела: полоса сверху, значок и цифра красятся им. */
+  accent: string;
+  accentSoft: string;
+  icon: "task" | "letter" | "meeting";
 };
 
 type ListBlock = {
@@ -127,6 +131,9 @@ export default async function TodayPage() {
       key: "tasks",
       title: "Задачи",
       href: "/tasks",
+      accent: "var(--color-brand)",
+      accentSoft: "var(--color-brand-soft)",
+      icon: "task",
       total: sum(taskBy),
       totalLabel: plural(sum(taskBy), "открытая", "открытые", "открытых"),
       pill: `новых: ${taskBy.get("NEW") ?? 0}`,
@@ -142,6 +149,9 @@ export default async function TodayPage() {
       key: "letters",
       title: "Письма",
       href: "/letters",
+      accent: "var(--color-copper)",
+      accentSoft: "var(--color-copper-soft)",
+      icon: "letter",
       total: sum(letterBy),
       totalLabel: plural(sum(letterBy), "открытое", "открытых", "открытых"),
       pill: `новых: ${letterBy.get("NEW") ?? 0}`,
@@ -155,6 +165,9 @@ export default async function TodayPage() {
       key: "meetings",
       title: "Встречи",
       href: "/meetings",
+      accent: "var(--color-purple-600)",
+      accentSoft: "var(--color-purple-50)",
+      icon: "meeting",
       total: meetingsAhead,
       totalLabel: "впереди",
       // У встречи нет «новой»: полезнее знать, сколько их сегодня.
@@ -294,23 +307,50 @@ export default async function TodayPage() {
 function Counter({ block }: { block: CounterBlock }) {
   const shares = segmentShares(block.segments);
 
+  // Плитка раздела из макета: полоса и подложка цветом раздела, значок
+  // в цветном квадрате, крупная цифра тем же цветом и стрелка перехода.
   return (
     <Link
       href={block.href}
-      className="card flex min-w-0 flex-col gap-3 p-5 transition hover:border-gray-300 hover:shadow-sm"
+      style={{ "--accent": block.accent, "--accent-soft": block.accentSoft } as React.CSSProperties}
+      className="card card-accent group flex min-w-0 flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-gray-500">{block.title}</p>
-          <p className="mt-1 flex items-baseline gap-2">
-            <span className="text-4xl font-semibold tabular-nums text-gray-900">{block.total}</span>
-            <span className="text-sm text-gray-500">{block.totalLabel}</span>
-          </p>
-        </div>
-        <span className="badge bg-gray-900 text-white">{block.pill}</span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          background: "linear-gradient(135deg, var(--accent-soft) 0%, transparent 62%)",
+        }}
+      />
+
+      <div className="relative flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="grid size-8 flex-none place-items-center rounded-[10px] text-white"
+          style={{ background: "var(--accent)" }}
+        >
+          <CounterIcon kind={block.icon} />
+        </span>
+        <span className="text-sm font-semibold text-gray-900">{block.title}</span>
+        <span className="badge ml-auto border border-gray-200 bg-white text-gray-500">
+          {block.pill}
+        </span>
       </div>
 
-      <div className="flex h-2 overflow-hidden rounded-full bg-gray-100">
+      <p className="relative flex items-baseline gap-2.5">
+        <span
+          className="font-display text-[38px] leading-none font-extrabold tracking-tight tabular-nums"
+          style={{ color: "var(--accent)" }}
+        >
+          {block.total}
+        </span>
+        <span className="text-sm text-gray-600">{block.totalLabel}</span>
+        <span className="ml-auto text-base text-gray-500 transition group-hover:translate-x-0.5">
+          →
+        </span>
+      </p>
+
+      <div className="relative flex h-1.5 overflow-hidden rounded-full bg-gray-200">
         {shares.map((share) => (
           <span
             key={share.key}
@@ -321,8 +361,47 @@ function Counter({ block }: { block: CounterBlock }) {
         ))}
       </div>
 
-      <p className="text-sm text-gray-500">{breakdownText(block.segments)}</p>
+      <p className="relative text-[12.5px] text-gray-500">{breakdownText(block.segments)}</p>
     </Link>
+  );
+}
+
+/** Значок раздела в плитке «Сегодня». */
+function CounterIcon({ kind }: { kind: CounterBlock["icon"] }) {
+  const paths = {
+    task: (
+      <>
+        <rect x="3.5" y="4" width="17" height="16" rx="3" />
+        <path d="m8.5 12.3 2.4 2.4 4.6-5" />
+      </>
+    ),
+    letter: (
+      <>
+        <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
+        <path d="m3.5 6.5 8.5 6 8.5-6" />
+      </>
+    ),
+    meeting: (
+      <>
+        <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+        <path d="M8 2.5v4M16 2.5v4M3 10h18" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {paths[kind]}
+    </svg>
   );
 }
 
@@ -330,7 +409,7 @@ function ListCard({ block }: { block: ListBlock }) {
   // min-w-0: без него длинная тема письма растягивает карточку и уводит
   // страницу вбок на телефоне.
   return (
-    <section className="card flex h-full min-w-0 flex-col p-5">
+    <section className="card card-accent flex h-full min-w-0 flex-col p-5">
       <h2 className="text-sm font-semibold text-gray-900">{block.title}</h2>
 
       {block.rows.length === 0 ? (

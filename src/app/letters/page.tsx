@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
 import { VisibilityBadge } from "@/components/badges";
 import { BulkVisibility } from "@/components/bulk-visibility";
-import { DirectionBadge, LetterStatusBadge } from "@/components/letter-badges";
+import { LetterStatusBadge } from "@/components/letter-badges";
 import { prisma } from "@/lib/db";
 import {
   LETTER_DIRECTION_LABELS,
@@ -60,7 +60,7 @@ export default async function LettersPage(props: PageProps<"/letters">) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Переписка ЭДО</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Реестр писем ЭДО</h1>
           <p className="text-sm text-gray-500">
             Входящие и исходящие письма со сроками исполнения
           </p>
@@ -168,77 +168,90 @@ export default async function LettersPage(props: PageProps<"/letters">) {
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
         <BulkVisibility entity="LETTER" enabled={user.role === "ADMIN"}>
-        <div className="card overflow-x-auto">
-          <table className="w-full min-w-5xl border-collapse">
-            <thead className="border-b border-gray-200 bg-gray-50">
-              <tr>
-                {user.role === "ADMIN" && <th className="table-head w-10" />}
-                <th className="table-head w-40">Номер</th>
-                <th className="table-head w-28">Дата</th>
-                <th className="table-head w-32">Направление</th>
-                <th className="table-head">Тема</th>
-                <th className="table-head w-48">Организация</th>
-                <th className="table-head w-28">Срок</th>
-                <th className="table-head w-40">Статус</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {letters.map((letter) => {
-                const overdue =
-                  letter.dueDate !== null && isLetterOpen(letter.status) && letter.dueDate < today;
-                return (
-                  <tr key={letter.id} className="hover:bg-gray-50">
-                    {user.role === "ADMIN" && (
-                      <td className="table-cell">
-                        <input type="checkbox" name="ids" value={letter.id} className="size-4" />
-                      </td>
-                    )}
-                    <td className="table-cell">
-                      <Link
-                        href={`/letters/${letter.id}`}
-                        className="font-medium text-gray-900 hover:underline"
-                      >
-                        {letter.number}
-                      </Link>
-                    </td>
-                    <td className="table-cell tabular-nums">{formatDate(letter.date)}</td>
-                    <td className="table-cell">
-                      <span className="flex flex-wrap gap-1">
-                        <DirectionBadge direction={letter.direction} />
-                        <VisibilityBadge isPublic={letter.isPublic} />
-                      </span>
-                    </td>
-                    <td className="table-cell">
-                      <span className="line-clamp-2">{letter.subject}</span>
+          {/*
+            Реестр строками, как в макете: значок направления, номер с датой,
+            тема, контрагент, срок и статус. Таблицы с шапкой здесь нет —
+            на узком экране строка просто складывается в две колонки.
+          */}
+          <ul className="card divide-y divide-gray-200 overflow-hidden">
+            {letters.map((letter) => {
+              const overdue =
+                letter.dueDate !== null && isLetterOpen(letter.status) && letter.dueDate < today;
+              const incoming = letter.direction === "INCOMING";
+              return (
+                <li
+                  key={letter.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-gray-50"
+                >
+                  {user.role === "ADMIN" && (
+                    <input
+                      type="checkbox"
+                      name="ids"
+                      value={letter.id}
+                      className="size-4 flex-none"
+                      aria-label={`Отметить письмо № ${letter.number}`}
+                    />
+                  )}
+
+                  <span
+                    aria-hidden
+                    className={`grid h-[22px] w-7 flex-none place-items-center rounded-md text-xs font-semibold ${
+                      incoming ? "bg-blue-50 text-brand" : "bg-orange-50 text-copper"
+                    }`}
+                  >
+                    {incoming ? "Вх" : "Исх"}
+                  </span>
+
+                  <span className="w-36 flex-none font-mono text-[13px] text-gray-600 tabular-nums">
+                    <Link href={`/letters/${letter.id}`} className="hover:underline">
+                      {letter.number}
+                    </Link>
+                    <span className="block text-[11.5px] text-gray-500">
+                      {formatDate(letter.date)}
+                    </span>
+                  </span>
+
+                  <span className="min-w-52 flex-1">
+                    <Link
+                      href={`/letters/${letter.id}`}
+                      className="block text-[14.5px] text-gray-900 hover:underline"
+                    >
+                      {letter.subject}
+                    </Link>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                      <span>{letter.counterparty?.name ?? "организация не указана"}</span>
+                      <VisibilityBadge isPublic={letter.isPublic} />
                       {letter.url && (
                         <a
                           href={letter.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-0.5 block text-xs text-blue-600 hover:underline"
+                          className="text-blue-600 hover:underline"
                         >
                           карточка в ЭДО
                         </a>
                       )}
-                    </td>
-                    <td className="table-cell">{letter.counterparty?.name ?? "—"}</td>
-                    <td
-                      className={`table-cell tabular-nums ${overdue ? "font-medium text-red-600" : ""}`}
-                    >
-                      {formatDate(letter.dueDate)}
-                    </td>
-                    <td className="table-cell">
-                      <LetterStatusBadge status={letter.status} />
-                      {letter.statusNote && (
-                        <p className="mt-0.5 text-xs text-gray-500">{letter.statusNote}</p>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </span>
+                  </span>
+
+                  <span className="flex w-40 flex-none flex-col items-start gap-0.5">
+                    <LetterStatusBadge status={letter.status} />
+                    {letter.statusNote && (
+                      <span className="text-xs text-gray-500">{letter.statusNote}</span>
+                    )}
+                  </span>
+
+                  <span
+                    className={`w-24 flex-none text-right font-mono text-[13px] tabular-nums ${
+                      overdue ? "font-medium text-red-600" : "text-gray-500"
+                    }`}
+                  >
+                    {formatDate(letter.dueDate)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </BulkVisibility>
       )}
     </div>
