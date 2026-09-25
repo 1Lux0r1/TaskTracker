@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
-import { VisibilityBadge } from "@/components/badges";
 import { BulkVisibility } from "@/components/bulk-visibility";
-import { LetterStatusBadge } from "@/components/letter-badges";
+import { DirectionMark, LetterStatusBadge } from "@/components/letter-badges";
+import { DueTag } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import {
   LETTER_DIRECTION_LABELS,
@@ -37,7 +37,8 @@ export default async function LettersPage(props: PageProps<"/letters">) {
   const today = startOfToday();
   const activeFilters = countActiveFilters(filter);
 
-  const [letters, counterparties, members] = await Promise.all([
+  const admin = user.role === "ADMIN";
+  const [letters, counterparties, members, total] = await Promise.all([
     prisma.letter.findMany({
       where: buildLetterWhere(filter, today),
       include: { counterparty: true, owner: true, project: true },
@@ -54,20 +55,22 @@ export default async function LettersPage(props: PageProps<"/letters">) {
       orderBy: { fullName: "asc" },
       select: { id: true, fullName: true },
     }),
+    prisma.letter.count(),
   ]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3.5">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Реестр писем ЭДО</h1>
-          <p className="text-sm text-gray-500">
-            Входящие и исходящие письма со сроками исполнения
+          <h1 className="text-[25px] leading-tight font-bold text-gray-900">Реестр писем ЭДО</h1>
+          <p className="mt-1 max-w-[62ch] text-sm text-gray-600">
+            Реестр ведётся руками: письмо заводится одной формой, а найти его можно по номеру,
+            слову из темы или набору фильтров.
           </p>
         </div>
         <div className="flex gap-2">
           <Link href="/api/export?entity=letters" className="btn-secondary">
-            Выгрузить в Excel
+            Выгрузить
           </Link>
           <Link href="/letters/new" className="btn-primary">
             Внести письмо
@@ -83,7 +86,13 @@ export default async function LettersPage(props: PageProps<"/letters">) {
           <FilterPresets scope="LETTER" items={presets.items} appliedId={presets.appliedId ?? undefined} />
         }
         query={filter.query}
-        placeholder="номер, тема, организация"
+        found={
+          <>
+            Найдено: {letters.length} из {total}
+            {letters.length === 300 && " (первые 300, уточните фильтр)"}
+          </>
+        }
+        placeholder="Номер, тема, ключевое слово"
       >
         <label className="field">
           Выборка
@@ -159,99 +168,89 @@ export default async function LettersPage(props: PageProps<"/letters">) {
         </label>
       </FilterBar>
 
-      <p className="text-sm text-gray-500">
-        Найдено писем: {letters.length}
-        {letters.length === 300 && " (показаны первые 300, уточните фильтр)"}
-      </p>
-
       {letters.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
-        <BulkVisibility entity="LETTER" enabled={user.role === "ADMIN"}>
+        <BulkVisibility entity="LETTER" enabled={admin}>
           {/*
-            Реестр строками, как в макете: значок направления, номер с датой,
-            тема, контрагент, срок и статус. Таблицы с шапкой здесь нет —
-            на узком экране строка просто складывается в две колонки.
+            Реестр колонками с подписями, как в макете: номер с датой,
+            направление, тема, контрагент, ответственный, срок и статус.
+            Рамок ячеек нет; на узком экране подписи прячутся, а строка
+            складывается в две колонки.
           */}
-          <ul className="card divide-y divide-gray-200 overflow-hidden">
+          <div
+            className="reg"
+            style={
+              {
+                "--reg-cols": `${admin ? "18px " : ""}112px 44px minmax(0,1fr) 156px 128px 96px 152px`,
+              } as React.CSSProperties
+            }
+          >
+            <div className="reg-head">
+              {admin && <span />}
+              <span>Номер</span>
+              <span>Тип</span>
+              <span>Тема</span>
+              <span>Контрагент</span>
+              <span>Ответственный</span>
+              <span>Срок</span>
+              <span>Статус</span>
+            </div>
             {letters.map((letter) => {
-              const overdue =
-                letter.dueDate !== null && isLetterOpen(letter.status) && letter.dueDate < today;
-              const incoming = letter.direction === "INCOMING";
+              const open = isLetterOpen(letter.status);
               return (
-                <li
-                  key={letter.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-gray-50"
-                >
-                  {user.role === "ADMIN" && (
+                <div key={letter.id} className="reg-row relative">
+                  {admin && (
                     <input
                       type="checkbox"
                       name="ids"
                       value={letter.id}
-                      className="size-4 flex-none"
+                      className="relative z-10 size-4"
                       aria-label={`Отметить письмо № ${letter.number}`}
                     />
                   )}
-
-                  <span
-                    aria-hidden
-                    className={`grid h-[22px] w-7 flex-none place-items-center rounded-md text-xs font-semibold ${
-                      incoming ? "bg-blue-50 text-brand" : "bg-orange-50 text-copper"
-                    }`}
-                  >
-                    {incoming ? "Вх" : "Исх"}
-                  </span>
-
-                  <span className="w-36 flex-none font-mono text-[13px] text-gray-600 tabular-nums">
-                    <Link href={`/letters/${letter.id}`} className="hover:underline">
-                      {letter.number}
-                    </Link>
+                  <span className="font-mono text-[13px] text-gray-900 tabular-nums">
+                    {letter.number}
                     <span className="block text-[11.5px] text-gray-500">
                       {formatDate(letter.date)}
                     </span>
                   </span>
-
-                  <span className="min-w-52 flex-1">
+                  <DirectionMark direction={letter.direction} />
+                  <span className="min-w-0">
                     <Link
                       href={`/letters/${letter.id}`}
-                      className="block text-[14.5px] text-gray-900 hover:underline"
+                      className={`block truncate after:absolute after:inset-0 after:content-[''] ${
+                        letter.status === "NEW" ? "font-semibold text-gray-900" : "text-gray-900"
+                      }`}
                     >
                       {letter.subject}
                     </Link>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
-                      <span>{letter.counterparty?.name ?? "организация не указана"}</span>
-                      <VisibilityBadge isPublic={letter.isPublic} />
-                      {letter.url && (
-                        <a
-                          href={letter.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          карточка в ЭДО
-                        </a>
-                      )}
-                    </span>
-                  </span>
-
-                  <span className="flex w-40 flex-none flex-col items-start gap-0.5">
-                    <LetterStatusBadge status={letter.status} />
-                    {letter.statusNote && (
-                      <span className="text-xs text-gray-500">{letter.statusNote}</span>
+                    {(!letter.isPublic || letter.statusNote) && (
+                      <span className="block truncate text-xs text-gray-500">
+                        {[letter.isPublic ? null : "служебное", letter.statusNote]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
                     )}
                   </span>
-
-                  <span
-                    className={`w-24 flex-none text-right font-mono text-[13px] tabular-nums ${
-                      overdue ? "font-medium text-red-600" : "text-gray-500"
-                    }`}
-                  >
-                    {formatDate(letter.dueDate)}
+                  <span className="reg-cut">{letter.counterparty?.name ?? "—"}</span>
+                  <span className="min-w-0 truncate">
+                    {letter.owner ? (
+                      <span className="text-gray-900">{letter.owner.fullName}</span>
+                    ) : open ? (
+                      <span className="text-red-600">не назначен</span>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
                   </span>
-                </li>
+                  <DueTag date={letter.dueDate} closed={!open} />
+                  <span>
+                    <LetterStatusBadge status={letter.status} />
+                  </span>
+                </div>
               );
             })}
-          </ul>
+          </div>
         </BulkVisibility>
       )}
     </div>

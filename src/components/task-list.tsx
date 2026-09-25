@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { PriorityBadge, ProgressBar, StatusBadge, VisibilityBadge } from "@/components/badges";
-import { TrackBadge } from "@/components/letter-badges";
-import { formatDate, isOverdue } from "@/lib/domain";
+import { StatusBadge } from "@/components/badges";
+import { DueTag, Who } from "@/components/ui";
+import { isTaskOpen, taskPriorityLabel } from "@/lib/domain";
 
 export type TaskRow = {
   id: string;
@@ -32,8 +32,8 @@ type Props = {
 
 /**
  * Список задач строками, а не таблицей: в макете у записи своя строка
- * с названием, метками под ним и сроком справа — без колонки «№»,
- * без шапки таблицы и без рамок ячеек.
+ * с названием и метками под ним, справа ответственный, статус и срок —
+ * без колонки «№», без шапки таблицы и без рамок ячеек.
  */
 export function TaskList({ tasks, showProject = false, selectable = false, emptyMessage }: Props) {
   if (tasks.length === 0) {
@@ -41,17 +41,21 @@ export function TaskList({ tasks, showProject = false, selectable = false, empty
   }
 
   return (
-    <ul className="card divide-y divide-gray-200 overflow-hidden">
+    <ul className="card overflow-hidden">
       {tasks.map((task) => {
-        const overdue = isOverdue(task.dueDate, task.status);
+        const open = isTaskOpen(task.status);
+        const urgent = task.priority === "HIGH" || task.priority === "CRITICAL";
         return (
-          <li key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
+          <li
+            key={task.id}
+            className="relative flex items-center gap-3.5 border-b border-gray-200 px-4 py-[13px] last:border-b-0 hover:bg-gray-100"
+          >
             {selectable && (
               <input
                 type="checkbox"
                 name="ids"
                 value={task.id}
-                className="size-4 flex-none"
+                className="relative z-10 size-4 flex-none"
                 aria-label={`Отметить задачу «${task.title}»`}
               />
             )}
@@ -59,41 +63,38 @@ export function TaskList({ tasks, showProject = false, selectable = false, empty
             <div className="min-w-0 flex-1">
               <Link
                 href={`/tasks/${task.id}`}
-                className="block truncate text-[14.5px] text-gray-900 hover:underline"
+                className={`block truncate text-[14.5px] leading-snug after:absolute after:inset-0 after:content-[''] ${
+                  open ? "text-gray-900" : "text-gray-500 line-through"
+                }`}
               >
                 {task.title}
               </Link>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-500">
-                {showProject && task.project && (
-                  <Link
-                    href={`/projects/${task.project.id}`}
-                    className="font-medium text-gray-600 hover:underline"
-                  >
-                    {task.project.code}
-                  </Link>
+              <p className="mt-[3px] flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-gray-500">
+                {[
+                  showProject && task.project ? task.project.code : null,
+                  task.track?.name,
+                  task.externalTaskKey,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                {urgent && (
+                  <span className="text-red-600">· {taskPriorityLabel(task.priority)}</span>
                 )}
-                {task.track && <TrackBadge track={task.track} />}
-                <PriorityBadge priority={task.priority} />
-                <VisibilityBadge isPublic={task.isPublic ?? true} />
-                {task.externalTaskKey && (
-                  <span className="font-mono text-xs text-gray-400">{task.externalTaskKey}</span>
-                )}
-                <span>{task.assignee?.fullName ?? "без ответственного"}</span>
-              </div>
+                {task.isPublic === false && <span>· служебная</span>}
+              </p>
             </div>
 
-            <div className="hidden w-32 flex-none sm:block">
-              <StatusBadge status={task.status} />
+            <div className="hidden flex-none items-center gap-2.5 sm:grid sm:grid-cols-[170px_128px_84px]">
+              <Who name={task.assignee?.fullName} />
+              <span>
+                <StatusBadge status={task.status} />
+              </span>
+              <span className="justify-self-end">
+                <DueTag date={task.dueDate} closed={!open} />
+              </span>
             </div>
-            <div className="hidden w-24 flex-none md:block">
-              <ProgressBar value={task.progress} />
-            </div>
-            <span
-              className={`w-24 flex-none text-right font-mono text-[13px] tabular-nums ${
-                overdue ? "font-medium text-red-600" : "text-gray-500"
-              }`}
-            >
-              {formatDate(task.dueDate)}
+            <span className="flex-none sm:hidden">
+              <DueTag date={task.dueDate} closed={!open} />
             </span>
           </li>
         );

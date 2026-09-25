@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/components/ui";
 
 export type RailLink = {
   href: string;
@@ -10,8 +11,8 @@ export type RailLink = {
   count?: number;
   /** Число выделяется красным, когда есть просроченное. */
   hot?: boolean;
-  /** Значок пункта из макета — простой символ, без картинок. */
-  icon?: string;
+  /** Значок пункта, как в макете. */
+  icon?: IconName;
 };
 
 export type RailGroup = {
@@ -73,8 +74,8 @@ export function AppRail({ groups, project }: Props) {
                 className="rail-link"
               >
                 {link.icon && (
-                  <span aria-hidden className="w-[17px] flex-none text-center text-sm opacity-85">
-                    {link.icon}
+                  <span className="flex w-[17px] flex-none justify-center opacity-85">
+                    <Icon name={link.icon} size={15} />
                   </span>
                 )}
                 <span className="whitespace-nowrap lg:whitespace-normal">{link.label}</span>

@@ -5,15 +5,17 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/domain";
+import { Pill, type PillTone } from "@/components/ui";
 
-const TASK_STATUS_CLASS: Record<TaskStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700",
-  BACKLOG: "bg-gray-100 text-gray-600",
-  TODO: "bg-blue-50 text-blue-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  REVIEW: "bg-violet-50 text-violet-700",
-  DONE: "bg-emerald-50 text-emerald-700",
-  CANCELLED: "bg-gray-100 text-gray-400 line-through",
+/** Цвета статусов из макета: новая — медная, в работе — синяя, на проверке — жёлтая. */
+export const TASK_STATUS_TONE: Record<TaskStatus, PillTone> = {
+  NEW: "copper",
+  BACKLOG: "neutral",
+  TODO: "neutral",
+  IN_PROGRESS: "brand",
+  REVIEW: "warn",
+  DONE: "good",
+  CANCELLED: "neutral",
 };
 
 const PRIORITY_CLASS: Record<TaskPriority, string> = {
@@ -24,8 +26,7 @@ const PRIORITY_CLASS: Record<TaskPriority, string> = {
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const className = TASK_STATUS_CLASS[status as TaskStatus] ?? "bg-gray-100 text-gray-600";
-  return <span className={`badge ${className}`}>{taskStatusLabel(status)}</span>;
+  return <Pill tone={TASK_STATUS_TONE[status as TaskStatus] ?? "neutral"}>{taskStatusLabel(status)}</Pill>;
 }
 
 export function PriorityBadge({ priority }: { priority: string }) {

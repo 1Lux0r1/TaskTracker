@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { DocumentKindBadge, DocumentStatusBadge } from "@/components/letter-badges";
+import { Fragment } from "react";
+import { DocumentStatusBadge } from "@/components/letter-badges";
 import { FilterBar } from "@/components/filter-bar";
-import { ProgressBar, VisibilityBadge } from "@/components/badges";
+import { DueTag } from "@/components/ui";
 import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
 import {
@@ -10,10 +11,8 @@ import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUSES,
   documentStageRank,
+  documentKindLabel,
   documentStatusLabel,
-  formatDate,
-  signatureProgress,
-  startOfToday,
 } from "@/lib/domain";
 import {
   DOCUMENT_SORTS,
@@ -38,7 +37,8 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
   const filter = readDocumentFilter(params);
   const activeFilters = countActiveDocumentFilters(filter);
 
-  const [documents, counterparties, internalCount] = await Promise.all([
+  const admin = user.role === "ADMIN";
+  const [documents, counterparties, internalCount, total] = await Promise.all([
     prisma.document.findMany({
       where: buildDocumentWhere(filter),
       include: {
@@ -54,6 +54,7 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
       select: { id: true, name: true },
     }),
     prisma.counterparty.count({ where: { isInternal: true } }),
+    prisma.document.count(),
   ]);
 
   // По стадиям список сортируется здесь: в базе статус хранится строкой,
@@ -64,23 +65,23 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
       : documents;
 
   const declined = documents.filter((item) => item.status === "DECLINED").length;
-  const today = startOfToday();
   // Заголовок стадии ставится перед первым документом этой стадии: список
   // читается сверху вниз, от того, что горит, к законченному.
   const grouped = filter.sort === "statusAsc";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3.5">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Юридический трек</h1>
-          <p className="text-sm text-gray-500">
-            Регламенты, допсоглашения и контракты с подписанием по сторонам
+          <h1 className="text-[25px] leading-tight font-bold text-gray-900">Юридический трек</h1>
+          <p className="mt-1 max-w-[62ch] text-sm text-gray-600">
+            Документы с несколькими подписывающими сторонами: список с фильтрами по виду и
+            стадии. Подписи показаны точками, итог считается из матрицы сторон.
           </p>
         </div>
         <div className="flex gap-2">
           <Link href="/api/export?entity=documents" className="btn-secondary">
-            Выгрузить в Excel
+            Выгрузить
           </Link>
           <Link href="/documents/new" className="btn-primary">
             Новый документ
@@ -113,7 +114,8 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
           <FilterPresets scope="DOCUMENT" items={presets.items} appliedId={presets.appliedId ?? undefined} />
         }
         query={filter.query}
-        placeholder="название, организация, стадия"
+        placeholder="Поиск по названию, контрагенту, стадии"
+        found={`Найдено: ${ordered.length} из ${total}`}
       >
         <label className="field">
           Вид
@@ -170,96 +172,127 @@ export default async function DocumentsPage(props: PageProps<"/documents">) {
         </label>
       </FilterBar>
 
-      <p className="text-sm text-gray-500">Документов: {ordered.length}</p>
-
       {ordered.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">Под фильтр ничего не подошло.</p>
       ) : (
-        <BulkVisibility entity="DOCUMENT" enabled={user.role === "ADMIN"}>
-        <ul className="space-y-2">
-          {ordered.map((document, index) => {
-            const overdue =
-              document.dueDate !== null &&
-              document.status !== "SIGNED" &&
-              document.status !== "FILED" &&
-              document.dueDate < today;
-            const waiting = pendingParties(document.signatures);
-            const newStage = grouped && ordered[index - 1]?.status !== document.status;
-
-            return (
-              <li key={document.id}>
-                {newStage && (
-                  <h2 className="mt-4 mb-2 text-sm font-semibold text-gray-500 first:mt-0">
-                    {documentStatusLabel(document.status)}
-                    <span className="ml-2 font-normal text-gray-400 tabular-nums">
-                      {ordered.filter((item) => item.status === document.status).length}
-                    </span>
-                  </h2>
-                )}
-
-                {/* Отметка живёт рядом с карточкой, а не внутри ссылки:
-                    иначе щелчок по ней уводил бы на документ. */}
-                <div className="flex items-start gap-2">
-                {user.role === "ADMIN" && (
-                  <input
-                    type="checkbox"
-                    name="ids"
-                    value={document.id}
-                    className="mt-5 size-4 shrink-0"
-                  />
-                )}
-                <Link
-                  href={`/documents/${document.id}`}
-                  className="card block min-w-0 flex-1 p-4 transition hover:border-gray-300 hover:shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900">{document.title}</p>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        {document.counterparty?.name ?? "Без организации"}
-                        {document.owner && ` · ${document.owner.fullName}`}
-                      </p>
+        <BulkVisibility entity="DOCUMENT" enabled={admin}>
+          {/* Реестр колонками, как в макете: подписи сторон — точками с
+              числом подписавших, итоговая стадия — пилюлей справа. */}
+          <div
+            className="reg"
+            style={
+              {
+                "--reg-cols": `${admin ? "18px " : ""}minmax(0,1fr) 110px 150px 96px 128px 96px 170px`,
+              } as React.CSSProperties
+            }
+          >
+            <div className="reg-head">
+              {admin && <span />}
+              <span>Документ</span>
+              <span>Вид</span>
+              <span>Контрагент</span>
+              <span>Подписи</span>
+              <span>Ответственный</span>
+              <span>Срок</span>
+              <span>Стадия</span>
+            </div>
+            {ordered.map((document, index) => {
+              const closed = document.status === "SIGNED" || document.status === "FILED";
+              const waiting = pendingParties(document.signatures);
+              const declinedBy = document.signatures.filter((item) => item.status === "DECLINED");
+              const newStage = grouped && ordered[index - 1]?.status !== document.status;
+              const note =
+                declinedBy.length > 0
+                  ? `отказ: ${declinedBy.map((item) => item.party).join(", ")}`
+                  : waiting.length > 0
+                    ? `ждём: ${waiting.join(", ")}`
+                    : null;
+              return (
+                <Fragment key={document.id}>
+                  {/* При сортировке по стадиям перед первой записью стадии —
+                      её название: список читается от того, что горит, к законченному. */}
+                  {newStage && (
+                    <div className="border-t border-gray-200 bg-gray-50 px-4 py-1.5 text-xs font-semibold text-gray-500">
+                      {documentStatusLabel(document.status)}{" "}
+                      <span className="font-normal tabular-nums">
+                        {ordered.filter((item) => item.status === document.status).length}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <DocumentKindBadge kind={document.kind} />
-                      <DocumentStatusBadge status={document.status} />
-                      <VisibilityBadge isPublic={document.isPublic} />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <ProgressBar value={signatureProgress(document.signatures)} />
-                      <p className="mt-1 text-xs text-gray-500">
-                        {waiting.length > 0 ? `Ждём: ${waiting.join(", ")}` : "Все стороны отметились"}
-                      </p>
-                    </div>
-                    <div className="text-sm sm:text-right">
-                      {document.dueDate && (
-                        <p className={overdue ? "font-medium text-red-600" : "text-gray-600"}>
-                          Срок {formatDate(document.dueDate)}
-                          {overdue && " — просрочен"}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Формулировки из таблицы бывают в абзац длиной: показываем
-                      начало, целиком читается в карточке документа. */}
-                  {(document.nextAction || document.statusNote) && (
-                    <p className="mt-2 line-clamp-2 text-xs text-gray-500">
-                      {[document.nextAction, document.statusNote].filter(Boolean).join(" · ")}
-                    </p>
                   )}
-                </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="reg-row relative">
+                    {admin && (
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={document.id}
+                        className="relative z-10 size-4"
+                        aria-label={`Отметить документ «${document.title}»`}
+                      />
+                    )}
+                    <span className="min-w-0">
+                      <Link
+                        href={`/documents/${document.id}`}
+                        className="block truncate text-gray-900 after:absolute after:inset-0 after:content-['']"
+                      >
+                        {document.title}
+                      </Link>
+                      {(note || !document.isPublic) && (
+                        <span
+                          className={`block truncate text-xs ${
+                            declinedBy.length > 0 ? "text-red-600" : "text-gray-500"
+                          }`}
+                        >
+                          {[note, document.isPublic ? null : "служебный"].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                    <span className="reg-cut">{documentKindLabel(document.kind)}</span>
+                    <span className="reg-cut">{document.counterparty?.name ?? "—"}</span>
+                    <SignatureDots signatures={document.signatures} />
+                    <span className="reg-cut">{document.owner?.fullName ?? "—"}</span>
+                    <DueTag date={document.dueDate} closed={closed} />
+                    <span>
+                      <DocumentStatusBadge status={document.status} />
+                    </span>
+                  </div>
+                </Fragment>
+              );
+            })}
+          </div>
         </BulkVisibility>
       )}
     </div>
+  );
+}
+
+/** Подписи точками: зелёная — подписал, красная — отказ, серая — ждём. */
+function SignatureDots({ signatures }: { signatures: { status: string }[] }) {
+  const required = signatures.filter((item) => item.status !== "NOT_REQUIRED");
+  if (required.length === 0) return <span className="text-xs text-gray-500">не заданы</span>;
+  const signed = required.filter((item) => item.status === "SIGNED").length;
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      title={`Подписали ${signed} из ${required.length}`}
+    >
+      <span className="flex gap-1">
+        {required.map((item, index) => (
+          <i
+            key={index}
+            className={`block size-2 rounded-full ${
+              item.status === "SIGNED"
+                ? "bg-green-600"
+                : item.status === "DECLINED"
+                  ? "bg-red-600"
+                  : "bg-gray-300"
+            }`}
+          />
+        ))}
+      </span>
+      <span className="font-mono text-xs text-gray-500">
+        {signed}/{required.length}
+      </span>
+    </span>
   );
 }
 

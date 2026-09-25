@@ -100,6 +100,23 @@ const ICON_PATHS = {
       <path d="M13.6 2.5v5.2h5.2" />
     </>
   ),
+  target: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3.5" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5" />
+      <path d="M4 20h16" />
+    </>
+  ),
+  swap: (
+    <>
+      <path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5" />
+    </>
+  ),
   task: (
     <>
       <path d="M9 11l3 3 8-8" />
@@ -238,7 +255,9 @@ export function DueTag({
         ? shortDate(date)
         : due.text;
   return (
-    <span className={`font-mono text-[13px] whitespace-nowrap tabular-nums ${DUE_CLASS[due.state]} ${className}`}>
+    <span
+      className={`${due.state === "none" ? "" : "font-mono"} text-[13px] whitespace-nowrap tabular-nums ${DUE_CLASS[due.state]} ${className}`}
+    >
       {text}
     </span>
   );

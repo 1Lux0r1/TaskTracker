@@ -9,49 +9,72 @@ import {
   type LetterStatus,
   type SignatureStatus,
 } from "@/lib/domain";
+import { Pill, type PillTone } from "@/components/ui";
 
-const LETTER_STATUS_CLASS: Record<LetterStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  ON_APPROVAL: "bg-violet-50 text-violet-700",
-  ANSWERED: "bg-emerald-50 text-emerald-700",
-  SIGNED: "bg-emerald-50 text-emerald-700",
-  NOTED: "bg-gray-100 text-gray-600",
-  CLOSED: "bg-gray-100 text-gray-600",
+/** Цвета из макета: новое — медное, в работе — синее, согласование — жёлтое, итог — зелёный. */
+export const LETTER_STATUS_TONE: Record<LetterStatus, PillTone> = {
+  NEW: "copper",
+  IN_PROGRESS: "brand",
+  ON_APPROVAL: "warn",
+  ANSWERED: "good",
+  SIGNED: "good",
+  NOTED: "neutral",
+  CLOSED: "neutral",
 };
 
-const DOCUMENT_STATUS_CLASS: Record<DocumentStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-600",
-  REVIEW: "bg-violet-50 text-violet-700",
-  RETURNED: "bg-orange-50 text-orange-700",
-  SENT: "bg-blue-50 text-blue-700",
-  SIGNING: "bg-amber-50 text-amber-700",
-  SIGNED: "bg-emerald-50 text-emerald-700",
-  DECLINED: "bg-red-50 text-red-700",
-  FILED: "bg-slate-100 text-slate-600",
+export const DOCUMENT_STATUS_TONE: Record<DocumentStatus, PillTone> = {
+  DRAFT: "neutral",
+  REVIEW: "warn",
+  RETURNED: "copper",
+  SENT: "brand",
+  SIGNING: "brand",
+  SIGNED: "good",
+  DECLINED: "bad",
+  FILED: "neutral",
 };
 
-const SIGNATURE_STATUS_CLASS: Record<SignatureStatus, string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  SIGNED: "bg-emerald-50 text-emerald-700",
-  DECLINED: "bg-red-50 text-red-700",
-  NOT_REQUIRED: "bg-gray-100 text-gray-500",
+const SIGNATURE_STATUS_TONE: Record<SignatureStatus, PillTone> = {
+  PENDING: "warn",
+  SIGNED: "good",
+  DECLINED: "bad",
+  NOT_REQUIRED: "neutral",
 };
 
 export function LetterStatusBadge({ status }: { status: string }) {
-  const className = LETTER_STATUS_CLASS[status as LetterStatus] ?? "bg-gray-100 text-gray-600";
-  return <span className={`badge ${className}`}>{letterStatusLabel(status)}</span>;
+  return (
+    <Pill tone={LETTER_STATUS_TONE[status as LetterStatus] ?? "neutral"}>
+      {letterStatusLabel(status)}
+    </Pill>
+  );
 }
 
 export function DirectionBadge({ direction }: { direction: string }) {
   const className =
-    direction === "INCOMING" ? "bg-indigo-50 text-indigo-700" : "bg-orange-50 text-orange-700";
+    direction === "INCOMING" ? "bg-brand-soft text-brand" : "bg-copper-soft text-copper";
   return <span className={`badge ${className}`}>{letterDirectionLabel(direction)}</span>;
 }
 
+/** Метка направления в реестре: «вх» синим, «исх» медным, как в макете. */
+export function DirectionMark({ direction }: { direction: string }) {
+  const incoming = direction === "INCOMING";
+  return (
+    <span
+      title={letterDirectionLabel(direction)}
+      className={`inline-grid h-[22px] w-[30px] flex-none place-items-center rounded-[7px] text-xs font-semibold ${
+        incoming ? "bg-brand-soft text-brand" : "bg-copper-soft text-copper"
+      }`}
+    >
+      {incoming ? "вх" : "исх"}
+    </span>
+  );
+}
+
 export function DocumentStatusBadge({ status }: { status: string }) {
-  const className = DOCUMENT_STATUS_CLASS[status as DocumentStatus] ?? "bg-gray-100 text-gray-600";
-  return <span className={`badge ${className}`}>{documentStatusLabel(status)}</span>;
+  return (
+    <Pill tone={DOCUMENT_STATUS_TONE[status as DocumentStatus] ?? "neutral"}>
+      {documentStatusLabel(status)}
+    </Pill>
+  );
 }
 
 export function DocumentKindBadge({ kind }: { kind: string }) {
@@ -59,8 +82,11 @@ export function DocumentKindBadge({ kind }: { kind: string }) {
 }
 
 export function SignatureStatusBadge({ status }: { status: string }) {
-  const className = SIGNATURE_STATUS_CLASS[status as SignatureStatus] ?? "bg-gray-100 text-gray-600";
-  return <span className={`badge ${className}`}>{signatureStatusLabel(status)}</span>;
+  return (
+    <Pill tone={SIGNATURE_STATUS_TONE[status as SignatureStatus] ?? "neutral"}>
+      {signatureStatusLabel(status)}
+    </Pill>
+  );
 }
 
 /** Трек — запись справочника: подпись и цвет приходят из него. */

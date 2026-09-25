@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FilterBar } from "@/components/filter-bar";
 import { KanbanBoard } from "@/components/kanban-board";
+import { TaskTimeline } from "@/components/task-timeline";
 import { TaskList } from "@/components/task-list";
 import { BulkVisibility } from "@/components/bulk-visibility";
 import { prisma } from "@/lib/db";
@@ -32,7 +33,12 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const [tasks, projects, members, trackRows] = await Promise.all([
     prisma.task.findMany({
       where: buildTaskWhere(filter, today),
-      include: { assignee: true, project: true, track: true },
+      include: {
+        assignee: true,
+        project: true,
+        track: true,
+        _count: { select: { attachments: true } },
+      },
       orderBy: buildTaskOrderBy(filter.sort),
       take: 300,
     }),
@@ -56,8 +62,10 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   const cancelled = tasks.filter((task) => task.status === "CANCELLED").length;
 
   // По макету задачи открываются доской; список — второй вид того же набора.
-  const view = params.view === "list" ? "list" : "board";
-  const viewHref = (next: "board" | "list") => {
+  const view: View = VIEWS.some((item) => item.value === params.view)
+    ? (params.view as View)
+    : "board";
+  const viewHref = (next: View) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (key === "view" || value === undefined) continue;
@@ -70,27 +78,29 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-gray-900">Задачи</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3.5">
+        <div>
+          <h1 className="text-[25px] leading-tight font-bold text-gray-900">Задачи</h1>
+          <p className="mt-1 max-w-[62ch] text-sm text-gray-600">
+            Все треки в одном месте: задачи разработки видны здесь ссылкой на внешний трекер,
+            остальные ведутся тут.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex gap-0.5 rounded-lg bg-gray-100 p-0.5">
-            <Link
-              href={viewHref("board")}
-              aria-pressed={view === "board"}
-              className={viewTab(view === "board")}
-            >
-              Доска
-            </Link>
-            <Link
-              href={viewHref("list")}
-              aria-pressed={view === "list"}
-              className={viewTab(view === "list")}
-            >
-              Список
-            </Link>
-          </div>
+          <nav className="seg" aria-label="Вид">
+            {VIEWS.map((item) => (
+              <Link
+                key={item.value}
+                href={viewHref(item.value)}
+                aria-current={view === item.value ? "page" : undefined}
+                className="seg-btn"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
           <Link href="/api/export" className="btn-secondary">
-            Выгрузить в Excel
+            Выгрузить
           </Link>
           <Link href="/tasks/new" className="btn-primary">
             Новая задача
@@ -106,7 +116,13 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
           <FilterPresets scope="TASK" items={presets.items} appliedId={presets.appliedId ?? undefined} />
         }
         query={filter.query}
-        placeholder="номер, название, ход работы"
+        placeholder="Поиск по названию, номеру, ходу работы"
+        found={
+          <>
+            Найдено: {tasks.length}
+            {tasks.length === 300 && " (первые 300, уточните фильтр)"}
+          </>
+        }
       >
         <label className="field">
           Выборка
@@ -174,11 +190,9 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
         </label>
       </FilterBar>
 
-      <p className="text-sm text-gray-500">
-        Найдено задач: {tasks.length}
-        {tasks.length === 300 && " (показаны первые 300, уточните фильтр)"}
-      </p>
-      {view === "board" ? (
+      {view === "timeline" ? (
+        <TaskTimeline tasks={tasks} today={today} />
+      ) : view === "board" ? (
         <>
           <KanbanBoard tasks={tasks} />
           {/* На доске нет колонки «Отменена»: такие задачи видны в списке. */}
@@ -208,9 +222,11 @@ export default async function TasksPage(props: PageProps<"/tasks">) {
   );
 }
 
-/** Переключатель вида: выбранная вкладка белая, как в макете. */
-function viewTab(active: boolean): string {
-  return active
-    ? "rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm"
-    : "rounded-md px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900";
-}
+/** Три вида одного набора задач, как в макете: доска, список и сроки. */
+const VIEWS = [
+  { value: "board", label: "Доска" },
+  { value: "list", label: "Список" },
+  { value: "timeline", label: "Сроки" },
+] as const;
+
+type View = (typeof VIEWS)[number]["value"];

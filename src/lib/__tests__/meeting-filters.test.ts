@@ -10,9 +10,9 @@ import { formatMeetingTime, isUpcomingMeeting, meetingKindLabel } from "@/lib/do
 const TODAY = new Date("2026-09-23T00:00:00");
 
 describe("readMeetingFilter", () => {
-  it("по умолчанию показывает предстоящие встречи", () => {
+  it("по умолчанию показывает все встречи: экран сам делит их на ближайшие и прошедшие", () => {
     const filter = readMeetingFilter({});
-    expect(filter.preset).toBe("upcoming");
+    expect(filter.preset).toBe("all");
     expect(filter.kind).toBe("");
     expect(filter.query).toBe("");
   });
@@ -20,13 +20,16 @@ describe("readMeetingFilter", () => {
   it("отбрасывает вид и выборку, которых нет в справочнике", () => {
     const filter = readMeetingFilter({ kind: "ЧТО-ТО", preset: "ЧТО-ТО" });
     expect(filter.kind).toBe("");
-    expect(filter.preset).toBe("upcoming");
+    expect(filter.preset).toBe("all");
   });
 });
 
 describe("buildMeetingWhere", () => {
   it("предстоящие — от сегодняшнего дня, прошедшие — до него", () => {
-    expect(buildMeetingWhere(readMeetingFilter({}), TODAY).date).toEqual({ gte: TODAY });
+    expect(buildMeetingWhere(readMeetingFilter({ preset: "upcoming" }), TODAY).date).toEqual({
+      gte: TODAY,
+    });
+    expect(buildMeetingWhere(readMeetingFilter({}), TODAY).date).toBeUndefined();
     expect(buildMeetingWhere(readMeetingFilter({ preset: "past" }), TODAY).date).toEqual({
       lt: TODAY,
     });

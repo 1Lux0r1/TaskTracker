@@ -61,7 +61,6 @@ export default async function TodayPage() {
   const user = await requireUser();
   const now = new Date();
   const today = startOfToday();
-  const openTasks = { notIn: CLOSED_TASK_STATUSES };
   const openLetters = { notIn: CLOSED_LETTER_STATUSES };
 
   const overdueTaskWhere = buildTaskWhere(readTaskFilter({ preset: "overdue" }), today);

@@ -2,12 +2,15 @@ import type { Prisma } from "@/generated/prisma/client";
 import { MEETING_KINDS, type MeetingKind } from "@/lib/domain";
 import { normalizeQuery } from "@/lib/search";
 
-/** Отбор встреч: по умолчанию показываем предстоящие — их и ищут чаще всего. */
+/**
+ * Отбор встреч. По умолчанию — все: экран, как в макете, делит их на две
+ * карточки, ближайшие и прошедшие с материалами и решениями.
+ */
 export const MEETING_PRESETS = [
+  { value: "all", label: "Все" },
   { value: "upcoming", label: "Предстоящие" },
   { value: "past", label: "Прошедшие" },
   { value: "noDecisions", label: "Без решений" },
-  { value: "all", label: "Все" },
 ] as const;
 
 export type MeetingPreset = (typeof MEETING_PRESETS)[number]["value"];
@@ -20,7 +23,7 @@ export type MeetingFilter = {
 };
 
 export const DEFAULT_MEETING_FILTER: MeetingFilter = {
-  preset: "upcoming",
+  preset: "all",
   projectId: "",
   kind: "",
   query: "",

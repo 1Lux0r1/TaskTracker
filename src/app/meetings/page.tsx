@@ -7,8 +7,11 @@ import {
   formatDate,
   formatMeetingTime,
   isUpcomingMeeting,
+  meetingKindLabel,
+  plural,
   startOfToday,
 } from "@/lib/domain";
+import { Block, Pill } from "@/components/ui";
 import {
   MEETING_PRESETS,
   buildMeetingOrderBy,
@@ -47,7 +50,7 @@ export default async function MeetingsPage(props: PageProps<"/meetings">) {
         _count: { select: { attachments: true, tasks: true } },
       },
       orderBy: buildMeetingOrderBy(filter.preset),
-      take: 200,
+      take: 300,
     }),
     prisma.project.findMany({
       orderBy: { code: "asc" },
@@ -55,12 +58,23 @@ export default async function MeetingsPage(props: PageProps<"/meetings">) {
     }),
   ]);
 
+  const upcoming = meetings
+    .filter((meeting) => isUpcomingMeeting(meeting.date, today))
+    .sort(
+      (a, b) =>
+        a.date.getTime() - b.date.getTime() || (a.startTime ?? "").localeCompare(b.startTime ?? ""),
+    );
+  const past = meetings.filter((meeting) => !isUpcomingMeeting(meeting.date, today));
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3.5">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Встречи</h1>
-          <p className="text-sm text-gray-500">Повестка, участники, решения и материалы</p>
+          <h1 className="text-[25px] leading-tight font-bold text-gray-900">Встречи</h1>
+          <p className="mt-1 max-w-[62ch] text-sm text-gray-600">
+            Повестка, участники и решения хранятся вместе со встречей, а не в переписке. Из
+            решения сразу заводится задача.
+          </p>
         </div>
         <Link href="/meetings/new" className="btn-primary">
           Новая встреча
@@ -75,7 +89,8 @@ export default async function MeetingsPage(props: PageProps<"/meetings">) {
           <FilterPresets scope="MEETING" items={presets.items} appliedId={presets.appliedId ?? undefined} />
         }
         query={filter.query}
-        placeholder="тема, место, повестка, решения"
+        placeholder="Поиск по теме, месту, повестке"
+        found={`Встреч: ${meetings.length}`}
       >
         <label className="field">
           Выборка
@@ -111,74 +126,118 @@ export default async function MeetingsPage(props: PageProps<"/meetings">) {
         </label>
       </FilterBar>
 
-      <p className="text-sm text-gray-500">Встреч: {meetings.length}</p>
-
       {meetings.length === 0 ? (
         <p className="card p-6 text-sm text-gray-500">
-          {filter.preset === "upcoming" && activeFilters === 0
-            ? "Предстоящих встреч нет."
-            : "Под фильтр ничего не подошло."}
+          {activeFilters === 0 ? "Встреч пока нет." : "Под фильтр ничего не подошло."}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {meetings.map((meeting) => {
-            const upcoming = isUpcomingMeeting(meeting.date, today);
-            const names = meeting.participants
-              .map((item) => item.member?.fullName ?? item.orgContact?.fullName ?? item.externalName)
-              .filter(Boolean);
-            const time = formatMeetingTime(meeting.startTime, meeting.endTime);
-
-            return (
-              <li key={meeting.id}>
-                <Link
-                  href={`/meetings/${meeting.id}`}
-                  className="card block p-4 transition hover:border-gray-300 hover:shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900">{meeting.subject}</p>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        {meeting.project.code}
-                        {meeting.place && ` · ${meeting.place}`}
-                        {meeting.owner && ` · запись ведёт ${meeting.owner.fullName}`}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="badge bg-violet-50 text-violet-700">
-                        {MEETING_KIND_LABELS[meeting.kind as keyof typeof MEETING_KIND_LABELS] ??
-                          meeting.kind}
-                      </span>
-                      <span
-                        className={`badge ${
-                          upcoming ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {formatDate(meeting.date)}
-                        {time && ` · ${time}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="mt-2 line-clamp-1 text-sm text-gray-600">
-                    {names.length > 0 ? `Участники: ${names.join(", ")}` : "Участники не отмечены"}
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                    {meeting.decisions
-                      ? "Решения записаны"
-                      : upcoming
-                        ? "Решений пока нет"
-                        : "Решения не записаны"}
-                    {meeting._count.tasks > 0 && ` · задач по встрече: ${meeting._count.tasks}`}
-                    {meeting._count.attachments > 0 &&
-                      ` · материалов: ${meeting._count.attachments}`}
-                  </p>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        // Две карточки, как в макете: ближайшие — от ближайшей, прошедшие —
+        // от последней, у каждой видно, внесены ли материалы и решения.
+        <div className="grid items-start gap-3.5 lg:grid-cols-2">
+          <Block
+            tone="brand"
+            icon="calendar"
+            title="Ближайшие"
+            sub={
+              upcoming.length > 0
+                ? `${upcoming.length} ${plural(upcoming.length, "встреча", "встречи", "встреч")} впереди`
+                : "Впереди встреч нет"
+            }
+            flush
+          >
+            <MeetingRows meetings={upcoming} upcoming empty="Предстоящих встреч нет." />
+          </Block>
+          <Block tone="violet" icon="clock" title="Прошедшие" sub="Материалы и решения" flush>
+            <MeetingRows meetings={past} upcoming={false} empty="Прошедших встреч нет." />
+          </Block>
+        </div>
       )}
+
+      <Block tone="copper" icon="mail" title="Почта" sub="Что появится, когда подключим почтовый ящик проекта">
+        <ul className="list-disc space-y-1 pl-5 text-[14.5px] text-gray-600">
+          <li>Приглашение из календаря почты создаёт встречу с участниками и временем.</li>
+          <li>Протокол рассылается участникам одной кнопкой, отправка пишется в историю встречи.</li>
+          <li>Письма по теме встречи подтягиваются в её материалы ссылкой на реестр писем ЭДО.</li>
+        </ul>
+      </Block>
     </div>
+  );
+}
+
+type MeetingRow = {
+  id: string;
+  subject: string;
+  date: Date;
+  startTime: string | null;
+  endTime: string | null;
+  place: string | null;
+  kind: string;
+  decisions: string | null;
+  participants: {
+    externalName: string | null;
+    member: { fullName: string } | null;
+    orgContact: { fullName: string } | null;
+  }[];
+  _count: { attachments: number; tasks: number };
+};
+
+function MeetingRows({
+  meetings,
+  upcoming,
+  empty,
+}: {
+  meetings: MeetingRow[];
+  upcoming: boolean;
+  empty: string;
+}) {
+  if (meetings.length === 0) {
+    return <p className="px-[18px] pb-[18px] text-sm text-gray-500">{empty}</p>;
+  }
+  return (
+    <ul className="border-t border-gray-200">
+      {meetings.map((meeting) => {
+        const names = meeting.participants
+          .map((item) => item.member?.fullName ?? item.orgContact?.fullName ?? item.externalName)
+          .filter(Boolean);
+        const files = meeting._count.attachments;
+        return (
+          <li key={meeting.id} className="border-b border-gray-200 last:border-b-0">
+            <Link
+              href={`/meetings/${meeting.id}`}
+              className="block px-[18px] py-[13px] hover:bg-brand-soft"
+            >
+              <span className="block text-[14.5px] leading-snug text-gray-900">{meeting.subject}</span>
+              <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12.5px] text-gray-500">
+                <span className="font-mono text-gray-600">
+                  {formatDate(meeting.date)} {formatMeetingTime(meeting.startTime, meeting.endTime)}
+                </span>
+                {meeting.place && <span>{meeting.place}</span>}
+                {names.length > 0 && <span>{names.join(", ")}</span>}
+                {files > 0 && (
+                  <span>
+                    {files} {plural(files, "файл", "файла", "файлов")}
+                  </span>
+                )}
+              </span>
+              <span className="mt-2 flex flex-wrap gap-1.5">
+                <Pill>{meetingKindLabel(meeting.kind)}</Pill>
+                {upcoming ? (
+                  files === 0 && <Pill tone="warn">материалы не внесены</Pill>
+                ) : meeting.decisions ? (
+                  <Pill tone="good">есть решения</Pill>
+                ) : (
+                  <Pill tone="bad">решения не записаны</Pill>
+                )}
+                {meeting._count.tasks > 0 && (
+                  <Pill tone="brand">
+                    {meeting._count.tasks} {plural(meeting._count.tasks, "задача", "задачи", "задач")}
+                  </Pill>
+                )}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
