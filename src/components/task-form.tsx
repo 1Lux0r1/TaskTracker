@@ -5,6 +5,7 @@ import { ArtifactFields, type ArtifactValue } from "@/components/artifact-fields
 import { KeepFormValues } from "@/components/keep-form-values";
 import { VisibilityField } from "@/components/visibility-field";
 import { SubmitButton } from "@/components/submit-button";
+import { Pill } from "@/components/ui";
 import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
@@ -113,11 +114,18 @@ export function TaskForm({
         </label>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <label className="field sm:col-span-3">
-          Задача
-          <input name="title" required defaultValue={defaults?.title} className="input" />
-        </label>
+      <label className="field">
+        Название
+        <input
+          name="title"
+          required
+          defaultValue={defaults?.title}
+          placeholder="Что нужно сделать"
+          className="input"
+        />
+      </label>
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="field">
           Трек
           {/* key по проекту: при смене проекта выбор сбрасывается на его
@@ -141,23 +149,17 @@ export function TaskForm({
             ))}
           </select>
         </label>
-      </div>
-
-      <label className="field">
-        Описание
-        <textarea
-          name="description"
-          rows={3}
-          defaultValue={defaults?.description ?? ""}
-          className="input"
-        />
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-4">
         {/* Новая задача заводится со статусом «Новая», поэтому при создании
             статус не спрашиваем: его выставляют потом, по ходу работы. */}
         {hideStatus ? (
-          <input type="hidden" name="status" value={NEW_TASK_STATUS} />
+          <div className="field">
+            Статус
+            <input type="hidden" name="status" value={NEW_TASK_STATUS} />
+            <span className="mt-1 flex flex-wrap items-center gap-2 py-1.5">
+              <Pill tone="copper">{TASK_STATUS_LABELS[NEW_TASK_STATUS]}</Pill>
+              <span className="text-xs font-normal text-gray-500 normal-case tracking-normal">двигается в самой задаче</span>
+            </span>
+          </div>
         ) : (
           <label className="field">
             Статус
@@ -171,16 +173,6 @@ export function TaskForm({
           </label>
         )}
         <label className="field">
-          Приоритет
-          <select name="priority" defaultValue={defaults?.priority ?? "MEDIUM"} className="input">
-            {TASK_PRIORITIES.map((priority) => (
-              <option key={priority} value={priority}>
-                {TASK_PRIORITY_LABELS[priority]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
           Ответственный
           <select name="assigneeId" defaultValue={defaults?.assigneeId ?? ""} className="input">
             <option value="">— не назначен —</option>
@@ -192,80 +184,6 @@ export function TaskForm({
           </select>
         </label>
         <label className="field">
-          Входит в задачу
-          <select name="parentId" defaultValue={defaults?.parentId ?? ""} className="input">
-            <option value="">— самостоятельная —</option>
-            {parentCandidates.map((task) => (
-              <option key={task.id} value={task.id}>
-                #{task.number} {task.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="field">
-          Ключ задачи во внешнем трекере
-          <input
-            name="externalTaskKey"
-            defaultValue={defaults?.externalTaskKey ?? ""}
-            placeholder="Например, AISRKII-9837"
-            className="input"
-          />
-        </label>
-        <label className="field">
-          Внешний ответственный
-          <input
-            name="externalAssignee"
-            defaultValue={defaults?.externalAssignee ?? ""}
-            placeholder="Организация и контактное лицо"
-            className="input"
-          />
-        </label>
-        <label className="field">
-          Письмо-основание
-          <select name="letterId" defaultValue={defaults?.letterId ?? ""} className="input">
-            <option value="">— без письма —</option>
-            {letters.map((letter) => (
-              <option key={letter.id} value={letter.id}>
-                № {letter.number} — {letter.subject.slice(0, 60)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <VisibilityField
-        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.TASK}
-        isNew={isNew}
-        canChange={canChangeVisibility}
-      />
-
-      <label className="field">
-        Ход работы
-        <textarea
-          name="progressNote"
-          rows={3}
-          defaultValue={defaults?.progressNote ?? ""}
-          placeholder="Хронология: что и когда произошло по задаче"
-          className="input"
-        />
-      </label>
-
-      <ArtifactFields defaults={defaults?.artifacts} documents={documents} />
-
-      <div className="grid gap-4 sm:grid-cols-5">
-        <label className="field">
-          Начало
-          <input
-            type="date"
-            name="startDate"
-            defaultValue={toDateInputValue(defaults?.startDate)}
-            className="input"
-          />
-        </label>
-        <label className="field">
           Срок
           <input
             type="date"
@@ -275,39 +193,142 @@ export function TaskForm({
           />
         </label>
         <label className="field">
-          Оценка, ч
-          <input
-            type="number"
-            step="0.5"
-            min="0"
-            name="estimateHours"
-            defaultValue={defaults?.estimateHours ?? ""}
-            className="input"
-          />
+          Приоритет
+          <select name="priority" defaultValue={defaults?.priority ?? "MEDIUM"} className="input">
+            {TASK_PRIORITIES.map((priority) => (
+              <option key={priority} value={priority}>
+                {TASK_PRIORITY_LABELS[priority]}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field">
-          Факт, ч
+          Задача во внешнем трекере
           <input
-            type="number"
-            step="0.5"
-            min="0"
-            name="spentHours"
-            defaultValue={defaults?.spentHours ?? ""}
-            className="input"
-          />
-        </label>
-        <label className="field">
-          Готовность, %
-          <input
-            type="number"
-            min="0"
-            max="100"
-            name="progress"
-            defaultValue={defaults?.progress ?? 0}
+            name="externalTaskKey"
+            defaultValue={defaults?.externalTaskKey ?? ""}
+            placeholder="Например, AISRKII-9837"
             className="input"
           />
         </label>
       </div>
+
+      <ArtifactFields defaults={defaults?.artifacts} documents={documents} />
+
+      <VisibilityField
+        value={defaults?.isPublic ?? VISIBILITY_DEFAULTS.TASK}
+        isNew={isNew}
+        canChange={canChangeVisibility}
+      />
+
+      {/* Всё остальное по макету спрятано: при заведении задачи нужны
+          название, трек, ответственный и срок, прочее дописывается позже. */}
+      <details open={!isNew} className="group rounded-xl border border-gray-200">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-700 select-none">
+          <span className="mr-1.5 inline-block transition group-open:rotate-90">›</span>
+          Подробнее: описание, основание, сроки и трудозатраты
+        </summary>
+        <div className="space-y-4 border-t border-gray-200 px-4 py-4">
+        <label className="field">
+          Описание
+          <textarea
+            name="description"
+            rows={3}
+            defaultValue={defaults?.description ?? ""}
+            className="input"
+          />
+        </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+          <label className="field">
+            Входит в задачу
+            <select name="parentId" defaultValue={defaults?.parentId ?? ""} className="input">
+              <option value="">— самостоятельная —</option>
+              {parentCandidates.map((task) => (
+                <option key={task.id} value={task.id}>
+                  #{task.number} {task.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Письмо-основание
+            <select name="letterId" defaultValue={defaults?.letterId ?? ""} className="input">
+              <option value="">— без письма —</option>
+              {letters.map((letter) => (
+                <option key={letter.id} value={letter.id}>
+                  № {letter.number} — {letter.subject.slice(0, 60)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Внешний ответственный
+            <input
+              name="externalAssignee"
+              defaultValue={defaults?.externalAssignee ?? ""}
+              placeholder="Организация и контактное лицо"
+              className="input"
+            />
+          </label>
+          <label className="field">
+            Начало
+            <input
+              type="date"
+              name="startDate"
+              defaultValue={toDateInputValue(defaults?.startDate)}
+              className="input"
+            />
+          </label>
+          </div>
+        <label className="field">
+          Ход работы
+          <textarea
+            name="progressNote"
+            rows={3}
+            defaultValue={defaults?.progressNote ?? ""}
+            placeholder="Хронология: что и когда произошло по задаче"
+            className="input"
+          />
+        </label>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+          <label className="field">
+            Оценка, ч
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              name="estimateHours"
+              defaultValue={defaults?.estimateHours ?? ""}
+              className="input"
+            />
+          </label>
+          <label className="field">
+            Факт, ч
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              name="spentHours"
+              defaultValue={defaults?.spentHours ?? ""}
+              className="input"
+            />
+          </label>
+          <label className="field">
+            Готовность, %
+            <input
+              type="number"
+              min="0"
+              max="100"
+              name="progress"
+              defaultValue={defaults?.progress ?? 0}
+              className="input"
+            />
+          </label>
+          </div>
+        </div>
+      </details>
 
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>

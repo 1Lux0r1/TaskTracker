@@ -221,7 +221,7 @@ h4 {
   }
 
   .field {
-    @apply block text-sm font-medium text-gray-700;
+    @apply flex flex-col text-sm font-medium text-gray-700;
   }
 
   .input {
