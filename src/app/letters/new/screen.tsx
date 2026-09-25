@@ -84,7 +84,8 @@ export async function NewLetterScreen({ searchParams, inPanel }: NewScreenProps)
         : "",
     ownerId:
       known?.ownerId && members.some((item) => item.id === known.ownerId) ? known.ownerId : "",
-    status: "IN_PROGRESS",
+    // Только что зарегистрированное письмо — «Новое», как в макете.
+    status: "NEW",
     // Пачку писем чаще всего заводят с одной видимостью: подставляем ту,
     // с которой завели предыдущее.
     visibility: visibilityValue(known?.isPublic ?? VISIBILITY_DEFAULTS.LETTER),

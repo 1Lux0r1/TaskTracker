@@ -123,13 +123,24 @@ async function railData(): Promise<{
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [openTasks, overdueTasks, openLetters, signingDocuments, aheadMeetings, projects, members] =
-    await Promise.all([
+  const [
+    openTasks,
+    overdueTasks,
+    openLetters,
+    overdueLetters,
+    signingDocuments,
+    aheadMeetings,
+    projects,
+    members,
+  ] = await Promise.all([
       prisma.task.count({ where: { status: { notIn: CLOSED_TASK_STATUSES } } }),
       prisma.task.count({
         where: { status: { notIn: CLOSED_TASK_STATUSES }, dueDate: { lt: today } },
       }),
       prisma.letter.count({ where: { status: { notIn: CLOSED_LETTER_STATUSES } } }),
+      prisma.letter.count({
+        where: { status: { notIn: CLOSED_LETTER_STATUSES }, dueDate: { lt: today } },
+      }),
       prisma.document.count({ where: { status: { in: ["SENT", "SIGNING", "REVIEW"] } } }),
       prisma.meeting.count({ where: { date: { gte: today } } }),
       prisma.project.findMany({
@@ -144,22 +155,28 @@ async function railData(): Promise<{
     {
       caption: "Работа",
       links: [
-        { href: "/", label: "Сегодня" },
-        { href: "/tasks", label: "Задачи", count: openTasks, hot: overdueTasks > 0 },
-        { href: "/letters", label: "Реестр писем ЭДО", count: openLetters },
-        { href: "/documents", label: "Юридический трек", count: signingDocuments },
-        { href: "/integrations", label: "Интеграции" },
-        { href: "/meetings", label: "Встречи", count: aheadMeetings },
-        { href: "/calendar", label: "Календарь" },
+        { href: "/", label: "Сегодня", icon: "◎" },
+        { href: "/tasks", label: "Задачи", icon: "◧", count: openTasks, hot: overdueTasks > 0 },
+        {
+          href: "/letters",
+          label: "Реестр писем ЭДО",
+          icon: "✉",
+          count: openLetters,
+          hot: overdueLetters > 0,
+        },
+        { href: "/documents", label: "Юридический трек", icon: "§", count: signingDocuments },
+        { href: "/integrations", label: "Интеграции", icon: "⇄" },
+        { href: "/meetings", label: "Встречи", icon: "◇", count: aheadMeetings },
+        { href: "/calendar", label: "Календарь", icon: "▤" },
       ],
     },
     {
       caption: "Сводка",
       links: [
-        { href: "/analytics", label: "Аналитика" },
-        { href: "/reports", label: "Отчёты" },
-        { href: "/directory", label: "Справочники" },
-        { href: "/import", label: "Импорт" },
+        { href: "/analytics", label: "Аналитика", icon: "◔" },
+        { href: "/reports", label: "Отчёты", icon: "▦" },
+        { href: "/directory", label: "Справочники", icon: "≡" },
+        { href: "/import", label: "Импорт", icon: "↧" },
       ],
     },
   ];

@@ -139,6 +139,38 @@ export function formatDateTime(value: Date | null | undefined): string {
   }).format(value);
 }
 
+/** Короткая дата «30.09» — в строках реестров год лишний. */
+export function formatShortDate(value: Date | null | undefined): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(value);
+}
+
+/** Сколько календарных дней до срока: отрицательное число — дни просрочки. */
+export function daysUntil(dueDate: Date, today: Date = startOfToday()): number {
+  const due = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
+}
+
+export type DueState = "none" | "done" | "over" | "soon" | "later";
+
+/**
+ * Срок словами. В файле заказчика просрочка записана текстом («просрочка 49
+ * дн.») и устаревает в тот же день, поэтому здесь она считается на лету.
+ * Ближайшая неделя подсвечивается как «скоро».
+ */
+export function describeDue(
+  dueDate: Date | null | undefined,
+  options: { closed?: boolean; today?: Date } = {},
+): { state: DueState; text: string; days: number | null } {
+  if (!dueDate) return { state: "none", text: "без срока", days: null };
+  if (options.closed) return { state: "done", text: formatShortDate(dueDate), days: null };
+  const days = daysUntil(dueDate, options.today);
+  if (days < 0) return { state: "over", text: `просрочка ${-days} дн.`, days };
+  if (days === 0) return { state: "soon", text: "сегодня", days };
+  if (days <= 7) return { state: "soon", text: `через ${days} дн.`, days };
+  return { state: "later", text: formatShortDate(dueDate), days };
+}
+
 /** Значение для <input type="date"> в локальном часовом поясе. */
 export function toDateInputValue(value: Date | null | undefined): string {
   if (!value) return "";

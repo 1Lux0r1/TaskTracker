@@ -39,6 +39,13 @@ export async function createLetter(
   const input = normalizeLetterByDirection(parsed.data, {
     answerNotRequired: formData.get("answerNotRequired") === "on",
   });
+  if (!input.dueDate && !CLOSED_LETTER_STATUSES.includes(input.status as LetterStatus)) {
+    return {
+      ok: false,
+      error: "Укажите срок ответа или отметьте «Ответ не требуется»",
+      saved,
+    };
+  }
   const answer = await answerIsValid(input.responseToId, input.projectId, input.direction);
   if (!answer.ok) return { ok: false, error: answer.error, saved };
   // Номер письма повторяется в разные годы, поэтому дубль ищем по номеру и дате.

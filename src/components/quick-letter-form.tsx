@@ -11,6 +11,8 @@ import {
   LETTER_STATUS_LABELS,
   LETTER_STATUSES,
   LETTER_DIRECTION_TEXT,
+  CLOSED_LETTER_STATUSES,
+  type LetterStatus,
   toDateInputValue,
 } from "@/lib/domain";
 import { VISIBILITY_OPTIONS } from "@/lib/visibility";
@@ -79,12 +81,19 @@ export function QuickLetterForm({
 
   // Письма вносят пачкой, поэтому после сохранения очищаем только само письмо,
   // а проект, направление, дату, организацию и ответственного оставляем.
+  // После любого ответа сервера форма перемонтируется: React 19 сам
+  // сбрасывает поля формы к исходным, и без перемонтирования списки
+  // показали бы первый вариант, а отправили бы его же вместо выбранного.
   const savedCount = state?.saved.length ?? 0;
-  const [handledCount, setHandledCount] = useState(0);
-  if (savedCount !== handledCount) {
-    setHandledCount(savedCount);
-    setValues((current) => ({ ...current, ...BLANK_LETTER }));
-    setAnswerNotRequired(false);
+  const [seenState, setSeenState] = useState(state);
+  const [epoch, setEpoch] = useState(0);
+  if (state !== seenState) {
+    setSeenState(state);
+    setEpoch((current) => current + 1);
+    if (state?.ok) {
+      setValues((current) => ({ ...current, ...BLANK_LETTER }));
+      setAnswerNotRequired(false);
+    }
   }
 
   useEffect(() => {
@@ -104,6 +113,10 @@ export function QuickLetterForm({
     projectId: values.projectId,
   });
 
+  // Открытое письмо без срока — главная дыра старого реестра: срок был у 17
+  // писем из 50. Поэтому срок нужен всегда, кроме писем без ответа.
+  const dueRequired = !answerNotRequired && !CLOSED_LETTER_STATUSES.includes(values.status as LetterStatus);
+
   const shiftDue = (days: number) => {
     const base = values.date ? new Date(`${values.date}T00:00:00`) : new Date();
     base.setDate(base.getDate() + days);
@@ -111,9 +124,12 @@ export function QuickLetterForm({
   };
 
   return (
-    // Ключ меняется после каждого сохранения: React 19 сбрасывает поля формы
-    // сам, и без перемонтирования списки остались бы со старым выбором в DOM.
-    <form action={formAction} key={handledCount} className="space-y-4">
+    <form
+      action={formAction}
+      key={epoch}
+      onKeyDown={submitOnCtrlEnter}
+      className="space-y-4"
+    >
       {state && !state.ok && state.error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>
       )}
@@ -159,6 +175,7 @@ export function QuickLetterForm({
                 value={answerNotRequired ? "" : values.dueDate}
                 onChange={set("dueDate")}
                 disabled={answerNotRequired}
+                required={dueRequired}
                 className="input w-44 disabled:bg-gray-100 disabled:text-gray-400"
               />
               {DUE_SHORTCUTS.map((days) => (
@@ -414,6 +431,11 @@ export function QuickLetterForm({
         <Link href="/letters" className="btn-secondary">
           Закончить
         </Link>
+        <span className="text-xs text-gray-500">
+          или <kbd className="rounded border border-gray-200 bg-gray-100 px-1 font-mono">Ctrl</kbd>
+          {" + "}
+          <kbd className="rounded border border-gray-200 bg-gray-100 px-1 font-mono">Enter</kbd>
+        </span>
       </div>
 
       {state?.saved && state.saved.length > 0 && (
@@ -435,4 +457,12 @@ export function QuickLetterForm({
       )}
     </form>
   );
+}
+
+/** Ctrl+Enter (⌘+Enter) сохраняет письмо и открывает пустую форму под следующее. */
+function submitOnCtrlEnter(event: React.KeyboardEvent<HTMLFormElement>) {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    event.currentTarget.requestSubmit();
+  }
 }
