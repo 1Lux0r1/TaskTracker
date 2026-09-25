@@ -14,13 +14,15 @@ type Props = {
   ceiling?: number;
   /** Рост — это хорошо (готовность) или плохо (просрочки). */
   growthIsGood: boolean;
+  /** Внутри другой карточки — без своей тени, тонкой рамкой. */
+  plain?: boolean;
 };
 
 /**
  * График динамики. Рисуется на сервере обычным SVG: библиотека графиков ради
  * двух линий тянула бы в страницу лишние сотни килобайт.
  */
-export function TrendChart({ title, points, pick, unit = "", ceiling, growthIsGood }: Props) {
+export function TrendChart({ title, points, pick, unit = "", ceiling, growthIsGood, plain = false }: Props) {
   const values = points.map(pick);
   const last = values[values.length - 1] ?? 0;
   const first = values[0] ?? 0;
@@ -31,7 +33,7 @@ export function TrendChart({ title, points, pick, unit = "", ceiling, growthIsGo
   const stroke = good === null ? "#6b7280" : good ? "#059669" : "#dc2626";
 
   return (
-    <div className="card min-w-0 p-4">
+    <div className={plain ? "min-w-0 rounded-xl border border-gray-200 p-4" : "card min-w-0 p-4"}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm text-gray-500">{title}</p>
         <p className="text-2xl font-semibold tabular-nums text-gray-900">
