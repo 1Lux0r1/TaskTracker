@@ -167,8 +167,9 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
       id: letter.id,
       type: "letter" as const,
       href: `/letters/${letter.id}`,
-      label: `№ ${letter.number}`,
-      note: letter.counterparty?.name ?? letter.subject,
+      // В клетке дня видна тема, как в макете: по номеру письмо не узнать.
+      label: letter.subject,
+      note: [`№ ${letter.number}`, letter.counterparty?.name].filter(Boolean).join(" · "),
       date: letter.dueDate!,
       overdue:
         !CLOSED_LETTER_STATUSES.includes(letter.status as never) && letter.dueDate! < today,
@@ -180,7 +181,7 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
       label: document.title,
       note: document.counterparty?.name ?? "",
       date: document.dueDate!,
-      overdue: document.status !== "SIGNED" && document.dueDate! < today,
+      overdue: !["SIGNED", "FILED", "DECLINED"].includes(document.status) && document.dueDate! < today,
     })),
     ...meetings.map((meeting) => ({
       id: meeting.id,
