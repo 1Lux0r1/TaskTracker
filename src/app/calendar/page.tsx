@@ -22,6 +22,7 @@ import {
   CLOSED_TASK_STATUSES,
   formatDate,
   formatMeetingTime,
+  plural,
   startOfToday,
   trackColor,
 } from "@/lib/domain";
@@ -53,13 +54,6 @@ type DurationBar = {
   startDate: Date;
   dueDate: Date;
   dot: string;
-};
-
-const TYPE_CHIP: Record<CalendarType, string> = {
-  task: "bg-sky-100 text-sky-800 hover:bg-sky-200",
-  letter: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200",
-  document: "bg-violet-100 text-violet-800 hover:bg-violet-200",
-  meeting: "bg-amber-100 text-amber-800 hover:bg-amber-200",
 };
 
 export default async function CalendarPage(props: PageProps<"/calendar">) {
@@ -232,136 +226,188 @@ export default async function CalendarPage(props: PageProps<"/calendar">) {
         : `${MONTHS[filter.day.getMonth()]} ${filter.day.getFullYear()}`;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3.5">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Календарь</h1>
-          <p className="text-sm text-gray-500">
-            Сроки задач, писем и документов и дни встреч в одной сетке
+          <h1 className="font-display text-2xl font-bold tracking-tight text-gray-900">Календарь</h1>
+          <p className="mt-1 max-w-[62ch] text-sm text-gray-600">
+            Сроки задач, писем и документов вместе со встречами. Слева период, справа — выбранный
+            день целиком: что назначено и что можно завести.
           </p>
         </div>
-        {/* Режим — ссылками, а не формой: он должен оставаться в адресе. */}
-        <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
-          {CALENDAR_VIEWS.map((view) => (
-            <Link
-              key={view.value}
-              href={calendarHref(filter, { view: view.value })}
-              className={`rounded-md px-3 py-1.5 text-sm ${
-                filter.view === view.value
-                  ? "bg-gray-900 font-medium text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {view.label}
-            </Link>
-          ))}
+
+        {/* Режим и период — ссылками, а не формой: они должны оставаться в адресе. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="seg">
+            {CALENDAR_VIEWS.map((view) => (
+              <Link
+                key={view.value}
+                href={calendarHref(filter, { view: view.value })}
+                aria-current={filter.view === view.value ? "page" : undefined}
+                className="seg-btn"
+              >
+                {view.label}
+              </Link>
+            ))}
+          </div>
+          {filter.view !== "list" && (
+            <>
+              <Link
+                href={calendarHref(filter, { day: shiftCalendar(filter.view, filter.day, -1) })}
+                aria-label="Предыдущий период"
+                className="btn-secondary px-2.5 py-1"
+              >
+                ←
+              </Link>
+              <b className="font-display min-w-44 text-center text-[15px] font-semibold text-gray-900">
+                {periodTitle}
+              </b>
+              <Link
+                href={calendarHref(filter, { day: shiftCalendar(filter.view, filter.day, 1) })}
+                aria-label="Следующий период"
+                className="btn-secondary px-2.5 py-1"
+              >
+                →
+              </Link>
+              <Link href={calendarHref(filter, { day: today })} className="btn-secondary px-2.5 py-1">
+                Сегодня
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="card flex flex-wrap items-center gap-3 p-3">
-        <div className="flex items-center gap-1">
-          <Link
-            href={calendarHref(filter, { day: shiftCalendar(filter.view, filter.day, -1) })}
-            aria-label="Предыдущий период"
-            className="btn-secondary"
-          >
-            ←
-          </Link>
-          <Link
-            href={calendarHref(filter, { day: shiftCalendar(filter.view, filter.day, 1) })}
-            aria-label="Следующий период"
-            className="btn-secondary"
-          >
-            →
-          </Link>
-          <Link href={calendarHref(filter, { day: today })} className="btn-secondary">
-            Сегодня
-          </Link>
-        </div>
-        <h2 className="text-lg font-semibold text-gray-900">{periodTitle}</h2>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {CALENDAR_TYPES.map((type) => {
+          const on = filter.types.includes(type.value);
+          return (
+            <Link
+              key={type.value}
+              href={calendarHref(filter, { types: toggleType(filter.types, type.value) })}
+              data-on={on}
+              className="fchip"
+            >
+              <span
+                aria-hidden
+                className="mr-[7px] size-2 flex-none rounded-[2px]"
+                style={{ background: TYPE_DOT[type.value] }}
+              />
+              {type.label}
+              <span className="fchip-n">{counts[type.value]}</span>
+            </Link>
+          );
+        })}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {CALENDAR_TYPES.map((type) => {
-            const on = filter.types.includes(type.value);
-            return (
-              <Link
-                key={type.value}
-                href={calendarHref(filter, { types: toggleType(filter.types, type.value) })}
-                className={`badge ${on ? TYPE_CHIP[type.value] : "bg-gray-100 text-gray-400"}`}
+          {filter.view === "month" && filter.types.includes("task") && (
+            <Link
+              href={calendarHref(filter, { showDuration: !filter.showDuration })}
+              data-on={filter.showDuration}
+              className="fchip"
+            >
+              Показать длительность задач
+            </Link>
+          )}
+          {/* Выбор проекта нужен, только когда проектов больше одного. */}
+          {projects.length > 1 && (
+            <form className="flex items-center gap-2">
+              <input type="hidden" name="view" value={filter.view} />
+              <input type="hidden" name="day" value={dayKey(filter.day)} />
+              <input type="hidden" name="types" value={filter.types.join(",")} />
+              {filter.showDuration && <input type="hidden" name="duration" value="1" />}
+              <label className="sr-only" htmlFor="calendar-project">
+                Проект
+              </label>
+              <select
+                id="calendar-project"
+                name="projectId"
+                defaultValue={filter.projectId}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[13px] text-gray-600 outline-none focus:border-brand"
               >
-                {type.label}
-                <span className="ml-1.5 tabular-nums">{on ? counts[type.value] : "—"}</span>
-              </Link>
-            );
-          })}
+                <option value="">Все проекты</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.code} — {project.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="fchip">
+                Показать
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <form className="flex items-end gap-2">
-          <input type="hidden" name="view" value={filter.view} />
-          <input type="hidden" name="day" value={dayKey(filter.day)} />
-          <input type="hidden" name="types" value={filter.types.join(",")} />
-          {filter.showDuration && <input type="hidden" name="duration" value="1" />}
-          <label className="field">
-            Проект
-            <select name="projectId" defaultValue={filter.projectId} className="input w-56">
-              <option value="">Все проекты</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.code} — {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="btn-secondary">
-            Показать
-          </button>
-        </form>
-
-        {filter.view === "month" && filter.types.includes("task") && (
-          <Link
-            href={calendarHref(filter, { showDuration: !filter.showDuration })}
-            className={`badge ${
-              filter.showDuration ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
-            }`}
-          >
-            Показать длительность задач
-          </Link>
-        )}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {/* В ленте панель дня не нужна: лента и так идёт по дням. */}
+      <div
+        className={
+          filter.view === "list"
+            ? ""
+            : "grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_316px] lg:items-start"
+        }
+      >
         <div className="min-w-0">
           {filter.view === "month" && (
-            <MonthGrid
-              filter={filter}
-              grid={grid}
-              byDay={byDay}
-              bars={bars}
-              today={today}
-            />
+            <MonthGrid filter={filter} grid={grid} byDay={byDay} bars={bars} today={today} />
           )}
-          {filter.view === "week" && <WeekGrid filter={filter} grid={grid} byDay={byDay} today={today} />}
-          {filter.view === "list" && <EventList filter={filter} events={events} today={today} />}
+          {filter.view === "week" && (
+            <WeekRows filter={filter} grid={grid} byDay={byDay} today={today} />
+          )}
+          {filter.view === "list" && <Agenda events={events} today={today} />}
         </div>
 
+        {filter.view !== "list" && (
         <CalendarDayPanel
-          title={longDate(filter.day)}
-          isToday={isSameDay(filter.day, today)}
+          title={`${filter.day.getDate()} ${LONG_MONTHS[filter.day.getMonth()]}`}
+          note={dayNote(filter.day, today)}
           day={dayKey(filter.day)}
           projectId={filter.projectId}
           events={selectedEvents.map((event) => ({
             id: `${event.type}-${event.id}`,
             href: event.href,
             label: event.label,
-            note: event.note,
-            chip: event.overdue ? "bg-red-100 text-red-800" : TYPE_CHIP[event.type],
-            type: typeLabel(event.type),
+            note: [typeLabel(event.type), event.note].filter(Boolean).join(" · "),
+            dot: TYPE_DOT[event.type],
+            overdue: event.overdue,
           }))}
         />
+        )}
       </div>
     </div>
+  );
+}
+
+/** Цвет метки записи по её виду — те же четыре цвета, что в макете. */
+const TYPE_DOT: Record<CalendarType, string> = {
+  task: "var(--color-blue-500)",
+  letter: "var(--color-amber-500)",
+  document: "var(--color-green-600)",
+  meeting: "var(--color-purple-600)",
+};
+
+/**
+ * Запись в клетке или в строке недели: нейтральная плашка с цветным
+ * квадратом. Заливка цветом остаётся за просрочкой — иначе сетка рябит.
+ */
+function EventChip({ event, big = false }: { event: CalendarEvent; big?: boolean }) {
+  return (
+    <Link
+      href={event.href}
+      title={`${typeLabel(event.type)}: ${event.label}${event.note ? ` · ${event.note}` : ""}`}
+      className={`${event.overdue ? "ev-chip ev-chip-over" : "ev-chip"} ${
+        big ? "max-w-full px-2.5 py-[5px] text-[12.5px]" : ""
+      }`}
+    >
+      {!event.overdue && (
+        <span
+          aria-hidden
+          className="size-1.5 flex-none rounded-[2px]"
+          style={{ background: TYPE_DOT[event.type] }}
+        />
+      )}
+      <span className={big ? "min-w-0" : "truncate"}>{event.label}</span>
+    </Link>
   );
 }
 
@@ -380,9 +426,12 @@ function MonthGrid({
 }) {
   return (
     <div className="card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+      <div className="grid grid-cols-7 border-b border-gray-200">
         {WEEKDAYS.map((weekday) => (
-          <div key={weekday} className="px-2 py-2 text-center text-xs font-semibold text-gray-500">
+          <div
+            key={weekday}
+            className="px-3 py-2.5 text-[11px] font-semibold tracking-[0.08em] text-gray-500 uppercase"
+          >
             {weekday}
           </div>
         ))}
@@ -392,6 +441,7 @@ function MonthGrid({
           const events = byDay.get(dayKey(date)) ?? [];
           const otherMonth = date.getMonth() !== filter.day.getMonth();
           const selected = isSameDay(date, filter.day);
+          const isToday = isSameDay(date, today);
           const slices = bars
             .map((bar) => ({ bar, slice: durationSlice(bar, date) }))
             .filter((item) => item.slice.visible)
@@ -400,31 +450,31 @@ function MonthGrid({
           return (
             <div
               key={dayKey(date)}
-              className={`min-h-28 border-r border-b border-gray-100 p-1.5 ${
-                otherMonth ? "bg-gray-50" : ""
-              } ${selected ? "ring-2 ring-inset ring-gray-900" : ""}`}
+              className={`flex min-h-27 flex-col gap-1 border-r border-b border-gray-200 p-2 nth-7n:border-r-0 ${
+                otherMonth ? "bg-gray-100" : ""
+              } ${selected ? "ring-2 ring-brand ring-inset" : ""}`}
             >
               <Link
                 href={calendarHref(filter, { day: date })}
-                className={`inline-flex size-6 items-center justify-center rounded-full text-xs tabular-nums ${
-                  isSameDay(date, today)
-                    ? "bg-gray-900 font-semibold text-white"
-                    : "text-gray-500 hover:bg-gray-100"
-                }`}
+                className={
+                  isToday
+                    ? "self-start rounded-md bg-brand px-1.5 py-px font-mono text-[12.5px] font-semibold text-white"
+                    : "self-start font-mono text-[12.5px] text-gray-500 hover:text-gray-900"
+                }
               >
                 {date.getDate()}
               </Link>
 
-              {/* Полосы выходят за поля ячейки, чтобы соседние дни сливались
+              {/* Полосы выходят за поля клетки, чтобы соседние дни сливались
                   в одну линию, а не в пунктир. */}
               {slices.length > 0 && (
-                <div className="-mx-1.5 mt-1 space-y-0.5">
+                <div className="-mx-2 space-y-0.5">
                   {slices.map(({ bar, slice }) => (
                     <Link
                       key={bar.id}
                       href={bar.href}
                       title={bar.title}
-                      className={`block h-4 overflow-hidden px-1 text-[10px] leading-4 text-white ${bar.dot} ${
+                      className={`block h-4 overflow-hidden px-1.5 text-[10px] leading-4 text-white ${bar.dot} ${
                         slice.first ? "rounded-l-full" : ""
                       } ${slice.last ? "rounded-r-full" : ""}`}
                     >
@@ -438,31 +488,17 @@ function MonthGrid({
                 </div>
               )}
 
-              <ul className="mt-1 space-y-1">
-                {events.slice(0, 4).map((event) => (
-                  <li key={`${event.type}-${event.id}`}>
-                    <Link
-                      href={event.href}
-                      title={`${typeLabel(event.type)}: ${event.label}`}
-                      className={`block truncate rounded px-1 py-0.5 text-xs ${
-                        event.overdue ? "bg-red-100 text-red-800 hover:bg-red-200" : TYPE_CHIP[event.type]
-                      }`}
-                    >
-                      {event.label}
-                    </Link>
-                  </li>
-                ))}
-                {events.length > 4 && (
-                  <li>
-                    <Link
-                      href={calendarHref(filter, { day: date })}
-                      className="block px-1 text-xs text-gray-400 hover:text-gray-600"
-                    >
-                      ещё {events.length - 4}
-                    </Link>
-                  </li>
-                )}
-              </ul>
+              {events.slice(0, 3).map((event) => (
+                <EventChip key={`${event.type}-${event.id}`} event={event} />
+              ))}
+              {events.length > 3 && (
+                <Link
+                  href={calendarHref(filter, { day: date })}
+                  className="pl-1 text-[11px] text-gray-500 hover:text-gray-900"
+                >
+                  ещё {events.length - 3}
+                </Link>
+              )}
             </div>
           );
         })}
@@ -471,7 +507,8 @@ function MonthGrid({
   );
 }
 
-function WeekGrid({
+/** Неделя — строками: слева день покрупнее, справа всё, что на него пришлось. */
+function WeekRows({
   filter,
   grid,
   byDay,
@@ -483,48 +520,40 @@ function WeekGrid({
   today: Date;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+    <div className="flex flex-col gap-2.5">
       {grid.map((date, index) => {
         const events = byDay.get(dayKey(date)) ?? [];
         const selected = isSameDay(date, filter.day);
+        const isToday = isSameDay(date, today);
 
         return (
           <div
             key={dayKey(date)}
-            className={`card min-h-40 p-2 ${selected ? "ring-2 ring-gray-900" : ""}`}
+            className={`card grid grid-cols-[92px_minmax(0,1fr)] items-center gap-3.5 px-3.5 py-3 sm:grid-cols-[118px_minmax(0,1fr)] ${
+              index > 4 ? "bg-gray-50" : ""
+            } ${selected ? "ring-2 ring-brand ring-inset" : ""}`}
           >
-            <Link
-              href={calendarHref(filter, { day: date })}
-              className="flex items-center justify-between gap-2"
-            >
-              <span className="text-xs font-semibold text-gray-500">{WEEKDAYS[index]}</span>
-              <span
-                className={`inline-flex size-6 items-center justify-center rounded-full text-xs tabular-nums ${
-                  isSameDay(date, today)
-                    ? "bg-gray-900 font-semibold text-white"
-                    : "text-gray-500"
-                }`}
+            <Link href={calendarHref(filter, { day: date })} className="block">
+              <b
+                className={
+                  isToday
+                    ? "font-display inline-block rounded-md bg-brand px-2 py-px text-base font-semibold text-white"
+                    : "font-display inline-block text-base font-semibold text-gray-900"
+                }
               >
-                {date.getDate()}
-              </span>
+                {date.getDate()} {SHORT_MONTHS[date.getMonth()]}
+              </b>
+              <span className="mt-0.5 block text-xs text-gray-500">{WEEKDAY_NAMES[index]}</span>
             </Link>
-
-            <ul className="mt-2 space-y-1">
-              {events.map((event) => (
-                <li key={`${event.type}-${event.id}`}>
-                  <Link
-                    href={event.href}
-                    className={`block rounded px-1.5 py-1 text-xs ${
-                      event.overdue ? "bg-red-100 text-red-800 hover:bg-red-200" : TYPE_CHIP[event.type]
-                    }`}
-                  >
-                    <span className="block truncate font-medium">{event.label}</span>
-                    {event.note && <span className="block truncate opacity-75">{event.note}</span>}
-                  </Link>
-                </li>
-              ))}
-              {events.length === 0 && <li className="px-1 text-xs text-gray-400">пусто</li>}
-            </ul>
+            <div className="flex min-w-0 flex-wrap items-center gap-[7px]">
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <EventChip key={`${event.type}-${event.id}`} event={event} big />
+                ))
+              ) : (
+                <span className="text-xs text-gray-500">ничего не назначено</span>
+              )}
+            </div>
           </div>
         );
       })}
@@ -532,87 +561,102 @@ function WeekGrid({
   );
 }
 
-function EventList({
-  filter,
-  events,
-  today,
-}: {
-  filter: CalendarFilter;
-  events: CalendarEvent[];
-  today: Date;
-}) {
-  // Просроченное стоит наверху отдельным блоком: оно не про «что впереди», и
-  // в ленте по датам ушло бы в прошлое, где его никто не увидит.
-  const overdue = events.filter((event) => event.overdue);
+/**
+ * Лента: что впереди, по дням, и отдельной группой просроченное — оно не про
+ * «что впереди» и в ленте по датам ушло бы в прошлое, где его не увидят.
+ */
+function Agenda({ events, today }: { events: CalendarEvent[]; today: Date }) {
+  const overdue = events
+    .filter((event) => event.overdue)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
   const ahead = events.filter((event) => !event.overdue);
 
   if (overdue.length === 0 && ahead.length === 0) {
-    return <p className="card p-6 text-sm text-gray-500">Впереди записей нет.</p>;
+    return <p className="card p-10 text-center text-sm text-gray-500">Впереди пусто.</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="card overflow-hidden">
       {overdue.length > 0 && (
-        <section className="card border-red-200 bg-red-50 p-4">
-          <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-red-900">
-            Просрочено
-            <span className="badge bg-red-100 text-red-800 tabular-nums">{overdue.length}</span>
-          </h3>
-          <ul className="mt-2 divide-y divide-red-100">
-            {overdue.map((event) => (
-              <EventRow key={`${event.type}-${event.id}`} event={event} withDate />
-            ))}
-          </ul>
-        </section>
+        <>
+          <GroupHead
+            title="Просрочено"
+            note={`${overdue.length} ${plural(overdue.length, "запись", "записи", "записей")}`}
+          />
+          {overdue.map((event) => (
+            <AgendaRow key={`${event.type}-${event.id}`} event={event} today={today} />
+          ))}
+        </>
       )}
 
-      {ahead.length === 0 ? (
-        <p className="card p-6 text-sm text-gray-500">Впереди записей нет.</p>
-      ) : (
-        <ul className="space-y-2">
-          {groupByDay(ahead).map(([key, dayEvents]) => (
-            <li key={key} className="card p-4">
-              <Link
-                href={calendarHref(filter, { day: dayEvents[0].date })}
-                className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900 hover:underline"
-              >
-                {longDate(dayEvents[0].date)}
-                {isSameDay(dayEvents[0].date, today) && (
-                  <span className="badge bg-gray-900 text-white">сегодня</span>
-                )}
-              </Link>
-              <ul className="mt-2 divide-y divide-gray-100">
-                {dayEvents.map((event) => (
-                  <EventRow key={`${event.type}-${event.id}`} event={event} />
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
+      {groupByDay(ahead).map(([key, dayEvents]) => {
+        const date = dayEvents[0].date;
+        const away = daysBetween(today, date);
+        return (
+          <div key={key}>
+            <GroupHead
+              title={`${date.getDate()} ${LONG_MONTHS[date.getMonth()]}`}
+              note={WEEKDAY_NAMES[(date.getDay() + 6) % 7]}
+              accent={away === 0 ? "сегодня" : away === 1 ? "завтра" : `через ${away} дн.`}
+              today={away === 0}
+            />
+            {dayEvents.map((event) => (
+              <AgendaRow key={`${event.type}-${event.id}`} event={event} today={today} />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/** Строка записи в ленте. В блоке просрочек рядом стоит срок: он в прошлом. */
-function EventRow({ event, withDate = false }: { event: CalendarEvent; withDate?: boolean }) {
+function GroupHead({
+  title,
+  note,
+  accent,
+  today = false,
+}: {
+  title: string;
+  note: string;
+  accent?: string;
+  today?: boolean;
+}) {
   return (
-    <li className="flex flex-wrap items-center gap-2 py-2">
-      <span
-        className={`badge ${event.overdue ? "bg-red-100 text-red-800" : TYPE_CHIP[event.type]}`}
-      >
-        {typeLabel(event.type)}
-      </span>
-      <Link href={event.href} className="text-sm text-gray-900 hover:underline">
-        {event.label}
-      </Link>
-      {event.note && <span className="text-sm text-gray-500">{event.note}</span>}
-      {event.overdue && (
-        <span className="ml-auto text-sm text-red-700">
-          {withDate ? `срок ${formatDate(event.date)}` : "просрочено"}
+    <div className="flex flex-wrap items-baseline gap-x-2.5 px-4 pt-3.5 pb-1.5 text-xs text-gray-500">
+      <b className="font-display text-[15px] font-semibold text-gray-900">{title}</b>
+      <span>{note}</span>
+      {accent && <span className={today ? "font-semibold text-brand" : ""}>{accent}</span>}
+    </div>
+  );
+}
+
+function AgendaRow({ event, today }: { event: CalendarEvent; today: Date }) {
+  const late = daysBetween(event.date, today);
+  return (
+    <Link
+      href={event.href}
+      className="flex items-center gap-3.5 border-t border-gray-200 px-4 py-3 hover:bg-gray-50"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14.5px] text-gray-900">{event.label}</span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+          <span
+            aria-hidden
+            className="size-2 flex-none rounded-[2px]"
+            style={{ background: TYPE_DOT[event.type] }}
+          />
+          {typeLabel(event.type)}
+          {event.note && <span>· {event.note}</span>}
         </span>
-      )}
-    </li>
+      </span>
+      <span
+        className={`flex-none font-mono text-[12.5px] whitespace-nowrap ${
+          event.overdue ? "font-medium text-red-600" : "text-gray-500"
+        }`}
+      >
+        {event.overdue ? `просрочено ${late} дн.` : formatDate(event.date)}
+      </span>
+    </Link>
   );
 }
 
@@ -623,6 +667,11 @@ function groupByDay(events: CalendarEvent[]): [string, CalendarEvent[]][] {
     days.set(key, [...(days.get(key) ?? []), event]);
   }
   return [...days.entries()];
+}
+
+/** Полных суток между днями: обе даты уже приведены к полуночи. */
+function daysBetween(from: Date, to: Date): number {
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
 }
 
 /** В подписи одной записи тип называется в единственном числе. */
@@ -637,14 +686,22 @@ function typeLabel(type: CalendarType): string {
   return TYPE_SINGULAR[type];
 }
 
+const SHORT_MONTHS = [
+  "янв", "фев", "мар", "апр", "мая", "июн",
+  "июл", "авг", "сен", "окт", "ноя", "дек",
+];
 const LONG_MONTHS = [
   "января", "февраля", "марта", "апреля", "мая", "июня",
   "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ];
-const LONG_WEEKDAYS = [
-  "воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота",
+/** Дни недели с понедельника — в том же порядке, что и сетка. */
+const WEEKDAY_NAMES = [
+  "понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье",
 ];
 
-function longDate(date: Date): string {
-  return `${date.getDate()} ${LONG_MONTHS[date.getMonth()]}, ${LONG_WEEKDAYS[date.getDay()]}`;
+/** Подпись под датой в панели дня: какой это день недели и насколько он далеко. */
+function dayNote(day: Date, today: Date): string {
+  const away = daysBetween(today, day);
+  const when = away === 0 ? "сегодня" : away > 0 ? `через ${away} дн.` : `${-away} дн. назад`;
+  return `${WEEKDAY_NAMES[(day.getDay() + 6) % 7]} · ${when}`;
 }

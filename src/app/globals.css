@@ -258,4 +258,122 @@ h4 {
   .rail-count {
     @apply ml-auto font-mono text-[11.5px] text-gray-500 tabular-nums;
   }
+
+  /* Реестр колонками: подписи сверху, строки без рамок ячеек — так реестры
+     устроены в макете. Ширины колонок задаёт страница через --reg-cols. */
+  .reg {
+    @apply overflow-hidden rounded-xl border border-gray-200 bg-white;
+    box-shadow: var(--shadow-card);
+  }
+
+  .reg-head,
+  .reg-row {
+    display: grid;
+    grid-template-columns: var(--reg-cols);
+    @apply items-center gap-3 px-4 py-2.5;
+  }
+
+  .reg-head {
+    @apply bg-gray-100 text-[10.5px] font-semibold tracking-[0.06em] text-gray-500 uppercase;
+  }
+
+  .reg-row {
+    @apply border-t border-gray-200 text-[13.5px];
+    @apply hover:bg-brand-soft;
+  }
+
+  /* На узком экране подписи колонок прячутся, строка складывается. */
+  @media (max-width: 1150px) {
+    .reg-head {
+      display: none;
+    }
+
+    .reg-row {
+      @apply grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 px-3.5 py-3;
+    }
+  }
+
+  .reg-cut {
+    @apply truncate text-gray-600;
+  }
+
+  /* Пилюля-фильтр: включённая заливается тёмным. */
+  .fchip {
+    @apply inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-[13px] text-gray-600;
+    @apply hover:border-gray-300 hover:text-gray-900;
+  }
+
+  .fchip[data-on="true"] {
+    @apply border-gray-900 bg-gray-900 font-medium text-white;
+  }
+
+  .fchip-n {
+    @apply ml-1.5 font-mono text-[11.5px] opacity-60;
+  }
+
+  /* Переключатель режима: отрезки в общей подложке. */
+  .seg {
+    @apply inline-flex gap-0.5 rounded-lg bg-gray-100 p-[3px];
+  }
+
+  .seg-btn {
+    @apply rounded-md px-3 py-1 text-[13.5px] text-gray-600 hover:text-gray-900;
+  }
+
+  .seg-btn[aria-current="page"] {
+    @apply bg-white font-semibold text-gray-900 shadow-sm;
+  }
+
+  /* Запись в клетке календаря: нейтральная плашка с цветным квадратом,
+     чтобы сетка не рябила от заливок. */
+  .ev-chip {
+    @apply flex items-center gap-1.5 rounded-md bg-gray-100 px-1.5 py-[3px] text-[11.5px] leading-tight text-gray-600;
+    @apply hover:bg-brand-soft hover:text-brand;
+  }
+
+  .ev-chip-over {
+    @apply bg-red-50 text-red-600;
+    @apply hover:bg-red-100 hover:text-red-700;
+  }
+}
+
+/* Появление формы поверх экрана: панель выезжает справа, окно всплывает. */
+@keyframes panel-in {
+  from {
+    transform: translateX(18px);
+    opacity: 0;
+  }
+}
+
+@keyframes window-in {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.panel-in {
+  animation: panel-in 0.18s ease-out;
+}
+
+.window-in {
+  animation: window-in 0.18s ease-out;
+}
+
+.scrim-in {
+  animation: scrim-in 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-in,
+  .window-in,
+  .scrim-in {
+    animation: none;
+  }
 }
