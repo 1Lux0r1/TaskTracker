@@ -223,7 +223,7 @@ export function TaskForm({
 
       {/* Всё остальное по макету спрятано: при заведении задачи нужны
           название, трек, ответственный и срок, прочее дописывается позже. */}
-      <details open={!isNew} className="group rounded-xl border border-gray-200">
+      <details open={!isNew || Boolean(defaults?.letterId)} className="group rounded-xl border border-gray-200">
         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-700 select-none">
           <span className="mr-1.5 inline-block transition group-open:rotate-90">›</span>
           Подробнее: описание, основание, сроки и трудозатраты

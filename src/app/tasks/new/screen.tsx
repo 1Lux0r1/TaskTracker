@@ -13,6 +13,8 @@ export async function NewTaskScreen({ searchParams, inPanel }: NewScreenProps) {
   const params = await searchParams;
   const projectId = Array.isArray(params.projectId) ? params.projectId[0] : params.projectId;
   // Дата приходит из панели дня в календаре: «завести задачу на этот день».
+  // Письмо приходит из карточки письма: «создать задачу по этому письму».
+  const letterId = Array.isArray(params.letterId) ? params.letterId[0] : params.letterId;
   const dueDate = parseDay(Array.isArray(params.dueDate) ? params.dueDate[0] : params.dueDate);
 
   const [projects, members] = await Promise.all([
@@ -104,7 +106,7 @@ export async function NewTaskScreen({ searchParams, inPanel }: NewScreenProps) {
           progressNote: null,
           artifacts: [],
           isPublic: VISIBILITY_DEFAULTS.TASK,
-          letterId: null,
+          letterId: letters.some((letter) => letter.id === letterId) ? (letterId ?? null) : null,
           parentId: null,
           startDate: null,
           dueDate,

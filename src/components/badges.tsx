@@ -64,6 +64,11 @@ export function ProgressBar({ value }: { value: number }) {
   );
 }
 
+/** Видимость в карточке записи: там она показывается всегда, а не только у служебных. */
+export function VisibilityPill({ isPublic }: { isPublic: boolean }) {
+  return isPublic ? <Pill tone="brand">Публичная — в отчёт</Pill> : <Pill>Служебная</Pill>;
+}
+
 /**
  * Служебная запись: в отчёт руководству она не идёт. Публичность — обычное
  * состояние, поэтому отметка появляется только у служебных записей.

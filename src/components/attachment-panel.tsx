@@ -2,7 +2,6 @@
 
 import { useActionState, useRef, useState } from "react";
 import { ConfirmSubmit } from "@/components/confirm-submit";
-import { SubmitButton } from "@/components/submit-button";
 import { MAX_ATTACHMENT_SIZE, MAX_UPLOAD_BATCH_SIZE } from "@/lib/limits";
 import type { ActionResult } from "@/lib/validation";
 
@@ -29,7 +28,7 @@ type Props = {
 
 /** Вложения записи: список файлов и добавление перетаскиванием или выбором. */
 export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
-  const [state, formAction] = useActionState(upload, null);
+  const [state, formAction, pending] = useActionState(upload, null);
   const [dragOver, setDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -132,26 +131,45 @@ export function AttachmentPanel({ attachments, owner, upload, remove }: Props) {
           acceptFiles(event.dataTransfer.files);
         }}
         className={`rounded-xl border-2 border-dashed px-4 py-5 text-center text-sm ${
-          dragOver ? "border-gray-900 bg-gray-50" : "border-gray-200"
+          dragOver ? "border-brand bg-brand-soft" : "border-gray-300 bg-gray-50/60"
         }`}
       >
         <input type="hidden" name={owner.field} value={owner.id} />
+        {/* Своя подпись вместо системной кнопки: браузер пишет её на языке
+            системы («Choose Files»), а интерфейс должен быть русским. Файл
+            уходит сразу после выбора, как и при перетаскивании. */}
         <input
           ref={inputRef}
+          id={`attach-${owner.id}`}
           type="file"
           name="file"
           multiple
-          onChange={(event) => setLocalError(tooBig(event.target.files))}
-          className="mx-auto block text-sm"
+          onChange={(event) => {
+            const error = tooBig(event.target.files);
+            setLocalError(error);
+            if (!error && event.target.files?.length) formRef.current?.requestSubmit();
+          }}
+          className="sr-only"
         />
-        <p className="mt-2 text-gray-500">
-          Перетащите файлы сюда или выберите их выше. Один файл — до{" "}
-          {formatSize(MAX_ATTACHMENT_SIZE)}, за один раз — до{" "}
+        <label
+          htmlFor={`attach-${owner.id}`}
+          className="block cursor-pointer text-gray-600 hover:text-gray-900"
+        >
+          {pending ? (
+            "Загружаем…"
+          ) : (
+            <>
+              Перетащите документ сюда или{" "}
+              <span className="font-medium text-brand underline-offset-2 hover:underline">
+                нажмите, чтобы выбрать файл
+              </span>
+            </>
+          )}
+        </label>
+        <p className="mt-1 text-xs text-gray-500">
+          Один файл — до {formatSize(MAX_ATTACHMENT_SIZE)}, за один раз — до{" "}
           {formatSize(MAX_UPLOAD_BATCH_SIZE)}.
         </p>
-        <div className="mt-3">
-          <SubmitButton pendingLabel="Загружаем…">Прикрепить</SubmitButton>
-        </div>
         {localError && <p className="mt-2 text-sm text-red-700">{localError}</p>}
         {!localError && state && !state.ok && (
           <p className="mt-2 text-sm text-red-700">{state.error}</p>
