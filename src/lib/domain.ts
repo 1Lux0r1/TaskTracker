@@ -503,3 +503,54 @@ export function integrationProgress(
   }
   return passed;
 }
+
+/* ─── Планирование развития ───────────────────────────────────────────────── */
+
+/** Приоритет направления — решение руководства. */
+export const PLAN_PRIORITIES = [
+  { value: "MAIN", label: "Главное" },
+  { value: "SUPPORT", label: "Обеспечивающее" },
+  { value: "DEFERRED", label: "Отложено" },
+] as const;
+
+export type PlanPriority = (typeof PLAN_PRIORITIES)[number]["value"];
+
+export function planPriorityLabel(value: string): string {
+  return PLAN_PRIORITIES.find((item) => item.value === value)?.label ?? value;
+}
+
+/**
+ * Статусы ДК в порядке конвейера. База хранит их строками и сортирует по
+ * алфавиту, поэтому порядок берётся отсюда, а не из запроса.
+ */
+export const PLAN_DK_STATUSES = [
+  { value: "PRESTUDY", label: "Предпроектное исследование", tone: "bg-gray-100 text-gray-600" },
+  { value: "PLANNING", label: "Верхнеуровневое планирование", tone: "bg-blue-50 text-blue-700" },
+  { value: "ANALYSIS", label: "Анализ: БА и архитектор", tone: "bg-purple-50 text-purple-600" },
+  { value: "TR_APPROVAL", label: "Согласование ТР", tone: "bg-amber-50 text-amber-700" },
+  { value: "PRODUCTION", label: "Производство", tone: "bg-orange-50 text-orange-600" },
+  { value: "DONE", label: "Завершено", tone: "bg-green-50 text-green-700" },
+  { value: "FROZEN", label: "Заморожено / отменено", tone: "bg-red-50 text-red-600" },
+] as const;
+
+export type PlanDkStatus = (typeof PLAN_DK_STATUSES)[number]["value"];
+
+export function planDkStatus(value: string) {
+  return PLAN_DK_STATUSES.find((item) => item.value === value) ?? PLAN_DK_STATUSES[0];
+}
+
+/**
+ * Уровень этапа: к чему относится задача. БА — к ДК, а если указан МС, то к
+ * МС; Арх — к ДК; СА, Р, Т, Док, DO, Внед — к МС.
+ */
+export const PLAN_STAGE_LEVELS = [
+  { value: "DK", label: "ДК" },
+  { value: "DK_OR_MS", label: "ДК или МС" },
+  { value: "MS", label: "МС" },
+] as const;
+
+export type PlanStageLevel = (typeof PLAN_STAGE_LEVELS)[number]["value"];
+
+export function planStageLevelLabel(value: string): string {
+  return PLAN_STAGE_LEVELS.find((item) => item.value === value)?.label ?? value;
+}

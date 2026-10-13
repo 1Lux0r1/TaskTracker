@@ -151,6 +151,7 @@ async function railData(): Promise<{
         { href: "/integrations", label: "Интеграции" },
         { href: "/meetings", label: "Встречи", count: aheadMeetings },
         { href: "/calendar", label: "Календарь" },
+        { href: "/planning", label: "Планирование развития" },
       ],
     },
     {

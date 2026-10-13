@@ -22,7 +22,9 @@
     "db:reset": "prisma migrate reset --force",
     "test": "vitest run",
     "test:watch": "vitest",
-    "search:reindex": "tsx --env-file-if-exists=.env scripts/reindex-search.ts"
+    "search:reindex": "tsx --env-file-if-exists=.env scripts/reindex-search.ts",
+    "planning:sample": "tsx --env-file-if-exists=.env scripts/planning-sample.ts",
+    "planning:import": "tsx --env-file-if-exists=.env scripts/planning-import.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",

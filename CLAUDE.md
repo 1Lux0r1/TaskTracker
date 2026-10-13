@@ -276,6 +276,9 @@ Docker + Caddy для облака, инструкция по установке
 - `src/lib/` — предметные модули: `letters.ts`, `tracks.ts`, `search.ts`,
   `attachments.ts`, `auth.ts`, `reports.ts`, фильтры реестров, `validation.ts`.
 - `src/lib/excel/` — импорт и экспорт, разбор хроники и колонок.
+- `src/lib/planning/` — модуль «Планирование развития»: генератор шифра
+  (`cipher.ts`, единственное место сборки шифра), сроки, решётка, разбор
+  книги. Описание — `docs/planning.md`.
 - `prisma/schema.prisma` и `prisma/migrations/` — модель и миграции.
 - `docs/` — архитектура, модель данных, разбор Excel, сопоставление колонок, поиск и
   аналитика, дорожная карта.
@@ -294,6 +297,8 @@ npm run db:deploy      # миграции + переиндексация пои�
 npm run db:seed        # демо-данные
 npm run auth:admin     # создать первого администратора
 npm run search:reindex # пересобрать поисковый индекс
+npm run planning:sample # тестовый пример планирования развития
+npm run planning:import -- книга.xlsx [--apply] # справочники из книги планирования
 ```
 
 Перед коммитом прогоняются `npm test`, `npm run typecheck`, `npm run lint`.

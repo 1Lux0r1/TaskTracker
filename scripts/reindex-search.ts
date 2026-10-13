@@ -131,10 +131,20 @@ async function main(): Promise<void> {
     });
   }
 
+  // Задачи плана развития: ищутся по шифру и наименованию.
+  const planTasks = await prisma.planTask.findMany({ select: { id: true, cipher: true, name: true } });
+
+  for (const task of planTasks) {
+    await prisma.planTask.update({
+      where: { id: task.id },
+      data: { searchIndex: buildSearchIndex([task.cipher, task.name]) },
+    });
+  }
+
   console.log(
     `Поиск пересобран: задач ${tasks.length}, писем ${letters.length}, ` +
       `документов ${documents.length}, встреч ${meetings.length}, ` +
-      `страниц справочника ${pages.length}.`,
+      `страниц справочника ${pages.length}, задач плана ${planTasks.length}.`,
   );
 }
 
