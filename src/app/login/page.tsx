@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { login } from "@/app/actions/auth";
+import { login, setupFirstAdmin } from "@/app/actions/auth";
+import { FirstAdminForm } from "@/components/first-admin-form";
 import { LoginForm } from "@/components/login-form";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -16,8 +17,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const rawNext = params.next;
   const next = typeof rawNext === "string" && rawNext.startsWith("/") ? rawNext : undefined;
 
-  // Пока в системе нет ни одного пароля, входить некому: показываем,
-  // как завести первого администратора, вместо пустой формы без объяснений.
+  // Пока в системе нет ни одного пароля, входить некому: вместо формы входа
+  // предлагаем завести первого администратора.
   const withPassword = await prisma.member.count({ where: { passwordHash: { not: null } } });
 
   return (
@@ -27,17 +28,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
       <div className="card mt-6 p-6">
         {withPassword === 0 ? (
-          <div className="space-y-2 text-sm text-gray-600">
-            <p className="font-medium text-gray-900">Пользователи ещё не заведены.</p>
-            <p>
-              Создайте первого администратора командой{" "}
-              <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">
-                npm run auth:admin
-              </code>{" "}
-              — она спросит почту, ФИО и пароль. Дальше администратор заводит остальных на
-              странице «Сотрудники».
-            </p>
-          </div>
+          <FirstAdminForm action={setupFirstAdmin} />
         ) : (
           <LoginForm action={login} next={next} />
         )}

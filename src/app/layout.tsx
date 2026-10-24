@@ -39,7 +39,7 @@ export default async function RootLayout({ children, panel }: LayoutProps<"/">) 
   // Значок показывает только уже записанное: пересборку просрочек делает
   // страница уведомлений, иначе она шла бы на каждой странице системы.
   const unread = user ? await unreadCount(user.id) : 0;
-  const rail = user ? await railData() : null;
+  const rail = user ? await railData(user.role === "ADMIN") : null;
 
   return (
     <html
@@ -116,7 +116,7 @@ export default async function RootLayout({ children, panel }: LayoutProps<"/">) 
  * Числа у пунктов меню: сколько записей ждёт работы. Считаем по всем
  * проектам — боковое меню общее, а проект выбирается уже внутри раздела.
  */
-async function railData(): Promise<{
+async function railData(isAdmin: boolean): Promise<{
   groups: RailGroup[];
   project: { name: string; note: string } | null;
 }> {
@@ -160,6 +160,8 @@ async function railData(): Promise<{
         { href: "/reports", label: "Отчёты" },
         { href: "/directory", label: "Справочники" },
         { href: "/import", label: "Импорт" },
+        // Копии и восстановление — дело администратора, участнику пункт не нужен.
+        ...(isAdmin ? [{ href: "/maintenance", label: "Обслуживание" }] : []),
       ],
     },
   ];
