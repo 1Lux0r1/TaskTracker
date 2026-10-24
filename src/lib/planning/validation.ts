@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PLAN_DK_STATUSES, PLAN_PRIORITIES, PLAN_STAGE_LEVELS } from "@/lib/domain";
-import { PLAN_CODE_PATTERN, PLAN_STAGE_CODE_PATTERN } from "@/lib/planning/cipher";
+import { PLAN_CODE_PATTERN, PLAN_PART_CODE_PATTERN, PLAN_STAGE_CODE_PATTERN } from "@/lib/planning/cipher";
 import { optionalDate, optionalNumber, optionalText } from "@/lib/validation";
 
 const code = (what: string) =>
@@ -33,7 +33,12 @@ export const planDirectionSchema = z.object({
 
 export const planPartSchema = z.object({
   directionId: id("направление"),
-  code: code("часть направления"),
+  code: z
+    .string()
+    .trim()
+    .min(1, "Укажите код части направления")
+    .max(12, "Код части — не длиннее 12 символов")
+    .regex(PLAN_PART_CODE_PATTERN, "Код части — буквы и цифры (например, номер раздела ОФТ: 1, 14), без точек и пробелов"),
   name: name("часть направления"),
 });
 
@@ -68,6 +73,7 @@ export const planDkSchema = z.object({
   status: z.enum(PLAN_DK_STATUSES.map((item) => item.value) as [string, ...string[]]),
   statusSince: optionalDate,
   note: optionalText,
+  deadline: optionalDate,
   trApprovedAt: optionalDate,
 });
 

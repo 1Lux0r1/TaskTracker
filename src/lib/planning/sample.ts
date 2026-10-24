@@ -4,24 +4,28 @@
  * с МС 08 terra-analyser-bff и ДК 02 «Поиск точек подключения к
  * магистральной сети».
  *
- * Пока книги планирования нет, названия направления, части и подсистемы
- * и сроки задач — рабочие. Импорт из книги (scripts/planning-import.ts)
- * перезапишет справочники по коду. Загрузка повторяемая: существующие
+ * Названия направления, части и сроки задач — рабочие; terra-analyser-bff,
+ * как в книге планирования, — № 8 реестра и третий МС подсистемы TA. Импорт
+ * из книги (scripts/planning-import.ts) обновит справочники по коду. Загрузка повторяемая: существующие
  * записи находятся по коду и номеру, задачи — по шифру.
  */
 import type { PrismaClient } from "../../generated/prisma/client";
 import { addDays } from "./dates";
 import { checkTaskDraft, planTaskSearchIndex } from "./service";
 
-/** Этапы конвейера в порядке методики: СА → Р → Т → Док → DO → Внед. */
+/**
+ * Этапы в порядке книги планирования: ОА → БА → Арх → СА → Р → Т → Док →
+ * Экс → Внед. «Экс» в книге заменил прежний DO (DevOps).
+ */
 export const DEFAULT_PLAN_STAGES = [
+  { code: "ОА", name: "Отраслевой анализ", level: "DK" },
   { code: "БА", name: "Бизнес-анализ", level: "DK_OR_MS" },
-  { code: "Арх", name: "Архитектура", level: "DK" },
+  { code: "Арх", name: "Архитектура", level: "DK_OR_MS" },
   { code: "СА", name: "Системный анализ", level: "MS" },
   { code: "Р", name: "Разработка", level: "MS" },
   { code: "Т", name: "Тестирование", level: "MS" },
-  { code: "Док", name: "Документирование", level: "MS" },
-  { code: "DO", name: "DevOps: вывод в среды", level: "MS" },
+  { code: "Док", name: "Документация", level: "MS" },
+  { code: "Экс", name: "Эксплуатация", level: "MS" },
   { code: "Внед", name: "Внедрение", level: "MS" },
 ] as const;
 
@@ -53,7 +57,7 @@ const SAMPLE_TASKS: {
   { dk: 1, stage: "Р", ms: 8, name: "Доработка трассировок по замечаниям", start: d(2026, 11, 23), weeks: 2 },
   { dk: 1, stage: "Т", ms: 8, name: "Повторное тестирование трассировок", start: d(2026, 12, 7), weeks: 1 },
   { dk: 1, stage: "Док", ms: 8, name: "Документация terra-analyser-bff", start: d(2026, 12, 14), weeks: 1 },
-  { dk: 1, stage: "DO", ms: 8, name: "Вывод terra-analyser-bff в продуктив", start: d(2026, 12, 21), weeks: 1 },
+  { dk: 1, stage: "Экс", ms: 8, name: "Вывод terra-analyser-bff в продуктив", start: d(2026, 12, 21), weeks: 1 },
   { dk: 2, stage: "БА", ms: null, name: "Бизнес-анализ поиска точек подключения", start: d(2026, 10, 12), weeks: 3 },
   { dk: 2, stage: "Арх", ms: null, name: "Архитектурное решение поиска точек подключения", start: d(2026, 11, 2), weeks: 2 },
 ];
@@ -92,14 +96,25 @@ export async function loadPlanningSample(db: PrismaClient): Promise<{ tasks: num
   const subsystem = await db.planSubsystem.upsert({
     where: { systemId_code: { systemId: system.id, code: "TA" } },
     update: {},
-    create: { systemId: system.id, code: "TA", name: "Terra Analyser" },
+    create: { systemId: system.id, code: "TA", name: "Подсистема анализа территорий" },
   });
 
-  const ms = await db.planModule.upsert({
+  // Номер в подсистеме — 3, как в книге, если он свободен; иначе следующий.
+  const existingMs = await db.planModule.findUnique({
     where: { systemId_number: { systemId: system.id, number: 8 } },
-    update: {},
-    create: { systemId: system.id, number: 8, name: "terra-analyser-bff", subsystemId: subsystem.id },
   });
+  const takenThird = await db.planModule.findUnique({
+    where: { subsystemId_subsystemNumber: { subsystemId: subsystem.id, subsystemNumber: 3 } },
+  });
+  const subsystemNumber = takenThird ? subsystem.lastMsNumber + 1 : 3;
+  const ms =
+    existingMs ??
+    (await db.planModule.create({
+      data: { systemId: system.id, number: 8, subsystemNumber, name: "terra-analyser-bff", subsystemId: subsystem.id },
+    }));
+  if (!existingMs && subsystem.lastMsNumber < subsystemNumber) {
+    await db.planSubsystem.update({ where: { id: subsystem.id }, data: { lastMsNumber: subsystemNumber } });
+  }
   if (system.lastMsNumber < 8) {
     await db.planSystem.update({ where: { id: system.id }, data: { lastMsNumber: 8 } });
   }

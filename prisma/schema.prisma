@@ -620,13 +620,13 @@ model Notification {
 /// Сохранённый набор фильтров реестра. Набор личный: у каждого свой срез
 /// работы, а общий набор потребовал бы договорённости, кто его меняет.
 model FilterPreset {
-  id       String @id @default(cuid())
-  memberId String
+  id        String   @id @default(cuid())
+  memberId  String
   /// Реестр, к которому относится набор: TASK, LETTER, DOCUMENT или MEETING.
-  scope    String
-  name     String
+  scope     String
+  name      String
   /// Условия отбора строкой параметров адреса, без ведущего «?».
-  query    String
+  query     String
   /// Набор по умолчанию применяется при открытии реестра. Он один на реестр.
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -638,7 +638,8 @@ model FilterPreset {
   @@index([memberId, scope])
 }
 
-/* ─── Планирование развития ──────────────────────────────────────────────────
+/**
+ * ─── Планирование развития ──────────────────────────────────────────────────
  * Модуль переносит методику из книги «Планирование развития системы»:
  * Система → Направление → Блок (направление + часть) → ДК → задачи плана.
  * Блок отдельной записью не хранится: это пара «направление + часть», то есть
@@ -704,13 +705,15 @@ model PlanDirectionPart {
 
 /// Подсистема — справочник системы.
 model PlanSubsystem {
-  id        String   @id @default(cuid())
-  systemId  String
-  code      String
-  name      String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  systemId     String
+  code         String
+  name         String
+  sortOrder    Int      @default(0)
+  /// Последний выданный номер МС в подсистеме: номер не переиспользуется.
+  lastMsNumber Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   system  PlanSystem   @relation(fields: [systemId], references: [id], onDelete: Restrict)
   modules PlanModule[]
@@ -722,20 +725,24 @@ model PlanSubsystem {
 /// МС (микросервис). Номер сквозной по системе, после присвоения не меняется.
 /// Версия ведётся руками и в шифр не входит.
 model PlanModule {
-  id          String   @id @default(cuid())
-  systemId    String
-  number      Int
-  name        String
-  subsystemId String
-  version     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  systemId        String
+  number          Int
+  name            String
+  subsystemId     String
+  /// Номер МС внутри подсистемы — он стоит в шифре книги (TA.1), сквозной
+  /// номер реестра — нет. Выдаётся счётчиком подсистемы.
+  subsystemNumber Int?
+  version         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   system    PlanSystem    @relation(fields: [systemId], references: [id], onDelete: Restrict)
   subsystem PlanSubsystem @relation(fields: [subsystemId], references: [id], onDelete: Restrict)
   tasks     PlanTask[]
 
   @@unique([systemId, number])
+  @@unique([subsystemId, subsystemNumber])
   @@index([subsystemId])
 }
 
@@ -765,6 +772,8 @@ model PlanDk {
   status       String    @default("PRESTUDY")
   statusSince  DateTime?
   note         String?
+  /// Срок пункта дорожной карты.
+  deadline     DateTime?
   /// Дата «ТР согласован».
   trApprovedAt DateTime?
   createdAt    DateTime  @default(now())

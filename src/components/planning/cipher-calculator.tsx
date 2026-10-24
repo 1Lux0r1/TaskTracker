@@ -8,6 +8,7 @@ import {
   CIPHER_SETTINGS,
   buildCipher,
   formatPlanNumber,
+  msLabel,
   nextRepeat,
   stageWithRepeat,
 } from "@/lib/planning/cipher";
@@ -23,7 +24,7 @@ export type CalculatorData = {
     label: string;
     dks: { id: string; number: number; name: string; subsystemCode: string | null }[];
   }[];
-  modules: { id: string; number: number; name: string; subsystemCode: string }[];
+  modules: { id: string; number: number; subsystemNumber: number | null; name: string; subsystemCode: string }[];
   stages: { id: string; code: string; name: string; level: string }[];
   existing: { id: string; dkId: string; stageId: string; moduleId: string | null; repeat: number; cipher: string }[];
 };
@@ -100,6 +101,7 @@ export function CipherCalculator({ data, defaults = {}, action, submitLabel }: P
       msSubsystem: ms?.subsystemCode,
       dkNumber: dk?.number,
       msNumber: ms?.number,
+      msSubsystemNumber: ms?.subsystemNumber,
       stage: stage?.code,
       repeat,
     },
@@ -182,7 +184,7 @@ export function CipherCalculator({ data, defaults = {}, action, submitLabel }: P
               <option value="">{msAllowed ? "— без МС: задача по ДК —" : "Этап ведётся по ДК"}</option>
               {data.modules.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {formatPlanNumber(item.number)} · {item.name} ({item.subsystemCode})
+                  {msLabel({ ...item, subsystem: { code: item.subsystemCode } })} · {item.name}
                 </option>
               ))}
             </select>

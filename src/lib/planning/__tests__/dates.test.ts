@@ -57,9 +57,10 @@ describe("сроки задачи плана", () => {
     expect(resolvePlanDates({ start: d(2026, 10, 5), weeks: 1.5, finish: null }).ok).toBe(false);
   });
 
-  it("сроки вне календаря 2026–2027 отклоняются", () => {
-    expect(resolvePlanDates({ start: d(2025, 12, 1), weeks: 1, finish: null }).ok).toBe(false);
-    expect(resolvePlanDates({ start: d(2027, 12, 27), weeks: 2, finish: null }).ok).toBe(false);
+  it("сроки вне календаря 2025–2029 отклоняются", () => {
+    expect(resolvePlanDates({ start: d(2024, 12, 1), weeks: 1, finish: null }).ok).toBe(false);
+    expect(resolvePlanDates({ start: d(2029, 12, 27), weeks: 2, finish: null }).ok).toBe(false);
+    expect(resolvePlanDates({ start: d(2025, 4, 1), weeks: 4, finish: null }).ok).toBe(true);
   });
 });
 
@@ -70,11 +71,12 @@ describe("недели календаря", () => {
     expect(isoWeek(d(2027, 1, 1))).toEqual({ year: 2026, week: 53 });
   });
 
-  it("шкала покрывает 2026–2027 неделями с понедельника", () => {
-    const weeks = planWeeks();
+  it("шкала идёт неделями с понедельника", () => {
+    const calendar = { from: d(2026, 1, 1), to: d(2027, 12, 31) };
+    const weeks = planWeeks(calendar);
     expect(weeks[0].start).toEqual(d(2025, 12, 29));
     expect(weeks.at(-1)!.start).toEqual(d(2027, 12, 27));
     expect(weeks).toHaveLength(105);
-    expect(weekIndex(d(2026, 1, 5))).toBe(1);
+    expect(weekIndex(d(2026, 1, 5), calendar)).toBe(1);
   });
 });

@@ -1,18 +1,20 @@
 /**
  * Генератор шифра задачи плана — единственное место, где шифр собирается.
  *
- * Формат: СИСТЕМА.НАПРАВЛЕНИЕ.ЧАСТЬ.ПОДСИСТЕМА.ДК.МС.ЭТАП. Позиции
- * дописываются по мере готовности, неизвестные опускаются:
- *   RKII.Gaz                    — ОФТ направления
- *   RKII.Gaz.Rte                — блок
- *   RKII.Gaz.Rte.TA.01          — ДК
- *   RKII.Gaz.Rte.TA.01.БА       — БА по ДК
- *   RKII.Gaz.Rte.TA.01.08.Р     — разработка по МС 08
- *   RKII.Gaz.Rte.TA.01.08.Р2    — возврат, повтор разработки
+ * Формат книги планирования (с 24.10.2026, утверждён по книге заказчика):
+ * СИСТЕМА.НАПРАВЛЕНИЕ.РАЗДЕЛ.ПУНКТ.ПОДСИСТЕМА.МС.ЭТАП, номера без нулей,
+ * подсистема — та, где живёт МС, номер МС — внутри подсистемы:
+ *   RKII.TATep                  — направление ОФТ
+ *   RKII.TATep.1                — раздел ОФТ (в модели — часть, блок)
+ *   RKII.TATep.1.1              — пункт дорожной карты (ДК)
+ *   RKII.TATep.1.1.БА           — БА по пункту, без МС
+ *   RKII.TATep.1.1.TA.1.Р       — разработка по МС TA.1
+ *   RKII.TATep.1.1.TA.1.Р2      — возврат, повтор разработки
  *
- * Открытое решение заказчика: подсистема может уйти из ДК и браться из МС
- * (RKII.Gaz.Rte.01.TA.08.Р). Смена формата — правка CIPHER_SETTINGS ниже,
- * после неё шифры пересобираются кнопкой в справочниках модуля.
+ * Прежний формат из ТЗ 13.10 (…ЧАСТЬ.ПОДСИСТЕМА.ДК.МС.ЭТАП, подсистема у ДК,
+ * сквозной номер МС, два знака) сохранён как CIPHER_SETTINGS_TZ. Смена
+ * формата — правка CIPHER_SETTINGS ниже, после неё шифры пересобираются
+ * кнопкой в справочниках модуля.
  */
 
 export type CipherSegment = "system" | "direction" | "part" | "subsystem" | "dk" | "ms" | "stage";
@@ -20,24 +22,35 @@ export type CipherSegment = "system" | "direction" | "part" | "subsystem" | "dk"
 export type CipherSettings = {
   /** Порядок сегментов слева направо. */
   segments: CipherSegment[];
-  /** Откуда берётся подсистема: из ДК (утверждено) или из МС. */
+  /** Откуда берётся подсистема: из ДК или из МС. */
   subsystemSource: "dk" | "ms";
+  /** Какой номер МС стоит в шифре: сквозной по реестру или внутри подсистемы. */
+  msNumber: "registry" | "subsystem";
+  /** Сколько знаков у номеров ДК и МС: 2 — 01, 08; 1 — без ведущих нулей. */
+  numberWidth: number;
   separator: string;
 };
 
-/** Утверждённый формат: …ЧАСТЬ.ПОДСИСТЕМА.ДК.МС.ЭТАП, подсистема у ДК. */
-export const CIPHER_SETTINGS: CipherSettings = {
-  segments: ["system", "direction", "part", "subsystem", "dk", "ms", "stage"],
-  subsystemSource: "dk",
+/** Формат книги планирования: подсистема и номер МС — из МС, без нулей. */
+export const CIPHER_SETTINGS_BOOK: CipherSettings = {
+  segments: ["system", "direction", "part", "dk", "subsystem", "ms", "stage"],
+  subsystemSource: "ms",
+  msNumber: "subsystem",
+  numberWidth: 1,
   separator: ".",
 };
 
-/** Вариант, который рассматривает заказчик: подсистема из МС, после ДК. */
-export const CIPHER_SETTINGS_SUBSYSTEM_FROM_MS: CipherSettings = {
-  segments: ["system", "direction", "part", "dk", "subsystem", "ms", "stage"],
-  subsystemSource: "ms",
+/** Формат ТЗ 13.10: …ЧАСТЬ.ПОДСИСТЕМА.ДК.МС.ЭТАП, подсистема у ДК. */
+export const CIPHER_SETTINGS_TZ: CipherSettings = {
+  segments: ["system", "direction", "part", "subsystem", "dk", "ms", "stage"],
+  subsystemSource: "dk",
+  msNumber: "registry",
+  numberWidth: 2,
   separator: ".",
 };
+
+/** Действующий формат. */
+export const CIPHER_SETTINGS: CipherSettings = CIPHER_SETTINGS_BOOK;
 
 export type CipherInput = {
   system?: string | null;
@@ -48,15 +61,18 @@ export type CipherInput = {
   /** Подсистема МС. */
   msSubsystem?: string | null;
   dkNumber?: number | null;
+  /** Сквозной номер МС в реестре системы. */
   msNumber?: number | null;
+  /** Номер МС внутри его подсистемы. */
+  msSubsystemNumber?: number | null;
   stage?: string | null;
   /** 1 — первая задача этапа, номер не пишется; 2 и дальше — повторы. */
   repeat?: number | null;
 };
 
-/** Номер ДК и МС — два знака, после 99 — три: 01, 08, 99, 100. */
-export function formatPlanNumber(value: number): string {
-  return String(value).padStart(2, "0");
+/** Номер ДК и МС в действующем формате: 1 или 01; после 99 — три знака. */
+export function formatPlanNumber(value: number, width: number = CIPHER_SETTINGS.numberWidth): string {
+  return String(value).padStart(width, "0");
 }
 
 /** Код этапа с номером повтора: Р, Р2, Р3. Номер пишется только у повторов. */
@@ -64,16 +80,41 @@ export function stageWithRepeat(stage: string, repeat: number | null | undefined
   return repeat && repeat > 1 ? `${stage}${repeat}` : stage;
 }
 
+/** Номер МС, который идёт в шифр при данных настройках. */
+export function cipherMsNumber(
+  ms: { number: number; subsystemNumber: number | null } | null | undefined,
+  settings: CipherSettings = CIPHER_SETTINGS,
+): number | null {
+  if (!ms) return null;
+  return settings.msNumber === "subsystem" ? ms.subsystemNumber : ms.number;
+}
+
+/** Подпись МС в списках: подсистема и номер так, как они стоят в шифре. */
+export function msLabel(
+  ms: { number: number; subsystemNumber: number | null; subsystem: { code: string } },
+  settings: CipherSettings = CIPHER_SETTINGS,
+): string {
+  const number = cipherMsNumber(ms, settings);
+  if (settings.msNumber === "subsystem") {
+    return `${ms.subsystem.code}.${number ?? "?"}`;
+  }
+  return formatPlanNumber(ms.number, settings.numberWidth);
+}
+
 export function buildCipher(input: CipherInput, settings: CipherSettings = CIPHER_SETTINGS): string {
-  const subsystem = settings.subsystemSource === "dk" ? input.dkSubsystem : input.msSubsystem;
+  const msNumber = settings.msNumber === "subsystem" ? input.msSubsystemNumber : input.msNumber;
+  // Подсистема из МС пишется только вместе с номером МС: без МС её нет.
+  const subsystem = settings.subsystemSource === "dk" ? input.dkSubsystem : msNumber ? input.msSubsystem : null;
+  const number = (value: number | null | undefined) =>
+    value ? formatPlanNumber(value, settings.numberWidth) : null;
 
   const values: Record<CipherSegment, string | null> = {
     system: clean(input.system),
     direction: clean(input.direction),
     part: clean(input.part),
     subsystem: clean(subsystem),
-    dk: input.dkNumber ? formatPlanNumber(input.dkNumber) : null,
-    ms: input.msNumber ? formatPlanNumber(input.msNumber) : null,
+    dk: number(input.dkNumber),
+    ms: number(msNumber),
     stage: clean(input.stage) ? stageWithRepeat(clean(input.stage)!, input.repeat) : null,
   };
 
@@ -97,6 +138,12 @@ export function nextRepeat(existing: number[]): number {
  * разделитель шифра, поэтому в коде её быть не может.
  */
 export const PLAN_CODE_PATTERN = /^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё0-9]*$/;
+
+/**
+ * Код части (раздела ОФТ): в книге это номер раздела — 1, 2, 14, — поэтому
+ * можно и одни цифры. Точки и пробелы по-прежнему нельзя.
+ */
+export const PLAN_PART_CODE_PATTERN = /^[A-Za-zА-Яа-яЁё0-9]+$/;
 
 /**
  * Код этапа — только буквы: цифра в конце читалась бы как номер повтора

@@ -4,7 +4,7 @@ import { NoSystem } from "@/components/planning/no-system";
 import { SystemSwitch } from "@/components/planning/system-switch";
 import { SubmitButton } from "@/components/submit-button";
 import { PLAN_DK_STATUSES, formatDate, planDkStatus, plural } from "@/lib/domain";
-import { formatPlanNumber } from "@/lib/planning/cipher";
+import { msLabel } from "@/lib/planning/cipher";
 import { blockCipher, dkCipher, loadPlanTree, pickSystem } from "@/lib/planning/queries";
 
 export const dynamic = "force-dynamic";
@@ -55,9 +55,11 @@ export default async function RoadmapPage(props: PageProps<"/planning/roadmap">)
               <div className="grid gap-3 lg:grid-cols-2">
                 {part.dks.map((dk) => {
                   const status = planDkStatus(dk.status);
-                  const modules = [...new Set(dk.tasks.flatMap((task) => (task.module ? [task.module.number] : [])))].sort(
-                    (a, b) => a - b,
-                  );
+                  const modules = [
+                    ...new Map(
+                      dk.tasks.flatMap((task) => (task.module ? [[task.module.number, msLabel(task.module)] as const] : [])),
+                    ),
+                  ].sort((a, b) => a[0] - b[0]);
                   const stages = [...new Set(dk.tasks.filter((task) => !task.module).map((task) => task.stage.code))];
                   // Производство начинается, когда согласованы ОФТ направления и ТР ДК.
                   const readyForProduction = Boolean(direction.oftApprovedAt && dk.trApprovedAt);
@@ -73,6 +75,7 @@ export default async function RoadmapPage(props: PageProps<"/planning/roadmap">)
                         <span className={`badge ${status.tone}`}>{status.label}</span>
                       </div>
                       <p className="mt-1 text-[12.5px] text-gray-500">
+                        {dk.deadline ? `Срок ${formatDate(dk.deadline)} · ` : ""}
                         Статус с {formatDate(dk.statusSince)} · ТР{" "}
                         {dk.trApprovedAt ? `согласован ${formatDate(dk.trApprovedAt)}` : "не согласован"}
                         {readyForProduction ? " · можно в производство" : ""}
@@ -84,9 +87,9 @@ export default async function RoadmapPage(props: PageProps<"/planning/roadmap">)
                             {code}
                           </span>
                         ))}
-                        {modules.map((number) => (
+                        {modules.map(([number, label]) => (
                           <span key={number} className="badge bg-gray-100 font-mono text-gray-700">
-                            МС {formatPlanNumber(number)}
+                            МС {label}
                           </span>
                         ))}
                         <span className="ml-auto text-[12.5px] text-gray-500">

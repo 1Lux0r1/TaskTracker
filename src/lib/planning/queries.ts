@@ -116,7 +116,7 @@ export async function loadCalculatorData(system: { id: string; code: string }) {
     }),
     prisma.planModule.findMany({
       where: { systemId: system.id },
-      orderBy: { number: "asc" },
+      orderBy: [{ subsystem: { sortOrder: "asc" } }, { subsystem: { code: "asc" } }, { subsystemNumber: "asc" }, { number: "asc" }],
       include: { subsystem: { select: { code: true } } },
     }),
     prisma.planStage.findMany({ orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
@@ -143,6 +143,7 @@ export async function loadCalculatorData(system: { id: string; code: string }) {
     modules: modules.map((item) => ({
       id: item.id,
       number: item.number,
+      subsystemNumber: item.subsystemNumber,
       name: item.name,
       subsystemCode: item.subsystem.code,
     })),

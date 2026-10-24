@@ -1,4 +1,5 @@
 import { PLAN_DK_STATUSES, toDateInputValue } from "@/lib/domain";
+import { CIPHER_SETTINGS } from "@/lib/planning/cipher";
 
 type Defaults = {
   name: string;
@@ -7,6 +8,7 @@ type Defaults = {
   statusSince: Date | null;
   note: string | null;
   trApprovedAt: Date | null;
+  deadline: Date | null;
 };
 
 type Props = {
@@ -23,17 +25,6 @@ export function DkFields({ defaults, subsystems }: Props) {
         <input name="name" required maxLength={300} defaultValue={defaults.name} className="input" />
       </label>
       <label className="field">
-        Подсистема
-        <select name="subsystemId" defaultValue={defaults.subsystemId ?? ""} className="input">
-          <option value="">Ещё не определена</option>
-          {subsystems.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.code} · {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
         Статус
         <select name="status" defaultValue={defaults.status} className="input">
           {PLAN_DK_STATUSES.map((item) => (
@@ -48,8 +39,28 @@ export function DkFields({ defaults, subsystems }: Props) {
         <input type="date" name="statusSince" defaultValue={toDateInputValue(defaults.statusSince)} className="input" />
       </label>
       <label className="field">
+        Срок
+        <input type="date" name="deadline" defaultValue={toDateInputValue(defaults.deadline)} className="input" />
+      </label>
+      <label className="field">
         ТР согласован
         <input type="date" name="trApprovedAt" defaultValue={toDateInputValue(defaults.trApprovedAt)} className="input" />
+      </label>
+      <label className="field sm:col-span-2">
+        Подсистема
+        <select name="subsystemId" defaultValue={defaults.subsystemId ?? ""} className="input">
+          <option value="">Ещё не определена</option>
+          {subsystems.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.code} · {item.name}
+            </option>
+          ))}
+        </select>
+        {CIPHER_SETTINGS.subsystemSource === "ms" && (
+          <span className="text-[12.5px] font-normal text-gray-500">
+            Для справки: в шифр подсистема идёт из МС задачи.
+          </span>
+        )}
       </label>
       <label className="field sm:col-span-2">
         Примечание

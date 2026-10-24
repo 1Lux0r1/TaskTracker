@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NoSystem } from "@/components/planning/no-system";
 import { SystemSwitch } from "@/components/planning/system-switch";
 import { prisma } from "@/lib/db";
-import { formatPlanNumber } from "@/lib/planning/cipher";
+import { msLabel } from "@/lib/planning/cipher";
 import {
   type GridCounts,
   moduleTaskCounts,
@@ -35,9 +35,12 @@ export default async function GridPage(props: PageProps<"/planning/grid">) {
     }),
   ]);
 
-  const blocks = directions.flatMap((direction) =>
+  const allBlocks = directions.flatMap((direction) =>
     direction.parts.map((part) => ({ key: blockKey(direction, part), title: `${direction.name} · ${part.name}`, part })),
   );
+  // Колонки — только блоки с ДК: в книге десятки разделов ОФТ ещё без
+  // пунктов, и пустые колонки растягивали решётку на несколько экранов.
+  const blocks = allBlocks.filter((block) => block.part.dks.length > 0);
   const dks = blocks.flatMap((block) =>
     block.part.dks.map((dk) => ({ id: dk.id, blockKey: block.key, subsystemId: dk.subsystemId })),
   );
@@ -57,7 +60,7 @@ export default async function GridPage(props: PageProps<"/planning/grid">) {
   const shared = sharedModules(moduleCounts);
   const usedModules = modules.filter((item) => moduleCounts.has(item.id));
 
-  if (blocks.length === 0) {
+  if (allBlocks.length === 0) {
     return <p className="card p-6 text-sm text-gray-500">Блоков пока нет: решётке не из чего строиться.</p>;
   }
 
@@ -73,6 +76,7 @@ export default async function GridPage(props: PageProps<"/planning/grid">) {
               {by === "dk"
                 ? "Число ДК блока, которые задевают подсистему: у ДК или через МС задач"
                 : "Число задач: по МС — подсистема МС, по ДК — подсистема ДК"}
+              {blocks.length < allBlocks.length ? ` · блоки с ДК: ${blocks.length} из ${allBlocks.length}` : ""}
             </p>
           </div>
           <div className="seg">
@@ -106,8 +110,8 @@ export default async function GridPage(props: PageProps<"/planning/grid">) {
             blocks={blocks}
             rows={usedModules.map((item) => ({
               id: item.id,
-              label: formatPlanNumber(item.number),
-              note: `${item.name} · ${item.subsystem.code}`,
+              label: msLabel(item),
+              note: `№ ${item.number} · ${item.name}`,
               hot: shared.has(item.id),
             }))}
             counts={moduleCounts}

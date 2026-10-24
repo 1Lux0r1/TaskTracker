@@ -243,8 +243,9 @@ export async function deletePlanSubsystem(_state: State, formData: FormData): Pr
 /* ─── МС ──────────────────────────────────────────────────────────────────── */
 
 /**
- * Новый МС получает следующий номер системы. Номер берётся из счётчика, а не
- * из максимума существующих: номер удалённого МС повторно не выдаётся.
+ * Новый МС получает следующий номер системы и следующий номер в подсистеме.
+ * Номера берутся из счётчиков, а не из максимума существующих: номер
+ * удалённого МС повторно не выдаётся.
  */
 export async function createPlanModule(_state: State, formData: FormData): Promise<ActionResult> {
   await requireUser();
@@ -259,16 +260,28 @@ export async function createPlanModule(_state: State, formData: FormData): Promi
       where: { id: subsystem.systemId },
       data: { lastMsNumber: { increment: 1 } },
     });
-    await tx.planModule.create({
-      data: { ...parsed.data, systemId: subsystem.systemId, number: system.lastMsNumber },
+    const inSubsystem = await tx.planSubsystem.update({
+      where: { id: subsystem.id },
+      data: { lastMsNumber: { increment: 1 } },
     });
-    return system.lastMsNumber;
+    await tx.planModule.create({
+      data: {
+        ...parsed.data,
+        systemId: subsystem.systemId,
+        number: system.lastMsNumber,
+        subsystemNumber: inSubsystem.lastMsNumber,
+      },
+    });
+    return `${system.lastMsNumber}, в шифре ${subsystem.code}.${inSubsystem.lastMsNumber}`;
   });
   refresh();
-  return { ok: true, message: `МС добавлен под номером ${String(number).padStart(2, "0")}` };
+  return { ok: true, message: `МС добавлен в реестр под номером ${number}` };
 }
 
-/** Номер МС не правится: меняются название, подсистема и версия. */
+/**
+ * Номер МС в реестре не правится: меняются название, подсистема и версия.
+ * При переносе в другую подсистему МС получает там следующий номер.
+ */
 export async function updatePlanModule(_state: State, formData: FormData): Promise<ActionResult> {
   await requireUser();
   const id = field(formData, "id");
@@ -283,8 +296,17 @@ export async function updatePlanModule(_state: State, formData: FormData): Promi
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.planModule.update({ where: { id }, data: parsed.data });
-    if (current.subsystemId !== parsed.data.subsystemId) await recomputeCiphers(tx, current.systemId);
+    const moved = current.subsystemId !== parsed.data.subsystemId;
+    const subsystemNumber = moved
+      ? (
+          await tx.planSubsystem.update({
+            where: { id: subsystem.id },
+            data: { lastMsNumber: { increment: 1 } },
+          })
+        ).lastMsNumber
+      : current.subsystemNumber;
+    await tx.planModule.update({ where: { id }, data: { ...parsed.data, subsystemNumber } });
+    if (moved) await recomputeCiphers(tx, current.systemId);
   });
   refresh();
   return { ok: true, message: "МС сохранён" };

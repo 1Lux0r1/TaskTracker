@@ -298,7 +298,7 @@ npm run db:seed        # демо-данные
 npm run auth:admin     # создать первого администратора
 npm run search:reindex # пересобрать поисковый индекс
 npm run planning:sample # тестовый пример планирования развития
-npm run planning:import -- книга.xlsx [--apply] # справочники из книги планирования
+npm run planning:import -- книга.xlsx [--apply] # книга планирования: справочники, карта, план
 ```
 
 Перед коммитом прогоняются `npm test`, `npm run typecheck`, `npm run lint`.

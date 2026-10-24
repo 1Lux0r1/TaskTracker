@@ -74,6 +74,7 @@ export async function NewDkScreen({ searchParams, inPanel }: NewScreenProps) {
               statusSince: null,
               note: null,
               trApprovedAt: null,
+              deadline: null,
             }}
           />
           <p className="text-[13px] text-gray-500">Номер ДК выдаётся сквозным внутри блока.</p>

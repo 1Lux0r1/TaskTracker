@@ -12,7 +12,7 @@ type Db = PrismaClient | Prisma.TransactionClient;
 /** Всё, из чего складывается шифр задачи. */
 export const PLAN_TASK_CIPHER_INCLUDE = {
   stage: { select: { code: true, level: true } },
-  module: { select: { number: true, subsystem: { select: { code: true } } } },
+  module: { select: { number: true, subsystemNumber: true, subsystem: { select: { code: true } } } },
   dk: {
     select: {
       number: true,
@@ -40,6 +40,7 @@ export function cipherInputOfTask(task: PlanTaskForCipher): CipherInput {
     msSubsystem: task.module?.subsystem.code,
     dkNumber: task.dk.number,
     msNumber: task.module?.number,
+    msSubsystemNumber: task.module?.subsystemNumber,
     stage: task.stage.code,
     repeat: task.repeat,
   };
@@ -159,6 +160,7 @@ export async function checkTaskDraft(
       msSubsystem: module?.subsystem.code,
       dkNumber: dk.number,
       msNumber: module?.number,
+      msSubsystemNumber: module?.subsystemNumber,
       stage: stage.code,
       repeat,
     },

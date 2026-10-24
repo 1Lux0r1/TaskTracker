@@ -17,7 +17,7 @@ import { SystemSwitch } from "@/components/planning/system-switch";
 import { SubmitButton } from "@/components/submit-button";
 import { prisma } from "@/lib/db";
 import { PLAN_STAGE_LEVELS, plural } from "@/lib/domain";
-import { CIPHER_SETTINGS, formatPlanNumber } from "@/lib/planning/cipher";
+import { CIPHER_SETTINGS, msLabel } from "@/lib/planning/cipher";
 import { pickSystem } from "@/lib/planning/queries";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +60,7 @@ export default async function PlanningDirectoryPage(props: PageProps<"/planning/
         prisma.planModule.findMany({
           where: { systemId: system.id },
           orderBy: { number: "asc" },
-          include: { _count: { select: { tasks: true } } },
+          include: { subsystem: { select: { code: true } }, _count: { select: { tasks: true } } },
         }),
         prisma.planStage.findMany({ orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
       ])
@@ -88,8 +88,8 @@ export default async function PlanningDirectoryPage(props: PageProps<"/planning/
           </ActionForm>
           {system && (
             <p className="px-4.5 pb-4.5 text-[13px] text-gray-500">
-              Последний выданный номер МС — {formatPlanNumber(system.lastMsNumber)}. Номера не
-              переиспользуются.
+              Последний выданный номер реестра МС — {system.lastMsNumber}. Номера не
+              переиспользуются ни в реестре, ни внутри подсистемы.
             </p>
           )}
         </Card>
@@ -98,8 +98,10 @@ export default async function PlanningDirectoryPage(props: PageProps<"/planning/
           <div className="px-4.5 pb-4.5">
             <p className="font-mono text-[13px] break-all text-gray-900">{format}</p>
             <p className="mt-1 text-[13px] text-gray-500">
-              Подсистема берётся {CIPHER_SETTINGS.subsystemSource === "dk" ? "из ДК" : "из МС"}. Неизвестные
-              позиции опускаются, номер повтора дописывается к этапу: Р2, СА2.
+              Подсистема берётся {CIPHER_SETTINGS.subsystemSource === "dk" ? "из ДК" : "из МС"}, номер МС —{" "}
+              {CIPHER_SETTINGS.msNumber === "subsystem" ? "внутри подсистемы (TA.1)" : "сквозной по реестру"}, номера{" "}
+              {CIPHER_SETTINGS.numberWidth > 1 ? "с ведущим нулём (01)" : "без ведущих нулей"}. Неизвестные позиции
+              опускаются, номер повтора дописывается к этапу: Р2, СА2.
             </p>
             <ActionForm action={rebuildPlanCiphers} className="mt-3">
               <SubmitButton className={small} pendingLabel="Пересобираем…">
@@ -175,19 +177,22 @@ export default async function PlanningDirectoryPage(props: PageProps<"/planning/
           </div>
 
           <div className="grid gap-3.5 lg:grid-cols-2">
-            <Card title="МС" note={`${modules.length} МС; номер выдаёт система, версия ведётся руками и в шифр не входит`}>
+            <Card title="МС" note={`${modules.length} МС; номер реестра и номер в подсистеме выдаёт система, версия ведётся руками и в шифр не входит`}>
               <ActionForm action={createPlanModule} className="flex flex-wrap items-center gap-2 px-4.5 pb-3">
                 <input name="name" aria-label="Название нового МС" placeholder="Новый МС, например terra-analyser-bff" required className={`${inline} min-w-48 flex-1`} />
                 <SubsystemSelect subsystems={subsystems} />
                 <input name="version" aria-label="Версия" placeholder="Версия" className={`${inline} w-24`} />
                 <SubmitButton className={small}>
-                  Добавить как {formatPlanNumber(system.lastMsNumber + 1)}
+                  Добавить как № {system.lastMsNumber + 1}
                 </SubmitButton>
               </ActionForm>
               <ul className="max-h-[640px] overflow-y-auto border-t border-gray-200">
                 {modules.map((item) => (
                   <li key={item.id} className="flex flex-wrap items-start gap-2 border-b border-gray-200 px-4.5 py-2">
-                    <span className="mt-1.5 w-9 font-mono text-sm font-semibold text-gray-900">{formatPlanNumber(item.number)}</span>
+                    <span className="mt-1 w-16 font-mono text-sm leading-tight font-semibold text-gray-900" title="Номер в реестре и код МС в шифре">
+                      {item.number}
+                      <span className="block text-[11px] font-normal text-gray-500">{msLabel(item)}</span>
+                    </span>
                     <ActionForm action={updatePlanModule} className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <input type="hidden" name="id" value={item.id} />
                       <input name="name" aria-label="Название МС" defaultValue={item.name} required className={`${inline} min-w-40 flex-1`} />

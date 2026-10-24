@@ -7,25 +7,18 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { loadPlanningSample } from "../sample";
 import { checkTaskDraft, recomputeCiphers } from "../service";
+import { MIGRATIONS, applyMigrations } from "./test-db";
 
 /**
  * Проверки на настоящей базе: все миграции накатываются на пустой файл
  * SQLite во временном каталоге, рабочая база не трогается.
  */
-const MIGRATIONS = path.join(process.cwd(), "prisma", "migrations");
 const PLANNING = readdirSync(MIGRATIONS).find((name) => name.endsWith("_planning_module"))!;
+const BOOK = readdirSync(MIGRATIONS).find((name) => name.endsWith("_planning_book"))!;
 
 let dir: string;
 let file: string;
 let prisma: PrismaClient;
-
-function applyMigrations(target: string): void {
-  const db = new Database(target);
-  for (const name of readdirSync(MIGRATIONS).filter((item) => /^\d+_/.test(item)).sort()) {
-    db.exec(readFileSync(path.join(MIGRATIONS, name, "migration.sql"), "utf8"));
-  }
-  db.close();
-}
 
 beforeAll(async () => {
   dir = mkdtempSync(path.join(tmpdir(), "planning-"));
@@ -54,15 +47,15 @@ describe("тестовый пример", () => {
     expect(ciphers).toHaveLength(10);
     expect(ciphers).toEqual(
       expect.arrayContaining([
-        "RKII.Gaz.Rte.TA.01.08.СА",
-        "RKII.Gaz.Rte.TA.01.08.Р",
-        "RKII.Gaz.Rte.TA.01.08.Р2",
-        "RKII.Gaz.Rte.TA.01.08.СА2",
-        "RKII.Gaz.Rte.TA.01.08.Т2",
-        "RKII.Gaz.Rte.TA.01.08.Док",
-        "RKII.Gaz.Rte.TA.01.08.DO",
-        "RKII.Gaz.Rte.TA.02.БА",
-        "RKII.Gaz.Rte.TA.02.Арх",
+        "RKII.Gaz.Rte.1.TA.3.СА",
+        "RKII.Gaz.Rte.1.TA.3.Р",
+        "RKII.Gaz.Rte.1.TA.3.Р2",
+        "RKII.Gaz.Rte.1.TA.3.СА2",
+        "RKII.Gaz.Rte.1.TA.3.Т2",
+        "RKII.Gaz.Rte.1.TA.3.Док",
+        "RKII.Gaz.Rte.1.TA.3.Экс",
+        "RKII.Gaz.Rte.2.БА",
+        "RKII.Gaz.Rte.2.Арх",
       ]),
     );
   });
@@ -77,13 +70,13 @@ describe("черновик задачи", () => {
   it("после Р и Р2 предлагает Р3", async () => {
     const { dk1, ms08, stage } = await ids();
     const check = await checkTaskDraft(prisma, { dkId: dk1, stageId: await stage("Р"), moduleId: ms08, repeat: null });
-    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.TA.01.08.Р3", repeat: 3 });
+    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.1.TA.3.Р3", repeat: 3 });
   });
 
   it("первая задача этапа идёт без номера", async () => {
     const { dk1, ms08, stage } = await ids();
     const check = await checkTaskDraft(prisma, { dkId: dk1, stageId: await stage("Внед"), moduleId: ms08, repeat: null });
-    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.TA.01.08.Внед", repeat: 1 });
+    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.1.TA.3.Внед", repeat: 1 });
   });
 
   it("предупреждает о дубле и называет свободный номер", async () => {
@@ -91,7 +84,7 @@ describe("черновик задачи", () => {
     const check = await checkTaskDraft(prisma, { dkId: dk1, stageId: await stage("Р"), moduleId: ms08, repeat: 2 });
     expect(check).toEqual({
       ok: false,
-      error: "Шифр RKII.Gaz.Rte.TA.01.08.Р2 уже есть в плане. Следующий свободный номер повтора — 3",
+      error: "Шифр RKII.Gaz.Rte.1.TA.3.Р2 уже есть в плане. Следующий свободный номер повтора — 3",
     });
   });
 
@@ -102,16 +95,22 @@ describe("черновик задачи", () => {
     if (!check.ok) expect(check.error).toContain("ведётся по МС");
   });
 
-  it("архитектура с МС отклоняется: Арх ведётся на ДК", async () => {
+  it("отраслевой анализ с МС отклоняется: ОА ведётся по пункту", async () => {
+    const { dk2, ms08, stage } = await ids();
+    const check = await checkTaskDraft(prisma, { dkId: dk2, stageId: await stage("ОА"), moduleId: ms08, repeat: null });
+    expect(check.ok).toBe(false);
+  });
+
+  it("архитектура ведётся и по пункту, и по МС", async () => {
     const { dk2, ms08, stage } = await ids();
     const check = await checkTaskDraft(prisma, { dkId: dk2, stageId: await stage("Арх"), moduleId: ms08, repeat: null });
-    expect(check.ok).toBe(false);
+    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.2.TA.3.Арх", repeat: 1 });
   });
 
   it("БА с МС ведётся на МС", async () => {
     const { dk2, ms08, stage } = await ids();
     const check = await checkTaskDraft(prisma, { dkId: dk2, stageId: await stage("БА"), moduleId: ms08, repeat: null });
-    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.TA.02.08.БА", repeat: 1 });
+    expect(check).toEqual({ ok: true, cipher: "RKII.Gaz.Rte.2.TA.3.БА", repeat: 1 });
   });
 
   it("неизвестный МС и ДК отклоняются", async () => {
@@ -147,10 +146,11 @@ describe("пересборка шифров", () => {
     const subsystem = await prisma.planSubsystem.findFirstOrThrow({ where: { code: "TA" } });
     await prisma.planSubsystem.update({ where: { id: subsystem.id }, data: { code: "TB" } });
     const changed = await recomputeCiphers(prisma, subsystem.systemId);
-    expect(changed).toBe(10);
-    expect(await prisma.planTask.count({ where: { cipher: { startsWith: "RKII.Gaz.Rte.TB." } } })).toBe(10);
-    const task = await prisma.planTask.findFirstOrThrow({ where: { cipher: "RKII.Gaz.Rte.TB.01.08.Р2" } });
-    expect(task.searchIndex).toContain("rkii.gaz.rte.tb.01.08.р2");
+    // Подсистема берётся из МС: задачи пункта без МС (БА, Арх ДК 2) не меняются.
+    expect(changed).toBe(8);
+    expect(await prisma.planTask.count({ where: { cipher: { startsWith: "RKII.Gaz.Rte.1.TB.3." } } })).toBe(8);
+    const task = await prisma.planTask.findFirstOrThrow({ where: { cipher: "RKII.Gaz.Rte.1.TB.3.Р2" } });
+    expect(task.searchIndex).toContain("rkii.gaz.rte.1.tb.3.р2");
 
     await prisma.planSubsystem.update({ where: { id: subsystem.id }, data: { code: "TA" } });
     await recomputeCiphers(prisma, subsystem.systemId);
@@ -176,6 +176,32 @@ describe("откат миграции", () => {
     expect(db.prepare(`SELECT count(*) AS n FROM "_prisma_migrations"`).get()).toEqual({ n: 0 });
     db.exec(readFileSync(path.join(MIGRATIONS, PLANNING, "migration.sql"), "utf8"));
     expect(tables().filter((name) => name.startsWith("Plan"))).toHaveLength(8);
+    db.close();
+  });
+});
+
+describe("откат миграции формата книги", () => {
+  it("down.sql убирает только новые колонки, данные модуля остаются", async () => {
+    const copy = path.join(dir, "rollback-book.db");
+    applyMigrations(copy);
+    const seeded = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: copy }) });
+    await loadPlanningSample(seeded);
+    await seeded.$disconnect();
+
+    const db = new Database(copy);
+    const columns = (table: string) =>
+      (db.prepare(`PRAGMA table_info("${table}")`).all() as { name: string }[]).map((r) => r.name);
+    db.exec(`CREATE TABLE "_prisma_migrations" ("migration_name" TEXT); INSERT INTO "_prisma_migrations" VALUES ('${BOOK}')`);
+    db.exec(readFileSync(path.join(MIGRATIONS, BOOK, "down.sql"), "utf8"));
+    expect(columns("PlanModule")).not.toContain("subsystemNumber");
+    expect(columns("PlanSubsystem")).not.toContain("lastMsNumber");
+    expect(columns("PlanDk")).not.toContain("deadline");
+    expect(db.prepare(`SELECT count(*) AS n FROM "PlanTask"`).get()).toEqual({ n: 10 });
+    expect(db.prepare(`SELECT count(*) AS n FROM "_prisma_migrations"`).get()).toEqual({ n: 0 });
+
+    // Повторный накат нумерует уже заведённые МС внутри подсистемы.
+    db.exec(readFileSync(path.join(MIGRATIONS, BOOK, "migration.sql"), "utf8"));
+    expect(db.prepare(`SELECT "subsystemNumber" AS n FROM "PlanModule"`).get()).toEqual({ n: 1 });
     db.close();
   });
 });
