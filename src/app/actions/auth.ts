@@ -131,3 +131,48 @@ export async function revokeMemberAccess(formData: FormData): Promise<void> {
   await prisma.session.deleteMany({ where: { memberId } });
   revalidatePath("/members");
 }
+
+export type SetupState = { ok: false; error: string; email: string; fullName: string } | null;
+
+/**
+ * Первый администратор с экрана входа — вместо команды `npm run auth:admin`.
+ * Работает, только пока в системе нет ни одного пароля: потом сотрудников
+ * заводит администратор, и эта дверь закрыта.
+ */
+export async function setupFirstAdmin(
+  _state: SetupState,
+  formData: FormData,
+): Promise<SetupState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const repeat = String(formData.get("passwordRepeat") ?? "");
+  const fail = (error: string): SetupState => ({ ok: false, error, email, fullName });
+
+  // Проверяем здесь, а не только на экране: форму могли отправить и после
+  // того, как администратора уже завели.
+  if ((await prisma.member.count({ where: { passwordHash: { not: null } } })) > 0) {
+    return fail("Администратор уже заведён. Войдите, а новых сотрудников заводит он");
+  }
+  if (!email || !email.includes("@")) return fail("Впишите рабочую почту: по ней входят");
+  if (!fullName) return fail("Впишите имя и фамилию");
+  const problem = checkPasswordRules(password);
+  if (problem) return fail(problem);
+  if (password !== repeat) return fail("Пароли не совпали");
+
+  const passwordHash = await hashPassword(password);
+  // Сотрудник с этой почтой мог прийти из импорта без пароля: тогда он и
+  // становится администратором, а не появляется второй раз.
+  const existing = await prisma.member.findUnique({ where: { email } });
+  const member = existing
+    ? await prisma.member.update({
+        where: { id: existing.id },
+        data: { passwordHash, role: "ADMIN", isActive: true, fullName },
+      })
+    : await prisma.member.create({ data: { email, fullName, role: "ADMIN", passwordHash } });
+
+  const userAgent = (await headers()).get("user-agent");
+  await createSession(member.id, userAgent);
+  await prisma.member.update({ where: { id: member.id }, data: { lastLoginAt: new Date() } });
+  redirect("/");
+}
