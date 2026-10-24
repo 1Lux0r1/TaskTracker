@@ -9,7 +9,7 @@
     "start:lan": "next start -H 0.0.0.0 -p 3000",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy && npm run search:reindex",
     "db:generate": "prisma generate",

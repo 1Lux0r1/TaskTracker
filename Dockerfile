@@ -28,7 +28,8 @@ ENV BACKUP_DIR=/backups
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
+# Папки public в проекте нет: строка COPY для неё роняла сборку образа.
+# Появится public — вернуть сюда её копирование.
 COPY --from=build /app/src/generated ./src/generated
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/prisma ./prisma

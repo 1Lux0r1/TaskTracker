@@ -1,0 +1,60 @@
+# Релиз для установки на компьютер.
+#
+# Запускается тегом вида v1.2.0. Сначала проходит полная проверка кода
+# (ci.yml, вместе с Windows), затем на странице Releases появляется архив
+# TaskTracker-v1.2.0.zip: распаковать, запустить scripts\install.ps1 —
+# и система стоит.
+#
+# На сервер ничего не выкладывается: установка остаётся ручной.
+
+name: Релиз
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Архив для установки
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Архив — ровно то, что лежит в git под тегом: без node_modules, базы,
+      # .env и вложений. Зависимости ставит и приложение собирает скрипт
+      # установки уже на месте.
+      - name: Собрать архив
+        run: |
+          name="TaskTracker-${GITHUB_REF_NAME}"
+          git archive --format=zip --prefix="${name}/" -o "${name}.zip" "${GITHUB_REF_NAME}"
+          echo "ARCHIVE=${name}.zip" >> "$GITHUB_ENV"
+      - name: Опубликовать релиз
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Установка на Windows: распаковать архив, в папке выполнить"
+            echo
+            echo '    powershell -ExecutionPolicy Bypass -File scripts\install.ps1'
+            echo
+            echo "macOS: \`bash scripts/install.sh\`. Подробности — docs/deploy.md."
+          } > notes.md
+          # Релиз, заведённый на сайте GitHub, уже существует к этому моменту:
+          # тогда только прикладываем к нему архив.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$ARCHIVE" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$ARCHIVE" \
+              --title "TaskTracker $GITHUB_REF_NAME" \
+              --notes-file notes.md --generate-notes --verify-tag
+          fi
