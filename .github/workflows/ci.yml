@@ -1,0 +1,93 @@
+# Проверка кода на каждом PR и каждом пуше в main.
+#
+# Порядок тот же, что перед коммитом руками: линт, типы, тесты, затем сборка
+# на чистой базе. Упавший шаг красит PR, и мержить такой PR нельзя, пока он
+# не позеленеет.
+#
+# Этот же процесс вызывается из выкладки релиза (release.yml): архив для
+# установки собирается только из кода, который прошёл все проверки.
+
+name: Проверка кода
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# Новый пуш в ветку PR отменяет проверку предыдущего: результат по старому
+# коду уже никому не нужен. Пуши в main проверяются все до одного.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Отдельная база под проверку: миграции и сборка не трогают ничьих данных.
+  DATABASE_URL: file:./prisma/ci.db
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  check:
+    name: Линт, типы, тесты, сборка
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Линт
+        run: npm run lint
+      - name: Типы
+        run: npm run typecheck
+      - name: Тесты
+        run: npm test
+      - name: Миграции на чистой базе
+        run: npm run db:deploy
+      - name: Сборка
+        run: npm run build
+
+  # Пилот стоит на Windows, и better-sqlite3 там ставится своей сборкой.
+  # Проверка дорогая (минуты Windows считаются вдвойне), поэтому идёт не на
+  # каждом PR, а на пуше в main и перед релизом.
+  windows:
+    name: Установка и сборка на Windows
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Тесты
+        run: npm test
+      - name: Миграции на чистой базе
+        run: npm run db:deploy
+      - name: Сборка
+        run: npm run build
+
+  # Образ для облака собирается, но никуда не отправляется: выкладка на
+  # сервер только по слову заказчика. Проверка нужна, чтобы Dockerfile не
+  # разошёлся с кодом к моменту переезда.
+  docker:
+    name: Образ Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
