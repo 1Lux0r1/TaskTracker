@@ -6,7 +6,10 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { startOfToday } from "@/lib/domain";
 import { prisma } from "@/lib/db";
+import { readBookFile } from "@/lib/planning/book-file";
+import { type BookImportResult, importBook } from "@/lib/planning/book-import";
 import { resolvePlanDates } from "@/lib/planning/dates";
+import { loadPlanningSample } from "@/lib/planning/sample";
 import {
   checkTaskDraft,
   planTaskSearchIndex,
@@ -588,4 +591,48 @@ export async function deletePlanTask(formData: FormData): Promise<void> {
   await prisma.planTask.delete({ where: { id } });
   refresh();
   redirect(`/planning/dk/${task.dkId}`);
+}
+
+/* ─── Книга планирования и тестовый пример ───────────────────────────────── */
+
+export type BookImportState =
+  | ({ ok: true; fileName: string } & BookImportResult)
+  | { ok: false; error: string }
+  | null;
+
+const BOOK_LIMIT = 20 * 1024 * 1024;
+
+/**
+ * Проверка или запись книги планирования из файла, выбранного на экране.
+ * Проверка ничего не меняет и показывает те же замечания, что будут при
+ * записи; запись — второй кнопкой того же файла.
+ */
+export async function importPlanningBook(_state: BookImportState, formData: FormData): Promise<BookImportState> {
+  await requireUser();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Выберите файл книги .xlsx" };
+  if (!/\.xlsx$/i.test(file.name)) return { ok: false, error: "Нужен файл Excel в формате .xlsx" };
+  if (file.size > BOOK_LIMIT) return { ok: false, error: "Файл больше 20 МБ — это не книга планирования" };
+  const apply = field(formData, "mode") === "apply";
+
+  let sheets;
+  try {
+    sheets = await readBookFile(Buffer.from(await file.arrayBuffer()));
+  } catch {
+    return { ok: false, error: "Не удалось прочитать файл: он повреждён или это не книга Excel" };
+  }
+  const result = await importBook(prisma, sheets, { apply });
+  if (result.found.length === 0) {
+    return { ok: false, error: "В файле не нашлось листов книги планирования: «Справочник», «ОФТ», «Дорожная карта», «План работ»" };
+  }
+  if (apply) refresh();
+  return { ok: true, fileName: file.name, ...result };
+}
+
+/** Тестовый пример из ТЗ: показать модуль, пока своих данных нет. */
+export async function loadPlanningSampleAction(): Promise<ActionResult> {
+  await requireUser();
+  const { tasks } = await loadPlanningSample(prisma);
+  refresh();
+  return { ok: true, message: tasks ? `Тестовый пример загружен: задач ${tasks}` : "Тестовый пример уже загружен" };
 }

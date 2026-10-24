@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PlanningTabs } from "@/components/planning/planning-tabs";
 import { requireUser } from "@/lib/auth";
 
@@ -21,6 +22,9 @@ export default async function PlanningLayout({ children }: LayoutProps<"/plannin
             выбранных значений.
           </p>
         </div>
+        <Link href="/planning/book" className="btn-secondary">
+          Загрузить книгу
+        </Link>
       </div>
       <div className="mb-5">
         <PlanningTabs />
