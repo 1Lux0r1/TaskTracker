@@ -15,7 +15,7 @@ import {
 } from "@/lib/domain";
 
 /** Пустая строка из формы означает «значение не задано», а не пустой текст. */
-const optionalText = z
+export const optionalText = z
   .string()
   .trim()
   .transform((value) => (value.length === 0 ? null : value))
@@ -27,7 +27,7 @@ const optionalText = z
  */
 const conditionalText = optionalText.optional().transform((value) => value ?? null);
 
-const optionalDate = z
+export const optionalDate = z
   .string()
   .trim()
   .transform((value) => (value.length === 0 ? null : new Date(`${value}T00:00:00`)))
@@ -42,7 +42,7 @@ const optionalDate = z
  */
 const conditionalDate = optionalDate.optional().transform((value) => value ?? null);
 
-const optionalNumber = z
+export const optionalNumber = z
   .string()
   .trim()
   .transform((value) => (value.length === 0 ? null : Number(value.replace(",", "."))))

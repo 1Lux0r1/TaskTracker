@@ -620,13 +620,13 @@ model Notification {
 /// Сохранённый набор фильтров реестра. Набор личный: у каждого свой срез
 /// работы, а общий набор потребовал бы договорённости, кто его меняет.
 model FilterPreset {
-  id       String @id @default(cuid())
-  memberId String
+  id        String   @id @default(cuid())
+  memberId  String
   /// Реестр, к которому относится набор: TASK, LETTER, DOCUMENT или MEETING.
-  scope    String
-  name     String
+  scope     String
+  name      String
   /// Условия отбора строкой параметров адреса, без ведущего «?».
-  query    String
+  query     String
   /// Набор по умолчанию применяется при открытии реестра. Он один на реестр.
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -636,4 +636,181 @@ model FilterPreset {
 
   @@unique([memberId, scope, name])
   @@index([memberId, scope])
+}
+
+/**
+ * ─── Планирование развития ──────────────────────────────────────────────────
+ * Модуль переносит методику из книги «Планирование развития системы»:
+ * Система → Направление → Блок (направление + часть) → ДК → задачи плана.
+ * Блок отдельной записью не хранится: это пара «направление + часть», то есть
+ * сама часть направления. Шифр задачи собирает src/lib/planning/cipher.ts.
+ */
+
+/// Система, развитие которой планируется (RKII). Её код — первый сегмент шифра.
+model PlanSystem {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  /// Последний выданный номер МС. Номер МС сквозной по системе и после
+  /// удаления модуля повторно не выдаётся, поэтому счётчик хранится отдельно.
+  lastMsNumber Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  directions PlanDirection[]
+  subsystems PlanSubsystem[]
+  modules    PlanModule[]
+}
+
+/// Направление — решение руководства: цель и срок, но не способ.
+/// ОФТ ведётся на направление, его код — «Система.Направление».
+model PlanDirection {
+  id            String    @id @default(cuid())
+  systemId      String
+  code          String
+  name          String
+  goal          String?
+  deadline      DateTime?
+  /// MAIN, SUPPORT или DEFERRED — значения в src/lib/domain.ts.
+  priority      String    @default("MAIN")
+  decisionDate  DateTime?
+  decisionBasis String?
+  /// Дата «ОФТ согласован». Пусто — ОФТ ещё не согласован.
+  oftApprovedAt DateTime?
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  system PlanSystem          @relation(fields: [systemId], references: [id], onDelete: Restrict)
+  parts  PlanDirectionPart[]
+
+  @@unique([systemId, code])
+}
+
+/// Часть направления. Пара «направление + часть» и есть блок дорожной карты.
+model PlanDirectionPart {
+  id          String   @id @default(cuid())
+  directionId String
+  code        String
+  name        String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  direction PlanDirection @relation(fields: [directionId], references: [id], onDelete: Restrict)
+  dks       PlanDk[]
+
+  @@unique([directionId, code])
+}
+
+/// Подсистема — справочник системы.
+model PlanSubsystem {
+  id           String   @id @default(cuid())
+  systemId     String
+  code         String
+  name         String
+  sortOrder    Int      @default(0)
+  /// Последний выданный номер МС в подсистеме: номер не переиспользуется.
+  lastMsNumber Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  system  PlanSystem   @relation(fields: [systemId], references: [id], onDelete: Restrict)
+  modules PlanModule[]
+  dks     PlanDk[]
+
+  @@unique([systemId, code])
+}
+
+/// МС (микросервис). Номер сквозной по системе, после присвоения не меняется.
+/// Версия ведётся руками и в шифр не входит.
+model PlanModule {
+  id              String   @id @default(cuid())
+  systemId        String
+  number          Int
+  name            String
+  subsystemId     String
+  /// Номер МС внутри подсистемы — он стоит в шифре книги (TA.1), сквозной
+  /// номер реестра — нет. Выдаётся счётчиком подсистемы.
+  subsystemNumber Int?
+  version         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  system    PlanSystem    @relation(fields: [systemId], references: [id], onDelete: Restrict)
+  subsystem PlanSubsystem @relation(fields: [subsystemId], references: [id], onDelete: Restrict)
+  tasks     PlanTask[]
+
+  @@unique([systemId, number])
+  @@unique([subsystemId, subsystemNumber])
+  @@index([subsystemId])
+}
+
+/// Этап конвейера: БА, Арх, СА, Р, Т, Док, DO, Внед. Уровень говорит, к чему
+/// относится задача этапа: DK — к ДК, MS — к МС, DK_OR_MS — к МС, если он указан.
+model PlanStage {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  level     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks PlanTask[]
+}
+
+/// ДК — верхнеуровневая задача блока. Номер сквозной внутри блока.
+model PlanDk {
+  id           String    @id @default(cuid())
+  partId       String
+  number       Int
+  name         String
+  /// Подсистема ДК: по утверждённому формату шифра она стоит перед номером ДК.
+  subsystemId  String?
+  /// Статус из src/lib/domain.ts; ставится руками.
+  status       String    @default("PRESTUDY")
+  statusSince  DateTime?
+  note         String?
+  /// Срок пункта дорожной карты.
+  deadline     DateTime?
+  /// Дата «ТР согласован».
+  trApprovedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  part      PlanDirectionPart @relation(fields: [partId], references: [id], onDelete: Restrict)
+  subsystem PlanSubsystem?    @relation(fields: [subsystemId], references: [id], onDelete: Restrict)
+  tasks     PlanTask[]
+
+  @@unique([partId, number])
+  @@index([subsystemId])
+}
+
+/// Задача плана: этап по ДК или по МС. Шифр собирает система, руками он не
+/// вводится. Возврат — повторная задача того же этапа с номером повтора 2, 3…
+model PlanTask {
+  id            String    @id @default(cuid())
+  dkId          String
+  stageId       String
+  moduleId      String?
+  /// 1 — первая задача этапа, без номера в шифре; 2 и дальше — повторы.
+  repeat        Int       @default(1)
+  cipher        String    @unique
+  name          String
+  durationWeeks Int?
+  startDate     DateTime?
+  finishDate    DateTime?
+  /// Строчными буквами: шифр и наименование (кириллицу SQLite не понижает).
+  searchIndex   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  dk     PlanDk      @relation(fields: [dkId], references: [id], onDelete: Restrict)
+  stage  PlanStage   @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  module PlanModule? @relation(fields: [moduleId], references: [id], onDelete: Restrict)
+
+  @@index([dkId])
+  @@index([moduleId])
+  @@index([searchIndex])
 }
